@@ -1,0 +1,404 @@
+import React, { useEffect, useState } from "react";
+import {
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Collapse,
+    Checkbox,
+    IconButton,
+    Paper,
+    Menu,
+    MenuItem,
+    Divider,
+} from "@mui/material";
+import { ExpandLess, ExpandMore } from "@mui/icons-material";
+import StarBorderIcon from "@mui/icons-material/StarBorder";
+import StarIcon from "@mui/icons-material/Star";
+import dayjs from "dayjs";
+import PropTypes from "prop-types";
+import { Draggable } from "@fullcalendar/interaction";
+
+export default function TasksList({
+    containerId,
+    tasks,
+    selectedTaskId,
+    listsList,
+    selectedList,
+    isNeedContextMenu = false,
+    setSelectedTaskId = null,
+    updateList = null,
+    linkTaskList = null,
+    additionalButtonClick = null,
+    changeTaskStatus = null,
+    deleteFromChildes = null,
+    additionalButton = null
+}) {
+    const [open, setOpen] = useState({});
+    const [completedOpen, setCompletedOpen] = useState(true);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [listsMenuAnchorEl, setListsMenuAnchorEl] = useState(null);
+    const [actionType, setActionType] = useState(null);
+    const [targetItemId, setTargetItemId] = useState(null);
+
+    useEffect(() => {
+        console.log('TasksList received props:', {
+            tasks,
+            selectedList,
+            selectedTaskId,
+            containerId
+        });
+    }, [tasks, selectedList, selectedTaskId, containerId]);
+
+    useEffect(() => {
+        const draggableEl = document.getElementById(`tasksList${containerId}`);
+        if (!draggableEl) {
+            console.log('Draggable element not found:', `tasksList${containerId}`);
+            return;
+        }
+
+        console.log('Initializing draggable for tasks:', tasks);
+        const draggable = new Draggable(draggableEl, {
+            itemSelector: '.draggable-task',
+            eventData: (eventEl) => {
+                const id = eventEl.getAttribute("data-id");
+                const task = tasks.find((task) => String(task.id) === id);
+                return {
+                    title: task.title,
+                    id: task.id,
+                    start: task.start || null,
+                    end: task.end || null,
+                    allDay: !task.start,
+                };
+            },
+        });
+
+        return () => draggable.destroy(); // Очистка Draggable при размонтировании
+    }, [tasks, containerId]);
+
+    if (!tasks || !selectedList) {
+        console.log('TasksList render blocked:', { tasks, selectedList });
+        return null;
+    }
+
+    function handleToggle(task_id, checked) {
+        const status_id = checked ? 2 : 1;
+        if (status_id == 2) {
+            const audio = new Audio("/sounds/isComplited.wav");
+            audio.play();
+        }
+        const updatedFields = { status_id };
+        if (status_id == 2) {
+            updatedFields.end_date = dayjs().toISOString();
+        }
+        if (typeof changeTaskStatus === "function") changeTaskStatus(task_id, updatedFields);
+    }
+
+    // const isDefaultList = (listId) => defaultLists.some(list => list.id === listId);
+
+    function handleClick(id) {
+        setOpen((prevOpen) => ({
+            ...prevOpen,
+            [id]: !prevOpen[id],
+        }));
+    }
+
+    function handleAdditionalButtonClick(task) {
+        if (typeof additionalButtonClick === "function") additionalButtonClick(task);
+    }
+
+    function handleContextMenu(event, item) {
+        event.preventDefault();
+        setAnchorEl(event.currentTarget);
+        setTargetItemId(item.id);
+    }
+
+    function handleCloseMenu() {
+        setListsMenuAnchorEl(null);
+        setAnchorEl(null);
+        setActionType(null);
+    }
+
+    async function handleChangeChildesOrder(elementId, direction) {
+        console.log(`handleChangeChildesOrder: `, selectedList.id, elementId, direction);
+
+        if (!selectedList) return;
+
+        const index = selectedList.childes_order.indexOf(elementId);
+
+        // Проверяем, что элемент найден в childes_order
+        if (index === -1) return;
+
+        if (direction === "up" && index > 0) {
+            // Меняем местами с предыдущим элементом
+            [selectedList.childes_order[index - 1], selectedList.childes_order[index]] = [
+                selectedList.childes_order[index],
+                selectedList.childes_order[index - 1],
+            ];
+        } else if (direction === "down" && index < selectedList.childes_order.length - 1) {
+            // Меняем местами со следующим элементом
+            [selectedList.childes_order[index + 1], selectedList.childes_order[index]] = [
+                selectedList.childes_order[index],
+                selectedList.childes_order[index + 1],
+            ];
+        }
+
+        setAnchorEl(null);
+        // Сохраняем изменения в childes_order
+        if (typeof updateList === "function")
+            updateList(selectedList.id, { childes_order: selectedList.childes_order });
+    }
+
+    function handleDeleteFromChildes(elementId) {
+        if (typeof deleteFromChildes === "function") deleteFromChildes(`task_${elementId}`, selectedList.id);
+        setAnchorEl(null);
+    }
+
+    async function handleToListAction(targetId, actionTypeName = null) {
+        if (!actionTypeName) actionTypeName = actionType;
+        console.log(`handleToListAction: `, actionTypeName, targetItemId, targetId);
+        if (actionTypeName === "move") {
+            if (typeof linkTaskList === "function") await linkTaskList(targetItemId, targetId);
+            if (typeof deleteFromChildes === "function")
+                await deleteFromChildes(`task_${targetItemId}`, selectedList.id);
+            console.log(`Перемещаем задачу с id ${targetItemId} в ${targetId}`);
+        } else if (actionTypeName === "link") {
+            if (typeof linkTaskList === "function") await linkTaskList(targetItemId, targetId);
+            console.log(`Связываем задачу с id ${targetItemId} с ${targetId}`);
+        }
+        // Закрываем все меню после выполнения действия
+        handleCloseMenu();
+    }
+
+    function handleUpToTask() {
+        handleToListAction(selectedList.id, "link");
+    }
+
+    function handleOpenListsMenu(event, actionType) {
+        setActionType(actionType);
+        setListsMenuAnchorEl(event.currentTarget);
+    }
+
+    function handleCloseListsMenu() {
+        setListsMenuAnchorEl(null);
+    }
+
+    // function handleOpenTasksMenu(event, actionType) {
+    //   setActionType(actionType);
+    //   setTasksMenuAnchorEl(event.currentTarget);
+    // }
+
+    // function handleCloseTasksMenu() {
+    //   setTasksMenuAnchorEl(null);
+    // }
+
+
+    function handleDragStart(event, task){
+        console.log("handleOnDragStart: ", event, task);
+        event.dataTransfer.setData("task", JSON.stringify(task));
+    }
+
+    function renderTask(task) {
+        const labelId = `checkbox-list-label-${task.id}`;
+        const hasChildren = task.childes_order && task.childes_order.length > 0;
+
+        return (
+            <div key={task.id}>
+                <ListItem disablePadding>
+                    <Paper sx={{ mb: 1, width: "100%" }}>
+                        <ListItemButton
+                            className="draggable-task"
+                            data-id={task.id}
+                            draggable="true"
+                            selected={selectedTaskId === task.id}
+                            onClick={() => {
+                                if (typeof setSelectedTaskId === "function") setSelectedTaskId(task.id);
+                            }}
+                            onDragStart={(event) => handleDragStart(event, task)}
+                            onContextMenu={isNeedContextMenu ? (event) => handleContextMenu(event, task) : undefined}
+                            // style={{
+                            //   backgroundColor:
+                            //     task.priority_id === 2
+                            //       ? '#FFFFE0' // светло-желтый цвет для priority_id = 1
+                            //       : task.priority_id === 3
+                            //       ? '#FFC0CB' // светло-красный цвет для priority_id = 3
+                            //       : 'inherit' // не меняем цвет, если priority_id = 0
+                            // }}
+                        >
+                            <ListItemIcon onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                    edge="start"
+                                    checked={task.status_id === 2}
+                                    tabIndex={-1}
+                                    disableRipple
+                                    inputProps={{ "aria-labelledby": labelId }}
+                                    onChange={(e) => {
+                                        e.stopPropagation();
+                                        handleToggle(task.id, e.target.checked);
+                                    }}
+                                />
+                            </ListItemIcon>
+                            <ListItemText id={labelId} primary={task.title} />
+                            {hasChildren && (
+                                <IconButton
+                                    edge="end"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        handleClick(task.id);
+                                    }}
+                                >
+                                    {open[task.id] ? <ExpandLess /> : <ExpandMore />}
+                                </IconButton>
+                            )}
+                            <IconButton
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleAdditionalButtonClick(task);
+                                }}
+                            >
+                                {additionalButton ? React.createElement(additionalButton) : task.priority_id === 3 ? <StarIcon /> : <StarBorderIcon />}
+                            </IconButton>
+                        </ListItemButton>
+                    </Paper>
+                </ListItem>
+                {hasChildren && (
+                    <Collapse in={open[task.id]} timeout="auto" unmountOnExit>
+                        <List disablePadding sx={{ pl: 3 }}>
+                            {task.childes_order.map((childId) => {
+                                const childTask = tasks.find((t) => t.id === childId);
+                                return childTask ? renderTask(childTask) : null;
+                            })}
+                        </List>
+                    </Collapse>
+                )}
+            </div>
+        );
+    }
+
+    // const activeTasks = isDefaultList(selectedList.id)
+    //   ? tasks.filter(task => task.status_id !== 2)
+    //   : selectedList.childes_order.map(taskId => tasks.find(t => t.id === taskId && t.status_id !== 2)).filter(Boolean);
+
+    // const completedTasks = isDefaultList(selectedList.id)
+    //   ? tasks.filter(task => task.status_id === 2)
+    //   : selectedList.childes_order.map(taskId => tasks.find(t => t.id === taskId && t.status_id === 2)).filter(Boolean);
+
+    // console.log(`selectedList: `, selectedList);
+    const activeTasks = selectedList.childes_order
+        .map((taskId) => tasks?.find((t) => t.id === taskId && t.status_id != 2))
+        .filter(Boolean);
+
+    const completedTasks = selectedList.childes_order
+        .map((taskId) => tasks?.find((t) => t.id === taskId && t.status_id == 2))
+        .filter(Boolean);
+
+    return (
+        <>
+            <List sx={{ width: "100%", pt: 0 }} component="nav" id={`tasksList${containerId}`}>
+                {activeTasks.map((task) => renderTask(task))}
+                {completedTasks.length > 0 && (
+                    <div>
+                        <ListItemButton onClick={() => setCompletedOpen(!completedOpen)}>
+                            <ListItemText primary="Completed Tasks" />
+                            {completedOpen ? <ExpandLess /> : <ExpandMore />}
+                        </ListItemButton>
+                        <Collapse in={completedOpen} timeout="auto" unmountOnExit>
+                            <List disablePadding>{completedTasks.map((task) => renderTask(task))}</List>
+                        </Collapse>
+                    </div>
+                )}
+            </List>
+            {isNeedContextMenu && (
+                <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleCloseMenu}>
+                    {listsList?.filter((item) => item.type == "list") && [
+                        <MenuItem key="moveToList" onClick={(event) => handleOpenListsMenu(event, "move")}>
+                            Переместить в список
+                        </MenuItem>,
+                        <MenuItem key="linkToList" onClick={(event) => handleOpenListsMenu(event, "link")}>
+                            Связать со списком
+                        </MenuItem>,
+                        // <Divider key="divider1" />,
+                        // <MenuItem
+                        //   key="linkToTask"
+                        //   onClick={(event) => handleOpenTasksMenu(event, 'link')}
+                        // >
+                        //   Связать с задачей
+                        // </MenuItem>,
+                        // <MenuItem
+                        //   key="moveToTask"
+                        //   onClick={(event) => handleOpenTasksMenu(event, 'move')}
+                        // >
+                        //   Сделать подзадачей
+                        // </MenuItem>,
+                    ]}
+                    {!selectedList?.childes_order?.includes(targetItemId) && [
+                        <MenuItem key="upToTask" onClick={() => handleUpToTask(selectedList.id)}>
+                            Поднять до задачи
+                        </MenuItem>,
+                    ]}
+                    {selectedList?.childes_order?.includes(targetItemId) && [
+                        <Divider key="divider2" />,
+                        <MenuItem key="moveUp" onClick={() => handleChangeChildesOrder(targetItemId, "up")}>
+                            Переместить выше
+                        </MenuItem>,
+                        <MenuItem key="moveDown" onClick={() => handleChangeChildesOrder(targetItemId, "down")}>
+                            Переместить ниже
+                        </MenuItem>,
+                        <MenuItem key="toggleInList" onClick={() => handleDeleteFromChildes(targetItemId)}>
+                            Удалить из этого списка
+                        </MenuItem>,
+                    ]}
+
+                    {/* <MenuItem onClick={handleDeleteClick}>Удалить</MenuItem> */}
+                </Menu>
+            )}
+
+            {isNeedContextMenu && (
+                <Menu anchorEl={listsMenuAnchorEl} open={Boolean(listsMenuAnchorEl)} onClose={handleCloseListsMenu}>
+                    {listsList
+                        .filter((item) => item.type === "list")
+                        .map((list) => (
+                            <MenuItem key={list.id} onClick={() => handleToListAction(list.id)}>
+                                {list.title}
+                            </MenuItem>
+                        ))}
+                </Menu>
+            )}
+
+            {/* Подменю для задач
+      <Menu
+        anchorEl={tasksMenuAnchorEl}
+        open={Boolean(tasksMenuAnchorEl)}
+        onClose={handleCloseTasksMenu}
+      >
+        {tasks.filter(item => item.status_id !== 2).filter(item => item.id !== targetItemId).map(task => (
+          <MenuItem key={task.id} onClick={() => handleToListAction(`task_${task.id}`)}>
+            {task.title}
+          </MenuItem>
+        ))}
+        {tasks.filter(item => item.status_id == 2).filter(item => item.id !== targetItemId).map(task => (
+          <MenuItem key={task.id} onClick={() => handleToListAction(`task_${task.id}`)}>
+            {task.title}
+          </MenuItem>
+        ))}
+      </Menu> */}
+        </>
+    );
+}
+
+TasksList.propTypes = {
+    containerId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    tasks: PropTypes.array,
+    selectedTaskId: PropTypes.number,
+    listsList: PropTypes.array,
+    isNeedContextMenu: PropTypes.bool,
+    selectedList: PropTypes.object,
+    setSelectedTaskId: PropTypes.func,
+    updateList: PropTypes.func,
+    linkTaskList: PropTypes.func,
+    additionalButtonClick: PropTypes.func,
+    changeTaskStatus: PropTypes.func,
+    deleteFromChildes: PropTypes.func,
+    additionalButton: PropTypes.object,
+};

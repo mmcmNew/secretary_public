@@ -1,0 +1,13 @@
+/.venv
+/.idea
+/migrations
+/app/config.py
+/app/logs
+/app/user_data
+/create_structure.bat
+/app/backups/
+/app/temp/
+/docs/
+/logs/
+/migrations/
+/app/static/

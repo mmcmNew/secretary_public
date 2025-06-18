@@ -1,0 +1,3 @@
+python generate_memory_numbers.py
+python generate_memory_db_numbers.py
+pause

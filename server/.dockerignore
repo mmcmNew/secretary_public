@@ -1,0 +1,28 @@
+# Игнорировать папку app/journals
+app/
+
+
+# Игнорировать все файлы с расширением .db
+*.db
+
+# Игнорировать временные файлы и папки
+*.pyc
+*.bat
+__pycache__/
+*.pyo
+*.pyd
+*.spec
+*.bat
+*.log
+.venv/
+.venv312/
+.git/
+.migrations/
+*.spec
+
+
+# Игнорировать скрытые файлы и папки (если они не нужны)
+.dockerignore
+Dockerfile
+docker-compose.yml
+.pyarmor_config

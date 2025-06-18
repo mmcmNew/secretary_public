@@ -1,0 +1,622 @@
+import sqlite3
+from datetime import timedelta
+
+from flask_socketio import emit
+import json
+import os
+
+from . import main
+from .handlers import fetch_table_records
+from app.block_notes_utiltes import extract_record_data_from_block, build_blocks_from_records
+from app import socketio
+from flask import Response, current_app, abort, render_template, make_response
+from flask import request, jsonify, send_from_directory, send_file
+from .models import *
+
+from app.secretary import answer_from_secretary
+from app.utilites import update_record, save_to_base, get_tables, save_to_base_modules, get_columns_names
+from app.text_to_edge_tts import generate_tts, del_all_audio_files
+from ..tasks.handlers import create_daily_scenario
+from app.get_records_utils import get_all_filters, fetch_filtered_records
+
+
+@current_app.route('/sw.js')
+def serve_sw():
+    try:
+        # Отдаем sw.js из папки dist
+        dist_folder = current_app.config.get('DIST_FOLDER', '')
+        response = make_response(send_from_directory(dist_folder, 'sw.js'))
+        response.headers['Content-Type'] = 'application/javascript'
+        # Service-Worker-Allowed НЕ НУЖЕН
+        return response
+    except Exception as e:
+        current_app.logger.error(f"Error serving sw.js: {e}")
+        return "SW not found", 404
+
+
+@main.route('/manifest.webmanifest')
+def serve_manifest():
+    try:
+        dist_folder = current_app.config.get('DIST_FOLDER', '')
+        # Отдаем manifest.webmanifest из папки dist
+        response = make_response(send_from_directory(dist_folder, 'manifest.webmanifest'))
+        response.headers['Content-Type'] = 'application/manifest+json'
+        return response
+    except Exception as e:
+        current_app.logger.error(f"Error serving manifest.webmanifest: {e}")
+        return "Manifest not found", 404
+
+
+@socketio.on('connect', namespace='/chat')
+def handle_connect():
+    print('Client connected')
+
+
+@socketio.on('disconnect', namespace='/chat')
+def handle_disconnect():
+    print('Client disconnected')
+
+
+@socketio.on('request_messages', namespace='/chat')
+@main.route('/api/chat/messages', methods=['GET'])
+def get_messages():
+    # current_app.logger.info('request_messages')
+    messages_list = ChatHistory.query.join(ChatHistory.user).order_by(ChatHistory.message_id.desc()).limit(100).all()
+    if messages_list:
+        messages_list = messages_list[::-1]
+        messages = [message.to_dict() for message in messages_list]
+    else:
+        messages = []
+    # print('dict_messages: ', messages)
+    response = Response(json.dumps(messages), mimetype='application/json')
+    # print(response)
+    emit('all_messages', messages, to=request.sid)
+    return response
+
+
+@main.route('/avatars/<path:filename>', methods=['GET'])
+@main.route('/static/<path:filename>', methods=['GET'])
+@main.route('/sounds/<path:filename>', methods=['GET'])
+@main.route('/memory/<path:filename>', methods=['GET'])
+@main.route('/audio/<path:filename>', methods=['GET'])
+def static_files(filename):
+    # Получаем полный путь маршрута
+    route = request.path
+    # print(f'Requested route: {route}')
+    base_dir = os.getcwd()
+    # Устанавливаем базовую директорию на основе пути запроса
+    if route.startswith('/avatars'):
+        base_dir = os.path.join(base_dir, 'app', 'user_data', 'static', 'avatars')
+    elif route.startswith('/static'):
+        base_dir = os.path.join(base_dir, 'app', 'user_data', 'static')
+    elif route.startswith('/sounds'):
+        base_dir = os.path.join(base_dir, 'app', 'user_data', 'static', 'sounds')
+    elif route.startswith('/memory'):
+        base_dir = os.path.join(base_dir, 'app', 'user_data', 'memory')
+    elif route.startswith('/audio'):
+        base_dir = os.path.join(base_dir, 'app', 'user_data', 'static', 'audio')
+
+    # print(f'static_files: Base directory: {base_dir}')
+
+    # Проверка на существование файла
+    file_path = os.path.join(base_dir, filename)
+    # print(f'static_files: File path: {file_path}')
+    if not os.path.isfile(file_path):
+        current_app.logger.error(f'static_files: File not found: {file_path}')
+        return f'File not found: {file_path}', 404
+
+    # Возвращаем файл из базовой директории
+    return send_from_directory(base_dir, filename)
+
+
+@main.route('/temp/<path:filename>', methods=['GET'])
+def get_temp_files(filename):
+    base_dir = os.path.join(os.getcwd(), 'app', 'temp')
+    file_path = os.path.join(base_dir, filename)
+    if not os.path.exists(file_path):
+        if filename.startswith('edge_audio_'):
+            record_id = filename.replace('edge_audio_', '').replace('.mp3', '')
+            message = ChatHistory.query.filter_by(message_id=record_id).first()
+            if not message:
+                abort(404, description='Message not found')
+            del_all_audio_files()  # очищаем временную папку от старых генераций
+            result = generate_tts(text=message.text, record_id=record_id)  # Вызов функции TTS
+            if result:  # Проверяем, был ли файл создан
+                return send_file(file_path)
+            else:
+                abort(404, description=result)
+    else:
+        return send_file(file_path)
+
+    return 'File not found', 404
+
+
+@main.route('/get_tts_audio', methods=['POST'])
+def get_tts_audio():
+    text = request.form.get('text')
+    if not text:
+        abort(400, description="No text provided")
+
+    result = generate_tts(text=text)  # Вызов функции TTS
+    if result:  # Проверяем, был ли файл создан
+        return send_file(result)
+    else:
+        abort(404, description="File not found")
+
+
+@main.route('/get_scenario/<string:name>', methods=['GET'])
+def get_scenario(name):
+    if name == 'my_day':
+        scenario = create_daily_scenario()
+        # print(f'get_scenario: my_day: {scenario}')
+        return {"scenario": scenario}, 200
+    scenario_path = os.path.join(os.getcwd(), 'app', 'user_data', 'scenarios', f'{name}.json')
+    # print(f'get_scenario: scenario_path: {scenario_path}')
+    try:
+        with open(scenario_path, 'r', encoding='utf-8') as file:
+            scenario = json.load(file)
+    except Exception as e:
+        print(f'action_module_processing: {e}')
+        abort(404, description=f"Scenario error: {e}")
+    if scenario:
+        # print(f'get_scenario: scenario: {scenario}')
+        return {"scenario": scenario}, 200
+    else:
+        abort(404, description="Scenario not found")
+
+
+@main.route('/get_tts_audio_filename', methods=['POST'])
+def get_tts_audio_filename():
+    text = request.form.get('text')
+    if not text:
+        abort(400, description="No text provided")
+
+    result = generate_tts(text=text)  # Вызов функции TTS, которая возвращает путь к файлу
+    if result and os.path.exists(result):  # Проверяем, был ли файл создан и существует ли он
+        edge_filename = result.replace('\\', '/').split('/')[-1]
+        return {'filename': edge_filename}, 200  # Отправляем имя файла
+    else:
+        abort(404, description="File not found")
+
+
+def save_message_to_base(user_id, text):
+    user = User.query.filter_by(user_id=user_id).first()
+    if not user:
+        return {'error': 'User not found'}, 404
+
+    message = ChatHistory(user_id=user.user_id, text=text)
+    db.session.add(message)
+    db.session.commit()
+
+    # Преобразуем сообщение в словарь
+    message_dict = message.to_dict()
+
+    return message_dict, 201
+
+
+'''@main.route('/api/chat/new_message', methods=['POST'])
+def api_new_message():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    text = data.get('text')
+    files = data.get('files')
+
+    # Проверяем корректность данных
+    if not user_id or not text:
+        return jsonify({'error': 'Invalid data'}), 400
+
+    # Вызываем общую функцию сохранения и трансляции сообщения
+    message, status_code = save_message_to_base(user_id, text, files)
+
+    # Если ошибка, возвращаем её как ответ
+    if status_code != 201:
+        return jsonify(message), status_code
+
+    # Если всё хорошо, возвращаем успешный ответ
+    return jsonify({'result': 'OK'}), status_code'''
+
+
+def message_emit(status_code, message, namespace='/chat'):
+    # current_app.logger.debug(f'Emit message: {message}')
+    if status_code == 201:
+        emit('message', message, namespace=namespace, to=request.sid)
+    else:
+        emit('error', message, namespace=namespace, to=request.sid)
+
+
+@main.route('/chat/new_message', methods=['POST'])
+def new_message():
+    data = request.form
+    files = request.files
+
+    # Преобразуем ImmutableMultiDict в обычный словарь и выводим его содержимое
+    data_dict = data.to_dict(flat=False)
+    files_dict = {key: files.getlist(key) for key in files}
+
+    # print('data: ', data_dict)
+    # print('files: ', files_dict)
+
+    # Проверяем корректность данных
+    user_id = data.get('user_id')
+    text = data.get('text')
+    if not user_id or not text:
+        return jsonify({'error': 'Invalid data'}), 400
+
+    # Вызываем общую функцию сохранения сообщения
+    message, status_code = save_message_to_base(user_id, text)
+    result = {'messages': [message]}
+
+    secretary_answer = answer_from_secretary(text, files)
+    # current_app.logger.debug(f'Secretary answer: {secretary_answer}')
+    if secretary_answer:
+        message, status_code = save_message_to_base('2', secretary_answer.get('text'))
+        message['params'] = secretary_answer.get('params', None)
+        message['context'] = secretary_answer.get('context', None)
+        result['messages'].append(message)
+        result['status_code'] = status_code
+    else:
+        message, status_code = save_message_to_base('2', 'Уточните запрос')
+        result['messages'].append(message)
+        result['status_code'] = status_code
+    return jsonify(result), status_code
+
+
+@socketio.on('new_message', namespace='/chat')
+def handle_new_message(data):
+    user_id = data.get('user_id')
+    text = data.get('text')
+    files = data.get('files', None)
+    # print('data: ', data)
+    # Проверяем корректность данных
+
+    if not user_id or not text:
+        emit('error', {'error': 'Invalid data'}, to=request.sid)
+        return
+
+    # Вызываем общую функцию сохранения сообщения
+    message, status_code = save_message_to_base(user_id, text)
+    # Вызываем общую функцию трансляции сообщения
+    message_emit(status_code, message)
+
+    secretary_answer = answer_from_secretary(text, files)
+    # current_app.logger.debug(f'Secretary answer: {secretary_answer}')
+    if secretary_answer:
+        message, status_code = save_message_to_base('2', secretary_answer.get('text'))
+        message['params'] = secretary_answer.get('params', None)
+        message_emit(status_code, message)
+    else:
+        message, status_code = save_message_to_base('2', 'Уточните запрос')
+        message_emit(status_code, message)
+
+
+# Маршрут для получения транскриптов при постоянном прослушивании
+@socketio.on('new_transcript', namespace='/chat')
+def handle_new_transcript(data):
+    # current_app.logger.info(f'handle_new_transcript: data: {data}')
+    user_id = data.get('user_id')
+    text = data.get('text')
+    # print(f'handle_new_transcript: {user_id}, {text}')
+    if 'стоп стоп стоп' in text.lower() or 'stop stop stop' in text.lower():
+        emit('stop_listening', to=request.sid)
+
+    if text.lower() == 'секретарь привет':
+        message, status_code = save_message_to_base(user_id='2', text='Здравствуйте')
+        message_emit(status_code, message)
+        return
+
+    current_app.logger.debug(f'{user_id}: {text}')
+
+    # Проверяем корректность данных
+    if not user_id or not text:
+        emit('error', {'error': 'Invalid data'}, to=request.sid)
+        return
+
+    # Передаем сообщение секретарю
+    secretary_answer = answer_from_secretary(text)
+    # print(secretary_answer)
+    if secretary_answer:
+        message, status_code = save_message_to_base(user_id=user_id, text=text)
+        message_emit(status_code, message)
+        message, status_code = save_message_to_base(user_id='2', text=secretary_answer.get('text'))
+        message['params'] = secretary_answer.get('params', None)
+        message['context'] = secretary_answer.get('context', None)
+        # print(message)
+        message_emit(status_code, message)
+
+
+# Маршрут для редактирования записи в чате
+@socketio.on('post_edited_record', namespace='/chat')
+def post_edited_record(data, timezone=''):
+    table_name = data.get('table_name')
+    record_info = data.copy()
+    del record_info['table_name']
+    result = update_record(table_name, record_info)
+    error = result.get('error')
+
+    if error:
+        emit('post_edited_record_response', {'status': 'error', 'message': error})
+    else:
+        emit('post_edited_record_response', {'status': 'OK'})
+
+
+@main.route('/post_new_record', methods=['POST'])
+def post_new_record():
+    data = request.form
+    files = request.files
+    # current_app.logger.debug(f'post_new_record: {data}, {files}')
+    table_name = data.get('table_name')
+    record_info = data.get('record_info')
+    result = save_to_base_modules(table_name, 'create', record_info, files)
+    # current_app.logger.debug(f'post_new_record: {result}')
+    error = result.get('error')
+    new_record_info = result.get('params')
+    # проверить есть ли ключ table name перед удалением
+    if new_record_info:
+        del new_record_info['table_name']
+    if error:
+        return jsonify(error), 404
+    else:
+        return jsonify(new_record_info), 201
+
+
+@main.route('/post_edited_record_api', methods=['POST'])
+def post_edited_record_api():
+    data = request.form
+    files = request.files
+    table_name = data.get('table_name')
+    record_info = data.get('record_info')
+    # print(f'post_new_record: {table_name}, {record_info}')
+    result = save_to_base_modules(table_name, 'update', record_info, files)
+    error = result.get('error')
+    updated_record_info = result.get('params')
+    if updated_record_info:
+        del updated_record_info['table_name']
+    if error:
+        return jsonify(error), 404
+    else:
+        return jsonify(updated_record_info), 201
+
+
+@main.route('/get_tables', methods=['GET'])
+def get_tables_route():
+    tables = get_tables()
+    # print(f'get_tables: {tables}')
+    return jsonify({'tables': tables}), 200
+
+
+def get_table_survey(table_name, conn):
+    columns_names = get_columns_names()
+    cursor = conn.cursor()
+
+    # Получаем список столбцов из таблицы
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    table_info = cursor.fetchall()
+
+    # Проверка на существование таблицы
+    if not table_info:
+        return jsonify({'error': f"Table '{table_name}' does not exist."}), 400
+
+    # Формируем список полей из таблицы
+    columns = [col[1] for col in table_info]  # col[1] это имя столбца в таблице
+
+    # Формируем структуру для JSON-ответа
+    action = {
+        "type": "survey",
+        "table_name": table_name,
+        "text": "Продиктуйте новую запись",
+        "fields": []
+    }
+
+    for col in columns:
+        field_name = columns_names.get(col, col)  # Если в columns_names нет, используем само имя столбца
+        field_entry = {
+            "field_id": col,
+            "field_name": field_name,
+            "check": "true"
+        }
+        action["fields"].append(field_entry)
+
+    return action
+
+
+# маршрут для получения списка дней на которые есть записи в журнале по имени таблицы
+@main.route('/get_days', methods=['GET'])
+def get_days_route():
+    db_path = current_app.config.get('MAIN_DB_PATH', '')
+    table_name = request.args.get('table_name')
+    month = request.args.get('month')
+    year = request.args.get('year')  # Новый параметр year
+    timezone_param = request.args.get('timezone', '0')
+    try:
+        client_timezone_offset = int(timezone_param)
+    except ValueError:
+        client_timezone_offset = 0  # Смещение времени клиента в минутах от UTC
+
+    # Проверка на наличие входных параметров
+    if not table_name or not month or not year:
+        return jsonify({'error': 'Missing table_name, month, or year parameters'}), 400
+
+    # Проверка, что month и year являются числовыми значениями
+    if not month.isdigit() or not (1 <= int(month) <= 12) or not year.isdigit() or len(year) != 4:
+        return jsonify({'error': 'Invalid month or year format'}), 400
+    # current_app.logger.debug(f'get_days: {table_name}, {month}, {year}, {client_timezone_offset}')
+    try:
+        start_date = datetime(int(year), int(month), 1)
+        if int(month) == 12:
+            end_date = datetime(int(year) + 1, 1, 1)  # Январь следующего года
+        else:
+            end_date = datetime(int(year), int(month) + 1, 1)  # Первый день следующего месяца
+
+        # Применяем смещение временной зоны клиента
+        start_date_utc = start_date - timedelta(minutes=client_timezone_offset)
+        end_date_utc = end_date - timedelta(minutes=client_timezone_offset)
+
+        with sqlite3.connect(db_path) as connection:
+            cursor = connection.cursor()
+            # Используем параметризованный запрос для безопасности
+            cursor.execute(f"""
+                            SELECT date FROM {table_name} 
+                            WHERE date >= ? AND date < ?
+                        """, (start_date_utc.strftime('%Y-%m-%d'), end_date_utc.strftime('%Y-%m-%d')))
+
+            # Сохраняем результат в переменную dates
+            dates = cursor.fetchall()
+
+            # current_app.logger.debug(f'get_days: {dates}')
+
+            days = []
+            for date in dates:
+                # Преобразуем строку даты в объект datetime
+                # current_app.logger.debug(f'{date[0]}')
+                date_obj = datetime.strptime(date[0], '%Y-%m-%d %H:%M:%S')
+                # current_app.logger.debug(f'{date_obj}')
+                # Применяем обратное смещение временной зоны клиента (возвращаем в часовой пояс клиента)
+                client_time = date_obj + timedelta(minutes=client_timezone_offset)
+
+                # Добавляем преобразованную дату в список
+                days.append(client_time)
+
+                # Получаем все уникальные даты
+            cursor.execute(f"""
+                                SELECT DATETIME(date) FROM {table_name}
+                            """)
+            unique_dates_raw = cursor.fetchall()
+            # current_app.logger.debug(f'get_days: {unique_dates_raw}')
+            unique_dates_set = set()
+            for date in unique_dates_raw:
+                # current_app.logger.info(f'get_days: {date}')
+                # Преобразуем строку даты в объект datetime
+                datetime_obj = datetime.strptime(date[0], '%Y-%m-%d %H:%M:%S')
+                # Применяем обратное смещение временной зоны клиента
+                client_date = datetime_obj + timedelta(minutes=client_timezone_offset)
+                # Добавляем уникальную дату в список
+                unique_dates_set.add(client_date.date().isoformat())
+
+            # current_app.logger.debug(f'get_days: {unique_dates_set}')
+            unique_dates = sorted(list(unique_dates_set))
+            survey = get_table_survey(table_name, connection)
+            # current_app.logger.debug(f'get_days: survey: {survey}')
+
+    except Exception as e:
+        current_app.logger.error(f'get_days: error: {e}')
+        return jsonify({'error': str(e)}), 404
+
+    # print(f'get_days: {days}')
+    return jsonify({'days': days, 'unique_dates': unique_dates, 'survey': survey}), 200
+
+
+@main.route('/journals', methods=['GET'])
+def get_file():
+    # print('get_file')
+    # Получение параметров из запроса
+    category = request.args.get('category')
+    date_folder = request.args.get('date_folder')
+    filename = request.args.get('filename')
+    # print(f'get_file: {category}, {date_folder}, {filename}')
+
+    BASE_DIRECTORY = os.path.join(os.getcwd(), 'app', 'user_data', 'journals')
+
+    # Построение пути к файлу
+    file_path = os.path.join(BASE_DIRECTORY, category, date_folder, filename)
+    # print(f'get_file: file_path: {file_path}')
+
+    # Проверка существования файла
+    if os.path.exists(file_path):
+        # Отправка файла клиенту
+        return send_from_directory(directory=os.path.join(BASE_DIRECTORY, category, date_folder), path=filename)
+    else:
+        # Возвращение ошибки 404, если файл не найден
+        abort(404, description="File not found")
+
+
+@main.route('/get_table_data', methods=['GET'])
+def get_table_data():
+    columns_names = get_columns_names()
+    table_name = request.args.get('table_name')
+    date = request.args.get('date')
+    timezone_offset = request.args.get('timezone_offset', None)
+
+    try:
+        records, columns = fetch_table_records(table_name, date, timezone_offset)
+        if not records:
+            return jsonify([]), 200
+        result = build_blocks_from_records(records, columns, columns_names)
+        return jsonify(result), 200
+    except Exception as e:
+        current_app.logger.error(f'Ошибка при получении блоков: {e}')
+        return jsonify({'error': str(e)}), 500
+
+
+@main.route('/update_record_from_blocks', methods=['POST'])
+def update_record_from_blocks():
+    from werkzeug.exceptions import BadRequest
+
+    data = request.get_json()
+    table_name = data.get('table_name')
+    blocks = data.get('blocks')
+    db_path = current_app.config.get('MAIN_DB_PATH', '')
+
+    try:
+        with sqlite3.connect(db_path) as connection:
+            cursor = connection.cursor()
+
+            for block in blocks:
+                result = extract_record_data_from_block(block)
+                if result is None:
+                    continue
+
+                record_id, column_name, record_text = result
+
+                try:
+                    cursor.execute(
+                        f"UPDATE {table_name} SET {column_name} = ? WHERE id = ?",
+                        (record_text, record_id)
+                    )
+                    if cursor.rowcount == 0:
+                        current_app.logger.warning(f"Запись не найдена: id={record_id}, column={column_name}")
+                except Exception as inner_err:
+                    current_app.logger.error(
+                        f"Ошибка при обновлении: id={record_id}, column={column_name} — {inner_err}"
+                    )
+
+            connection.commit()
+    except Exception as e:
+        current_app.logger.error(f'Ошибка при обновлении записи: {e}')
+        return jsonify({'error': str(e)}), 500
+
+    return jsonify({'success': True}), 200
+
+
+@main.route('/get_records', methods=['POST'])
+def get_records_route():
+    columns_names = get_columns_names()
+    try:
+        data = request.get_json() or {}
+        current_app.logger.debug(f'get_records_route: {data}')
+        table_name = data.get('table_name')
+        filters = data.get('filters', {})
+
+        if not table_name:
+            return jsonify({'error': 'table_name is required'}), 400
+
+        if not filters or all(not v for v in filters.values()):
+            return (jsonify({'error': 'Фильтры не заданы. Запрос отклонён для предотвращения получения всех записей.'}),
+                    400)
+
+        records, columns = fetch_filtered_records(table_name, filters)
+
+        blocks = build_blocks_from_records(records, columns, columns_names)
+        # current_app.logger.debug(f'get_records_route: {blocks}')
+        return jsonify(blocks), 200
+
+    except ValueError as e:
+        current_app.logger.error(f'Validation error: {e}')
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f'Ошибка при получении отфильтрованных блоков: {e}')
+        return jsonify({'error': str(e)}), 500
+
+
+@main.route('/get_tables_filters/<table_name>', methods=['GET'])
+def api_get_filter_values(table_name):
+    return get_all_filters(table_name)
