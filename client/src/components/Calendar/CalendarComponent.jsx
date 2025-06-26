@@ -36,7 +36,11 @@ function CalendarComponent({
   eventReceive,
   datesSet = null
 }) {
-  const { fetchTasks } = useTasks();
+  const {
+    fetchTasks,
+    addTask,
+    tasks,
+  } = useTasks();
   const { lists } = useLists();
   const { calendarEvents } = useCalendar();
   const draggableEl = useRef(null);
@@ -48,7 +52,6 @@ function CalendarComponent({
   const [selectedDate, setSelectedDate] = useState(null);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const currentTheme = useTheme();
-  const [tasks, setTasks] = useState([]);
 
   const timeOffset = newSettings?.timeOffset || 0;
   const isToggledBGTasksEdit = newSettings?.isToggledBGTasksEdit || false;
@@ -124,13 +127,9 @@ function CalendarComponent({
   }, [calendarEvents, timeOffset, newSettings?.isToggledBGTasksEdit]);
 
   useEffect(() => {
-    const fetchAndSetTasks = async () => {
-      if (selectedListId !== null && !tasks.loading) {
-        const newTasks = await fetchTasks(selectedListId);
-        setTasks(newTasks);
-      }
-    };
-    fetchAndSetTasks();
+    if (selectedListId !== null) {
+      fetchTasks(selectedListId);
+    }
   }, [selectedListId, fetchTasks]);
 
   useEffect(() => {
@@ -142,7 +141,7 @@ function CalendarComponent({
   }, [calendarEvents, calendarRef]);
 
   useEffect(() => {
-    if (draggableEl.current && tasks?.length > 0) {
+    if (draggableEl.current && tasks.data?.length > 0) {
       if (draggableInstance.current) {
         draggableInstance.current.destroy();
       }
@@ -150,7 +149,7 @@ function CalendarComponent({
         itemSelector: ".draggable-task",
         eventData: (eventEl) => {
           const id = eventEl.getAttribute("data-id");
-          const task = tasks.find((task) => String(task?.id) === id);
+          const task = tasks.data.find((task) => String(task?.id) === id);
 
           if (!task) return null;
 
@@ -172,7 +171,7 @@ function CalendarComponent({
             draggableInstance.current = null;
         }
     }
-  }, [tasks]);
+  }, [tasks.data]);
 
   function handleEventReceive(eventInfo) {
     if (eventReceive && typeof eventReceive === "function")
@@ -458,8 +457,6 @@ function CalendarComponent({
                 projects={lists.projects}
                 isNeedContextMenu={false}
                 setSelectedListId={setSelectedListId}
-                updateAll={updateAll}
-                updateEvents={updateEvents}
               />
             </Paper>
             {selectedListId && (
@@ -469,9 +466,9 @@ function CalendarComponent({
                 <Button onClick={() => setSelectedListId(null)}>Back</Button>
                 <List ref={draggableEl}>
                   {/* Список невыполненных задач */}
-                  {tasks && tasks.length > 0 ? (
+                  {tasks.data && tasks.data.length > 0 ? (
                     <>
-                      {tasks
+                      {tasks.data
                         .filter((task) => task.status_id !== 2)
                         .map((task) => (
                           <ListItem
@@ -485,7 +482,7 @@ function CalendarComponent({
                         ))}
 
                       {/* Список выполненных задач */}
-                      {tasks.filter((task) => task.status_id === 2).length >
+                      {tasks.data.filter((task) => task.status_id === 2).length >
                         0 && (
                         <>
                           <ListItem>
@@ -494,7 +491,7 @@ function CalendarComponent({
                               sx={{ fontWeight: "bold", marginTop: 2 }}
                             />
                           </ListItem>
-                          {tasks
+                          {tasks.data
                             .filter((task) => task.status_id === 2)
                             .map((task) => (
                               <ListItem
