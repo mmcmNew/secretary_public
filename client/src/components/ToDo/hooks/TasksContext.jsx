@@ -111,6 +111,7 @@ export const TasksProvider = ({ children, onError, setLoading, fetchLists }) => 
     deleteTask,
     version,
     setVersion,
+    loading: tasks.loading,
   }), [tasks, taskFields, selectedTaskId, fetchTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, version]);
 
   return <TasksContext.Provider value={contextValue}>{children}</TasksContext.Provider>;

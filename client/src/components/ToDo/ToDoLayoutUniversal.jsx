@@ -15,19 +15,21 @@ function ToDoLayoutUniversal() {
     updateTask,
     fetchTasks,
     selectedTaskId,
-    loading: tasksLoading,
+    tasks,
   } = useTasks();
+  const tasksLoading = tasks.loading;
   const {
     selectedListId,
     fetchLists,
-    loading: listsLoading,
+    lists,
   } = useLists();
+  const listsLoading = lists.loading;
   const { setError } = useContext(ErrorContext);
 
   // Состояния для ввода
   const [newTask, setNewTask] = useState('');
   const showEditor = Boolean(selectedTaskId);
-  const [loading, setLoading] = useState(false);
+  const loading = tasksLoading || listsLoading;
 
   useEffect(() => {
     fetchLists();
