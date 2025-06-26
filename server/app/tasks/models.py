@@ -7,7 +7,7 @@ import json
 import random
 import uuid
 
-from app import db
+from app import db, socketio
 
 # Вспомогательные таблицы для связи между задачами и подзадачами
 task_subtasks_relations = db.Table('task_subtasks_relations',
@@ -85,7 +85,10 @@ class DataVersion(db.Model):
         else:
             version_record.version_metadata = {'version': str(uuid.uuid4())}
         db.session.commit()
-        return version_record.version_metadata.get('version')
+        new_version = version_record.version_metadata.get('version')
+        # Notify clients about updated version
+        socketio.emit('data_updated', {'version': new_version}, namespace='/updates')
+        return new_version
 
     @classmethod
     def get_version_info(cls):

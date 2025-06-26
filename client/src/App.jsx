@@ -7,6 +7,7 @@ import { ContainerProvider } from './components/DraggableComponents/ContainerCon
 import { TasksProvider } from './components/ToDo/hooks/TasksContext';
 import { ListsProvider } from './components/ToDo/hooks/ListsContext';
 import { CalendarProvider } from './components/ToDo/hooks/CalendarContext';
+import UpdateWebSocketProvider from './components/DraggableComponents/UpdateWebSocketContext';
 import TestPage from './TestPage.jsx';
 import MainContainerMobile from './components/MobileMain.jsx';
 import { ErrorProvider } from './contexts/ErrorContext';
@@ -33,11 +34,12 @@ function App() {
   return (
     <div className="App">
       <ErrorProvider>
-        <ContainerProvider>
-          <TasksProvider>
-            <ListsProvider>
-              <CalendarProvider>
-                <Router future={{
+        <UpdateWebSocketProvider>
+          <ContainerProvider>
+            <TasksProvider>
+              <ListsProvider>
+                <CalendarProvider>
+                  <Router future={{
                   v7_fetcherPersist: true,
                   v7_normalizeFormMethod: true,
                   v7_partialHydration: true,
@@ -46,11 +48,12 @@ function App() {
                   v7_startTransition: true,
                 }}>
                   <AppRoutes />
-                </Router>
-              </CalendarProvider>
-            </ListsProvider>
-          </TasksProvider>
-        </ContainerProvider>
+                  </Router>
+                </CalendarProvider>
+              </ListsProvider>
+            </TasksProvider>
+          </ContainerProvider>
+        </UpdateWebSocketProvider>
       </ErrorProvider>
     </div>
   );
