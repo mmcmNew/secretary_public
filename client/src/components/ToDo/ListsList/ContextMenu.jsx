@@ -18,7 +18,7 @@ export default function ContextMenu({
 
   const isList = item?.type === 'list';
   const isGroup = item?.type === 'group';
-  const isProject = projects.find(project => project.id === item?.id);
+  const isProject = projects?.find(project => project.id === item?.id);
 
   return (
     <Menu

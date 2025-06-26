@@ -7,6 +7,7 @@ export default function ListsSection({
   items,
   sectionType,
   selectedListId,
+  selectedTaskId,
   openGroups,
   onSelect,
   onToggleGroup,
@@ -56,6 +57,7 @@ export default function ListsSection({
         <ListItem
           key={item.id}
           isSelected={selectedListId === item.id}
+          selectedTaskId={selectedTaskId}
           onSelect={(event) => onSelect(event, item.id)}
           showProgress={false} // Lists don't show progress in the original renderListItem
           isDraggable={sectionType !== 'default'}
@@ -88,6 +90,7 @@ ListsSection.propTypes = {
   items: PropTypes.array,
   sectionType: PropTypes.oneOf(['default', 'projects', 'lists']).isRequired,
   selectedListId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  selectedTaskId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   openGroups: PropTypes.object.isRequired,
   onSelect: PropTypes.func.isRequired,
   onToggleGroup: PropTypes.func.isRequired,

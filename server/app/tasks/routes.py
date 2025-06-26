@@ -180,9 +180,12 @@ def get_fields_config():
         "divider1": {"id": 3, "type": "divider"},
         "is_background": {"id": 4, "type": "toggle", "name": "Фоновая задача"},
         "color": {"id": 5, "type": "color", "name": "Цвет на календаре"},
-        "divider2": {"id": 6, "type": "divider"},
+        "divider1": {"id": 6, "type": "divider"},
+        "reward": {"id": 7, "type": "toggle", "name": "Награда"},
+        "cost": {"id": 8, "type": "number", "name": "Добавить файл"},
+        "divider2": {"id": 9, "type": "divider"},
         "priority_id": {
-            "id": 7,
+            "id": 10,
             "type": "select",
             "name": "Приоритет",
             "options": [
@@ -192,7 +195,7 @@ def get_fields_config():
             ]
         },
         "interval_id": {
-            "id": 8,
+            "id": 11,
             "type": "select",
             "name": "Повтор",
             "options": [
@@ -204,17 +207,17 @@ def get_fields_config():
                 {"value": None, "label": "Без повтора"}
             ]
         },
-        "is_infinite": {"id": 9, "type": "toggle", "name": "Бесконечно повторять на календаре"},
-        "divider3": {"id": 10, "type": "divider"},
+        "is_infinite": {"id": 12, "type": "toggle", "name": "Бесконечно повторять на календаре"},
+        "divider3": {"id": 13, "type": "divider"},
         "type_id": {
-            "id": 11,
+            "id": 14,
             "type": "select",
             "name": "Тип задачи",
             "groupBy": "type",
             "options": []  # будет заполнено данными из БД
         },
-        "attachments": {"id": 12, "type": "string", "name": "Добавить файл"},
-        "note": {"id": 13, "type": "text", "name": "Заметка"}
+        "attachments": {"id": 15, "type": "string", "name": "Добавить файл"},
+        "note": {"id": 16, "type": "text", "name": "Заметка"}
     }
 
     # Получение типов задач из БД

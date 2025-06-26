@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, useMediaQuery } from "@mui/system";
-import { useToDo } from "../ToDo/hooks/useToDoContext";
 import FocusModeComponent from "./FocuseMode";
 import { Button, IconButton, ToggleButton } from "@mui/material";
 import SmartphoneIcon from '@mui/icons-material/Smartphone';
@@ -19,10 +18,8 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default function AntiScheduleLayout({ containerId }) {
-  const { updateTask, getAntiSchedule, fetchTasks } = useToDo();
   const { listsList, defaultLists, projects, updateAll, updateEvents } =
     useToDo();
-  const { taskFields, changeTaskStatus, deleteTask } = useToDo();
   const { sendUpdatedTaskToServer, deleteAntiTask, addAntiTask } = useToDo();
   const [mode, setMode] = useState("focus");
   // const { setUpdates } = useContainer();

@@ -10,21 +10,30 @@ import PropTypes from 'prop-types';
 import ListsSection from './ListsList/ListsSection';
 import ContextMenu from './ListsList/ContextMenu';
 import { DndContext } from '@dnd-kit/core';
-
+import useTasks from './hooks/useTasks';
+import useLists from './hooks/useLists';
 
 export default function ListsList({
-  selectedListId,
-  listsList,
-  defaultLists,
-  projects,
-  updateList,
-  isNeedContextMenu=false,
-  setSelectedListId=null,
-  deleteFromChildes=null,
-  setSelectedTaskId=null,
-  linkListGroup=null,
-  updateAll=null,
-  updateEvents=null,
+  listsList = [],
+  defaultLists = [],
+  projects = [],
+  isNeedContextMenu = false,
+  setSelectedTaskId = null,
+  selectedTaskId = null,
+  updateAll = null,
+  updateEvents = null,
+  selectedListId = null,
+  setSelectedListId = null,
+  fetchLists = null,
+  addList = null,
+  updateList = null,
+  deleteList = null,
+  linkListGroup = null,
+  deleteFromChildes = null,
+  linkTaskList = null,
+  changeChildesOrder = null,
+  selectedList = null,
+  setSelectedList = null,
 }) {
   const [openGroups, setOpenGroups] = useState({});
   const [anchorEl, setAnchorEl] = useState(null);
@@ -36,6 +45,8 @@ export default function ListsList({
   const [projectMenuAnchorEl, setProjectMenuAnchorEl] = useState(null);
   const [actionType, setActionType] = useState(null); // Хранит текущее действие: "move" или "link"
   const inputRef = useRef(null);
+  const { fetchTasks } = useTasks();
+  const { fetchLists: fetchListsHook } = useLists();
 
   function handleToggleGroup(id) {
     setOpenGroups((prevOpenGroups) => ({
@@ -45,10 +56,9 @@ export default function ListsList({
   }
 
   async function handleUpdateAll() {
-    if (typeof updateAll === 'function')
-      updateAll();
-    if (typeof updateEvents === 'function')
-      updateEvents();
+    if (typeof fetchLists === 'function') await fetchLists();
+    else if (typeof fetchListsHook === 'function') await fetchListsHook();
+    if (typeof fetchTasks === 'function' && selectedListId) await fetchTasks(selectedListId);
   }
 
   function handleListItemClick(event, index) {
@@ -107,8 +117,8 @@ export default function ListsList({
       console.log(elementId, direction);
 
       let generalList = String(elementId).startsWith('project_')
-        ? projects
-        : listsList.filter(item => item.inGeneralList == 1 && !item.deleted);
+        ? listsList
+        : defaultLists.filter(item => item.inGeneralList == 1 && !item.deleted);
       console.log(generalList);
 
       // Находим индекс элемента по его id
@@ -146,7 +156,7 @@ export default function ListsList({
     // Если targetGroupId передан, работаем с группой
     console.log(`handleChangeChildesOrder: ${groupId}`, elementId, direction);
 
-    let targetGroup = projects.find((group) => group.id === groupId) || listsList.find((group) => group.id === groupId);
+    let targetGroup = listsList.find((group) => group.id === groupId) || listsList.find((group) => group.id === groupId);
 
     if (!targetGroup) return; // Если targetGroup не найден
 
@@ -239,9 +249,7 @@ export default function ListsList({
 
   return (
     <>
-      {(typeof updateAll === 'function' || typeof updateEvents === 'function') &&
-        <Button onClick={handleUpdateAll}>Update</Button>
-      }
+      <Button variant="outlined" onClick={handleUpdateAll} sx={{ mb: 1 }}>Обновить</Button>
       <DndContext onDragEnd={handleDragEnd}>
         <Box sx={{
           height: 'calc(100% - 50px)', // Вычитаем высоту кнопки
@@ -251,6 +259,7 @@ export default function ListsList({
             items={defaultLists}
             sectionType="default"
             selectedListId={selectedListId}
+            selectedTaskId={selectedTaskId}
             openGroups={openGroups}
             onSelect={handleListItemClick}
             onToggleGroup={handleToggleGroup}
@@ -263,13 +272,13 @@ export default function ListsList({
             handleTitleChange={handleTitleChange}
             editingTitle={editingTitle}
             listsList={listsList} // Pass listsList and projects for GroupItem children lookup
-            projects={projects}
           />
           <Divider />
           <ListsSection
             items={projects}
             sectionType="projects"
             selectedListId={selectedListId}
+            selectedTaskId={selectedTaskId}
             openGroups={openGroups}
             onSelect={handleListItemClick}
             onToggleGroup={handleToggleGroup}
@@ -282,13 +291,13 @@ export default function ListsList({
             handleTitleChange={handleTitleChange}
             editingTitle={editingTitle}
             listsList={listsList} // Pass listsList and projects for GroupItem children lookup
-            projects={projects}
           />
           <Divider />
           <ListsSection
             items={listsList}
             sectionType="lists"
             selectedListId={selectedListId}
+            selectedTaskId={selectedTaskId}
             openGroups={openGroups}
             onSelect={handleListItemClick}
             onToggleGroup={handleToggleGroup}
@@ -301,13 +310,12 @@ export default function ListsList({
             handleTitleChange={handleTitleChange}
             editingTitle={editingTitle}
             listsList={listsList} // Pass listsList and projects for GroupItem children lookup
-            projects={projects}
           />
         </Box>
       </DndContext>
       <ContextMenu
         anchorEl={anchorEl}
-        item={listsList.find(item => item.id === targetItemId) || projects.find(item => item.id === targetItemId)}
+        item={listsList?.find(item => item.id === targetItemId) || projects?.find(item => item.id === targetItemId)}
         groupId={targetGroupId}
         onClose={handleCloseMenu}
         onEditClick={handleEditClick}
@@ -317,7 +325,6 @@ export default function ListsList({
         onChangeChildesOrder={handleChangeChildesOrder}
         onAddToGeneralList={handleAddToGeneralList}
         listsList={listsList} // Pass listsList and projects for ContextMenu to filter available groups/projects
-        projects={projects}
       />
 
       {/* Submenu for groups */}

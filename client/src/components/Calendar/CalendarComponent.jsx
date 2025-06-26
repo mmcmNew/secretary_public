@@ -23,6 +23,9 @@ import ListsList from "../ToDo/ListsList";
 import NewTaskDialog from "./NewTaskDialog";
 import SettingsDialog from "./SettingsDialog";
 import PropTypes from "prop-types";
+import useTasks from "../ToDo/hooks/useTasks";
+import useLists from "../ToDo/hooks/useLists";
+import useCalendar from "../ToDo/hooks/useCalendar";
 
 export default function CalendarComponent({
   calendarRef,
@@ -31,16 +34,11 @@ export default function CalendarComponent({
   handleEventClick,
   handleEventChange,
   eventReceive,
-  addTask,
-  calendarEvents,
-  fetchTasks,
-  listsList,
-  defaultLists,
-  projects,
-  updateAll,
-  updateEvents,
   datesSet = null
 }) {
+  const { fetchTasks } = useTasks();
+  const { lists } = useLists();
+  const { calendarEvents } = useCalendar();
   const draggableEl = useRef(null);
   const draggableInstance = useRef(null);
   const [selectedListId, setSelectedListId] = useState(null);
@@ -532,9 +530,9 @@ export default function CalendarComponent({
               <ListsList
                 key={selectedListId}
                 selectedListId={selectedListId}
-                listsList={listsList}
-                defaultLists={defaultLists}
-                projects={projects}
+                listsList={lists.lists}
+                defaultLists={lists.default_lists}
+                projects={lists.projects}
                 isNeedContextMenu={false}
                 setSelectedListId={setSelectedListId}
                 updateAll={updateAll}
@@ -613,13 +611,5 @@ CalendarComponent.propTypes = {
   handleEventClick: PropTypes.func,
   handleEventChange: PropTypes.func,
   eventReceive: PropTypes.func,
-  addTask: PropTypes.func,
-  calendarEvents: PropTypes.array,
-  fetchTasks: PropTypes.func,
-  listsList: PropTypes.array,
-  defaultLists: PropTypes.array,
-  projects: PropTypes.array,
-  updateAll: PropTypes.func,
-  updateEvents: PropTypes.func,
   datesSet: PropTypes.func,
 };

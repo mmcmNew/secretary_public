@@ -28,7 +28,8 @@ export default function ListItem({
   handleKeyDown,
   handleBlur,
   handleTitleChange,
-  editingTitle
+  editingTitle,
+  selectedTaskId
 }) {
 
   const { setNodeRef, isOver } = useDroppable({
@@ -111,5 +112,6 @@ ListItem.propTypes = {
   handleKeyDown: PropTypes.func,
   handleBlur: PropTypes.func,
   handleTitleChange: PropTypes.func,
-  editingTitle: PropTypes.string
+  editingTitle: PropTypes.string,
+  selectedTaskId: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
 };

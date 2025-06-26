@@ -26,14 +26,15 @@ import ColorPicker from "../ColorPicker";
 import NewRecordDialog from "../JournalEditor/NewRecordDialog";
 import PropTypes from "prop-types";
 
-const TaskDetails = memo(function TaskDetails({
-    tasks,
-    selectedTaskId,
-    taskFields,          // здесь передаётся TaskField.data
-    addSubTask = null,
+function TaskDetails({
+    taskFields,
+    tasks = [],
+    selectedTaskId = null,
     updateTask = null,
     changeTaskStatus = null,
+    addSubTask = null,
     deleteTask = null,
+    selectedListId = null,
 }) {
     const [fields, setFields] = useState({});
     const [subTasks, setSubTasks] = useState({});
@@ -49,8 +50,16 @@ const TaskDetails = memo(function TaskDetails({
         const sorted = Object.entries(taskFields)
             .sort(([, a], [, b]) => (a.id || 0) - (b.id || 0));
         const initial = {};
-        sorted.forEach(([key]) => {
-            initial[key] = task[key] || null;
+        sorted.forEach(([key, field]) => {
+            if (field.type === 'toggle') {
+                initial[key] = typeof task[key] === 'boolean' ? task[key] : !!task[key];
+            } else if (field.type === 'color') {
+                initial[key] = typeof task[key] === 'string' ? task[key] : '';
+            } else if (field.type === 'multiselect') {
+                initial[key] = Array.isArray(task[key]) ? task[key] : [];
+            } else {
+                initial[key] = task[key] ?? '';
+            }
         });
         initial.title = task.title;
         setFields(initial);
@@ -70,27 +79,54 @@ const TaskDetails = memo(function TaskDetails({
     const handleUpdate = useCallback((field, value) => {
         setFields(prev => ({ ...prev, [field]: value }));
         if (task[field] !== value) {
-            updateTask({ taskId: task.id, [field]: value });
+            let listId = null;
+            if (Array.isArray(task.lists) && task.lists.length > 0) {
+                listId = task.lists[0].id;
+            } else if (selectedListId) {
+                listId = selectedListId;
+            }
+            updateTask({ taskId: task.id, [field]: value, listId });
         }
-    }, [task, updateTask]);
+    }, [task, updateTask, selectedListId]);
 
     const handleToggle = useCallback((taskId, checked) => {
         const status_id = checked ? 2 : 1;
-        const payload = { taskId, status_id };
+        let listId = null;
+        if (taskId === task.id) {
+            if (Array.isArray(task.lists) && task.lists.length > 0) {
+                listId = task.lists[0].id;
+            } else if (selectedListId) {
+                listId = selectedListId;
+            }
+        } else {
+            const sub = taskMap.get(taskId);
+            if (Array.isArray(sub?.lists) && sub.lists.length > 0) {
+                listId = sub.lists[0].id;
+            } else if (selectedListId) {
+                listId = selectedListId;
+            }
+        }
+        const payload = { taskId, status_id, listId };
         if (status_id === 2) {
             payload.end_date = dayjs().toISOString();
             const audio = new Audio("/sounds/isComplited.wav");
             audio.play();
         }
         changeTaskStatus(payload);
-    }, [changeTaskStatus]);
+    }, [changeTaskStatus, task, taskMap, selectedListId]);
 
     const handleSubBlur = useCallback((subId) => {
         const title = subTasks[subId]?.trim();
         const sub = taskMap.get(subId);
         if (!sub || sub.title === title) return;
-        updateTask({ taskId: subId, title });
-    }, [subTasks, taskMap, updateTask]);
+        let listId = null;
+        if (Array.isArray(sub?.lists) && sub.lists.length > 0) {
+            listId = sub.lists[0].id;
+        } else if (selectedListId) {
+            listId = selectedListId;
+        }
+        updateTask({ taskId: subId, title, listId });
+    }, [subTasks, taskMap, updateTask, selectedListId]);
 
     const handleKeyDown = useCallback((e, field, subId = null) => {
         if (e.key === 'Enter') {
@@ -99,6 +135,40 @@ const TaskDetails = memo(function TaskDetails({
             else handleUpdate(field, e.target.value);
         }
     }, [handleSubBlur, handleUpdate]);
+
+    const handleAddSubTask = useCallback(() => {
+        if (newSubTask.trim()) {
+            let listId = null;
+            if (Array.isArray(task.lists) && task.lists.length > 0) {
+                listId = task.lists[0].id;
+            } else if (selectedListId) {
+                listId = selectedListId;
+            }
+            addSubTask({ title: newSubTask, parentTaskId: task.id, listId });
+            setNewSubTask('');
+        }
+    }, [newSubTask, addSubTask, task, selectedListId]);
+
+    const handleDeleteSubTask = useCallback((subId) => {
+        let listId = null;
+        const sub = taskMap.get(subId);
+        if (Array.isArray(sub?.lists) && sub.lists.length > 0) {
+            listId = sub.lists[0].id;
+        } else if (selectedListId) {
+            listId = selectedListId;
+        }
+        deleteTask({ taskId: subId, listId });
+    }, [deleteTask, taskMap, selectedListId]);
+
+    const handleDeleteTask = useCallback(() => {
+        let listId = null;
+        if (Array.isArray(task.lists) && task.lists.length > 0) {
+            listId = task.lists[0].id;
+        } else if (selectedListId) {
+            listId = selectedListId;
+        }
+        deleteTask({ taskId: task.id, listId });
+    }, [deleteTask, task, selectedListId]);
 
     if (!task) return null;
 
@@ -128,7 +198,7 @@ const TaskDetails = memo(function TaskDetails({
                         if (!sub) return null;
                         return (
                             <Grid container alignItems="center" spacing={0.5} key={id} sx={{ marginY: 0.5 }}>
-                                <Grid item xs>
+                                <Grid item xs width="100%">
                                     <Box component="form" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                                         <Checkbox
                                             checked={sub.status_id === 2}
@@ -136,7 +206,7 @@ const TaskDetails = memo(function TaskDetails({
                                             onChange={(e) => handleToggle(sub.id, e.target.checked)}
                                         />
                                         <InputBase
-                                            sx={{ ml: 1, flex: 1, textDecoration: sub.status_id === 2 ? 'line-through' : 'none' }}
+                                            sx={{ ml: 1, flex: 1, textDecoration: sub.status_id === 2 ? 'line-through' : 'none', width: '100%' }}
                                             placeholder="Подзадача"
                                             value={subTasks[sub.id] || ''}
                                             onChange={(e) => setSubTasks(s => ({ ...s, [sub.id]: e.target.value }))}
@@ -145,7 +215,7 @@ const TaskDetails = memo(function TaskDetails({
                                             inputProps={{ 'aria-label': 'subtask' }}
                                         />
                                         <Divider sx={{ height: 15, m: 0.5 }} orientation="vertical" />
-                                        <IconButton sx={{ m: 0, p: 0 }} onClick={() => deleteTask(sub.id)}>
+                                        <IconButton sx={{ m: 0, p: 0 }} onClick={() => handleDeleteSubTask(sub.id)}>
                                             <CloseIcon />
                                         </IconButton>
                                     </Box>
@@ -157,7 +227,7 @@ const TaskDetails = memo(function TaskDetails({
                 </Box>
                 <Grid item xs>
                     <Box component="form" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                        <IconButton sx={{ m: 0, p: 0 }} onClick={() => { if (newSubTask.trim()) { addSubTask(newSubTask, task.id); setNewSubTask(''); } }}>
+                        <IconButton sx={{ m: 0, p: 0 }} onClick={handleAddSubTask}>
                             <AddIcon />
                         </IconButton>
                         <InputBase
@@ -165,7 +235,7 @@ const TaskDetails = memo(function TaskDetails({
                             placeholder="Добавить подзадачу"
                             value={newSubTask}
                             onChange={(e) => setNewSubTask(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter' && newSubTask.trim()) { e.preventDefault(); addSubTask(newSubTask, task.id); setNewSubTask(''); } }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSubTask(); } }}
                             inputProps={{ 'aria-label': 'add subtask' }}
                         />
                     </Box>
@@ -235,21 +305,21 @@ const TaskDetails = memo(function TaskDetails({
                                             size="small"
                                             selected={!!fields[key]}
                                             onChange={() => handleUpdate(key, !fields[key])}
-                                            sx={{ border: '1px solid', borderColor: fields[key] ? 'darkgrey' : 'grey.400', justifyContent: 'flex-start' }}
+                                            sx={{ border: '1px solid', borderColor: fields[key] ? 'darkgrey' : 'grey.400', justifyContent: 'flex-start', p: 0 }}
                                         >
-                                            {fields[key] ? <Checkbox checked /> : <Checkbox />}
+                                            <Checkbox checked={!!fields[key]} />
                                             <Typography sx={{ ml: 1, textTransform: 'none' }}>{field.name}</Typography>
                                         </ToggleButton>
                                     </FormControl>
                                 ) : field.type === 'color' ? (
-                                    <ColorPicker fieldKey={key} fieldName={field.name} selectedColorProp={fields[key]} onColorChange={(v) => handleUpdate(key, v)} />
+                                    <ColorPicker fieldKey={key} fieldName={field.name} selectedColorProp={fields[key] || ''} onColorChange={(v) => handleUpdate(key, v)} />
                                 ) : field.type === 'multiselect' ? (
                                     <Autocomplete
                                         multiple
                                         options={field.options}
                                         getOptionLabel={opt => opt.title}
                                         isOptionEqualToValue={(opt, val) => opt.id === val.id}
-                                        value={fields[key] || []}
+                                        value={Array.isArray(fields[key]) ? fields[key] : []}
                                         onChange={(e, nv) => handleUpdate(key, nv)}
                                         renderInput={(params) => <TextField {...params} label={field.name} />}
                                         renderTags={(val, getTagProps) => val.map((opt, idx) => <Chip key={opt.id} label={opt.title} {...getTagProps({ idx })} />)}
@@ -270,18 +340,24 @@ const TaskDetails = memo(function TaskDetails({
                     })}
             </Paper>
             <NewRecordDialog open={newRecordDialogOpen} handleClose={() => setNewRecordDialogOpen(false)} taskId={selectedTaskId} />
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 1 }}>
+                <Button variant="outlined" color="error" onClick={handleDeleteTask}>
+                    Удалить задачу
+                </Button>
+            </Box>
         </Box>
     );
-});
+}
 
 TaskDetails.propTypes = {
+    taskFields: PropTypes.object,  // сюда передаётся TaskField.data
     tasks: PropTypes.array,
     selectedTaskId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    taskFields: PropTypes.object,  // сюда передаётся TaskField.data
-    addSubTask: PropTypes.func,
     updateTask: PropTypes.func,
     changeTaskStatus: PropTypes.func,
+    addSubTask: PropTypes.func,
     deleteTask: PropTypes.func,
+    selectedListId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 };
 
 export default TaskDetails;

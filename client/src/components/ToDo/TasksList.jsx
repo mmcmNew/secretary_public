@@ -22,18 +22,18 @@ import { Draggable } from "@fullcalendar/interaction";
 
 export default function TasksList({
     containerId,
-    tasks,
-    selectedTaskId,
     listsList,
     selectedList,
     isNeedContextMenu = false,
     setSelectedTaskId = null,
-    updateList = null,
     linkTaskList = null,
     additionalButtonClick = null,
-    changeTaskStatus = null,
     deleteFromChildes = null,
-    additionalButton = null
+    additionalButton = null,
+    tasks = [],
+    selectedTaskId = null,
+    updateTask = null,
+    changeTaskStatus = null,
 }) {
     const [open, setOpen] = useState({});
     const [completedOpen, setCompletedOpen] = useState(true);
@@ -92,7 +92,7 @@ export default function TasksList({
         if (status_id == 2) {
             updatedFields.end_date = dayjs().toISOString();
         }
-        if (typeof changeTaskStatus === "function") changeTaskStatus(task_id, updatedFields);
+        if (typeof changeTaskStatus === "function") changeTaskStatus({ taskId: task_id, ...updatedFields, listId: selectedList.id });
     }
 
     // const isDefaultList = (listId) => defaultLists.some(list => list.id === listId);
@@ -199,6 +199,25 @@ export default function TasksList({
         event.dataTransfer.setData("task", JSON.stringify(task));
     }
 
+    function handleAddToMyDay() {
+        // Найти задачу по targetItemId
+        const task = tasks.find((t) => t.id === targetItemId);
+        if (!task) return;
+        // Установить дату на сегодня с 12:00 до 13:00
+        const today = dayjs().hour(12).minute(0).second(0).millisecond(0);
+        const end = today.clone().add(1, 'hour');
+        // Обновить задачу через updateTask, если доступно
+        if (typeof updateTask === 'function') {
+            updateTask({
+                taskId: task.id,
+                start: today.toISOString(),
+                end: end.toISOString(),
+                deadline: end.toISOString(),
+            });
+        }
+        handleCloseMenu();
+    }
+
     function renderTask(task) {
         const labelId = `checkbox-list-label-${task.id}`;
         const hasChildren = task.childes_order && task.childes_order.length > 0;
@@ -217,14 +236,6 @@ export default function TasksList({
                             }}
                             onDragStart={(event) => handleDragStart(event, task)}
                             onContextMenu={isNeedContextMenu ? (event) => handleContextMenu(event, task) : undefined}
-                            // style={{
-                            //   backgroundColor:
-                            //     task.priority_id === 2
-                            //       ? '#FFFFE0' // светло-желтый цвет для priority_id = 1
-                            //       : task.priority_id === 3
-                            //       ? '#FFC0CB' // светло-красный цвет для priority_id = 3
-                            //       : 'inherit' // не меняем цвет, если priority_id = 0
-                            // }}
                         >
                             <ListItemIcon onClick={(e) => e.stopPropagation()}>
                                 <Checkbox
@@ -311,26 +322,12 @@ export default function TasksList({
             </List>
             {isNeedContextMenu && (
                 <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleCloseMenu}>
+                    <MenuItem key="addToMyDay" onClick={handleAddToMyDay}>
+                        Добавить в Мой день
+                    </MenuItem>
                     {listsList?.filter((item) => item.type == "list") && [
-                        <MenuItem key="moveToList" onClick={(event) => handleOpenListsMenu(event, "move")}>
-                            Переместить в список
-                        </MenuItem>,
-                        <MenuItem key="linkToList" onClick={(event) => handleOpenListsMenu(event, "link")}>
-                            Связать со списком
-                        </MenuItem>,
-                        // <Divider key="divider1" />,
-                        // <MenuItem
-                        //   key="linkToTask"
-                        //   onClick={(event) => handleOpenTasksMenu(event, 'link')}
-                        // >
-                        //   Связать с задачей
-                        // </MenuItem>,
-                        // <MenuItem
-                        //   key="moveToTask"
-                        //   onClick={(event) => handleOpenTasksMenu(event, 'move')}
-                        // >
-                        //   Сделать подзадачей
-                        // </MenuItem>,
+                        <MenuItem key="moveToList" onClick={(event) => handleOpenListsMenu(event, "move")}>Переместить в список</MenuItem>,
+                        <MenuItem key="linkToList" onClick={(event) => handleOpenListsMenu(event, "link")}>Связать со списком</MenuItem>,
                     ]}
                     {!selectedList?.childes_order?.includes(targetItemId) && [
                         <MenuItem key="upToTask" onClick={() => handleUpToTask(selectedList.id)}>
@@ -396,6 +393,7 @@ TasksList.propTypes = {
     selectedList: PropTypes.object,
     setSelectedTaskId: PropTypes.func,
     updateList: PropTypes.func,
+    updateTask: PropTypes.func,
     linkTaskList: PropTypes.func,
     additionalButtonClick: PropTypes.func,
     changeTaskStatus: PropTypes.func,

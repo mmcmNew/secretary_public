@@ -9,7 +9,9 @@ import listPlugin from "@fullcalendar/list";
 import { Button, Grid, List, ListItem, ListItemText, Paper, Box, useTheme, ToggleButton } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import EditOffIcon from "@mui/icons-material/EditOff";
-import { useToDo } from "../ToDo/hooks/useToDoContext";
+import useTasks from "../ToDo/hooks/useTasks";
+import useLists from "../ToDo/hooks/useLists";
+import useCalendar from "../ToDo/hooks/useCalendar";
 import ListsList from "../ToDo/ListsList";
 import useContainer from "../DraggableComponents/useContainer";
 import TaskDialog from "./TaskDialog";
@@ -17,11 +19,9 @@ import NewTaskDialog from "./NewTaskDialog";
 import SettingsDialog from "./SettingsDialog";
 
 export default function Calendar() {
-    const { updateTask, addTask, calendarEvents, fetchTasks } = useToDo();
-    const { listsList, updateList, deleteFromChildes, defaultLists, projects, updateAll, updateEvents, linkListGroup } =
-        useToDo();
-    const { taskFields, addSubTask, changeTaskStatus, deleteTask } = useToDo();
-
+    const { updateTask, addTask, fetchTasks, taskFields, addSubTask, changeTaskStatus, deleteTask } = useTasks();
+    const { lists, updateList, deleteFromChildes, linkListGroup } = useLists();
+    const { calendarEvents } = useCalendar();
     const { setUpdates } = useContainer();
     const calendarRef = useRef(null);
     const draggableEl = useRef(null);
@@ -37,9 +37,8 @@ export default function Calendar() {
     const [slotDuration, setSlotDuration] = useState(30);
     const [timeRange, setTimeRange] = useState([8, 24]);
     const timeOffset = useRef(0);
-    const currentTheme = useTheme(); // Доступ к текущей теме MUI
-    const [currentView, setCurrentView] = useState("dayGridMonth"); // Состояние для текущего представления
-    // const [updatedCalendarEvents, setUpdatedCalendarEvents] = useState(null);
+    const currentTheme = useTheme();
+    const [currentView, setCurrentView] = useState("dayGridMonth");
     const [tasks, setTasks] = useState([]);
     const [selectedTaskId, setSelectedTaskId] = useState(null);
 
@@ -568,17 +567,15 @@ export default function Calendar() {
                             <ListsList
                                 key={selectedListId}
                                 selectedListId={selectedListId}
-                                listsList={listsList}
-                                defaultLists={defaultLists}
-                                projects={projects}
+                                lists={lists}
+                                defaultLists={lists.default_lists}
+                                projects={lists.projects}
                                 updateList={updateList}
                                 isNeedContextMenu={true}
                                 setSelectedListId={setSelectedListId}
                                 deleteFromChildes={deleteFromChildes}
                                 setSelectedTaskId={setSelectedTaskId}
                                 linkListGroup={linkListGroup}
-                                updateAll={updateAll}
-                                updateEvents={updateEvents}
                             />
                         </Paper>
                         {selectedListId && (
