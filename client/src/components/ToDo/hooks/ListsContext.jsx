@@ -92,6 +92,7 @@ export const ListsProvider = ({ children, onError, setLoading }) => {
     version,
     setVersion,
     fetchLists,
+    loading: lists.loading,
   }), [lists, selectedListId, selectedList, fetchLists, addList, updateList, deleteList, linkListGroup, deleteFromChildes, linkTaskList, changeChildesOrder, version]);
 
   return <ListsContext.Provider value={contextValue}>{children}</ListsContext.Provider>;
