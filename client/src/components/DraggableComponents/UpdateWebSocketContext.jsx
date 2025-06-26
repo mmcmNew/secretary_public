@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import PropTypes from 'prop-types';
 import io from 'socket.io-client';
-import useLists from '../ToDo/hooks/useLists';
-import useTasks from '../ToDo/hooks/useTasks';
+// import useLists from '../ToDo/hooks/useLists';
+// import useTasks from '../ToDo/hooks/useTasks';
 
 export default function UpdateWebSocketProvider({ children }) {
-  const { fetchLists, setVersion: setListsVersion } = useLists();
-  const { selectedTaskId, fetchTasks, setVersion: setTasksVersion } = useTasks();
+  // const { fetchLists, setVersion: setListsVersion } = useLists();
+  // const { selectedTaskId, fetchTasks, setVersion: setTasksVersion } = useTasks();
 
   useEffect(() => {
     const socket = io('/updates', { transports: ['websocket'] });
@@ -17,10 +17,6 @@ export default function UpdateWebSocketProvider({ children }) {
 
     socket.on('data_updated', ({ version }) => {
       console.log('data_updated', version);
-      if (typeof fetchLists === 'function') fetchLists();
-      if (typeof fetchTasks === 'function' && selectedTaskId) fetchTasks(selectedTaskId);
-      if (typeof setListsVersion === 'function') setListsVersion(version);
-      if (typeof setTasksVersion === 'function') setTasksVersion(version);
     });
 
     socket.on('disconnect', () => {
@@ -28,7 +24,7 @@ export default function UpdateWebSocketProvider({ children }) {
     });
 
     return () => socket.disconnect();
-  }, [fetchLists, fetchTasks, selectedTaskId, setListsVersion, setTasksVersion]);
+  }, []);
 
   return children;
 }
