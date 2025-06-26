@@ -8,8 +8,6 @@ import useTasks from './hooks/useTasks';
 export default function ToDoListsPanel({ mobile = false, setSelectedListId }) {
   const {
     lists,
-    defaultLists,
-    projects,
     setSelectedListId: setListId,
     deleteFromChildes,
     linkListGroup,
