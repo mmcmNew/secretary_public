@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -27,7 +27,7 @@ import useTasks from "../ToDo/hooks/useTasks";
 import useLists from "../ToDo/hooks/useLists";
 import useCalendar from "../ToDo/hooks/useCalendar";
 
-export default function CalendarComponent({
+function CalendarComponent({
   calendarRef,
   newSettings,
   setNewSettings,
@@ -36,7 +36,11 @@ export default function CalendarComponent({
   eventReceive,
   datesSet = null
 }) {
-  const { fetchTasks } = useTasks();
+  const {
+    fetchTasks,
+    addTask,
+    tasks,
+  } = useTasks();
   const { lists } = useLists();
   const { calendarEvents } = useCalendar();
   const draggableEl = useRef(null);
@@ -48,7 +52,6 @@ export default function CalendarComponent({
   const [selectedDate, setSelectedDate] = useState(null);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const currentTheme = useTheme();
-  const [tasks, setTasks] = useState([]);
 
   const timeOffset = newSettings?.timeOffset || 0;
   const isToggledBGTasksEdit = newSettings?.isToggledBGTasksEdit || false;
@@ -58,8 +61,6 @@ export default function CalendarComponent({
 
   const processedEvents = useMemo(() => {
     const offsetHours = Number(timeOffset) || 0;
-    console.log("[Component] Initial calendarEvents:", calendarEvents);
-    console.log("[Component] Processing events with offset:", offsetHours);
 
     const applyOffset = (dateInput) => {
       if (!dateInput) return null;
@@ -73,18 +74,14 @@ export default function CalendarComponent({
     };
 
     let eventsToProcess = Array.isArray(calendarEvents?.data) ? calendarEvents.data : [];
-    console.log("[Component] Events to process:", eventsToProcess);
 
     let calculatedEvents = eventsToProcess.map((event) => {
       if (!event) {
-        console.log("[Component] Skipping null event");
         return null;
       }
-      console.log("[Component] Processing event:", event);
       const updatedEvent = { ...event };
 
       const processedStartDate = applyOffset(event.start);
-      console.log("[Component] Processed start date:", processedStartDate);
       updatedEvent.start = processedStartDate ? processedStartDate.toISOString() : null;
 
       let processedEndDate = null;
@@ -95,14 +92,14 @@ export default function CalendarComponent({
            defaultEndDate.setHours(defaultEndDate.getHours() + 1);
            processedEndDate = defaultEndDate;
       }
-      console.log("[Component] Processed end date:", processedEndDate);
+      
       updatedEvent.end = processedEndDate ? processedEndDate.toISOString() : null;
 
       if (event.rrule && updatedEvent.start) {
         if (typeof updatedEvent.rrule === 'object' && updatedEvent.rrule !== null) {
              updatedEvent.rrule = { ...updatedEvent.rrule, dtstart: updatedEvent.start };
         } else {
-            console.warn(`[Component] Event ${event.id} - rrule is not an object during processing:`, event.rrule);
+            console.error(`[Component] Event ${event.id} - rrule is not an object during processing:`, event.rrule);
         }
       }
 
@@ -113,33 +110,26 @@ export default function CalendarComponent({
       updatedEvent.borderColor = color;
 
       updatedEvent.display = event.is_background ? "background" : "block";
-      console.log("[Component] Final processed event:", updatedEvent);
 
       return updatedEvent;
 
     }).filter(event => event !== null);
 
     if (newSettings && newSettings.isToggledBGTasksEdit) {
-        console.log("[Component] Filtering for background tasks editing.");
         calculatedEvents = calculatedEvents?.filter((event) => event?.display == "background");
         calculatedEvents?.forEach((event) => {
             if(event) event.display = "block";
         });
     }
 
-    console.log("[Component] Final processed events:", calculatedEvents);
     return calculatedEvents;
 
   }, [calendarEvents, timeOffset, newSettings?.isToggledBGTasksEdit]);
 
   useEffect(() => {
-    const fetchAndSetTasks = async () => {
-      if (selectedListId !== null && !tasks.loading) {
-        const newTasks = await fetchTasks(selectedListId);
-        setTasks(newTasks);
-      }
-    };
-    fetchAndSetTasks();
+    if (selectedListId !== null) {
+      fetchTasks(selectedListId);
+    }
   }, [selectedListId, fetchTasks]);
 
   useEffect(() => {
@@ -151,7 +141,7 @@ export default function CalendarComponent({
   }, [calendarEvents, calendarRef]);
 
   useEffect(() => {
-    if (draggableEl.current && tasks?.length > 0) {
+    if (draggableEl.current && tasks.data?.length > 0) {
       if (draggableInstance.current) {
         draggableInstance.current.destroy();
       }
@@ -159,7 +149,7 @@ export default function CalendarComponent({
         itemSelector: ".draggable-task",
         eventData: (eventEl) => {
           const id = eventEl.getAttribute("data-id");
-          const task = tasks.find((task) => String(task?.id) === id);
+          const task = tasks.data.find((task) => String(task?.id) === id);
 
           if (!task) return null;
 
@@ -181,17 +171,15 @@ export default function CalendarComponent({
             draggableInstance.current = null;
         }
     }
-  }, [tasks]);
+  }, [tasks.data]);
 
   function handleEventReceive(eventInfo) {
-    console.log('handleEventReceive' , eventInfo)
     if (eventReceive && typeof eventReceive === "function")
       eventReceive(eventInfo);
     eventInfo.event.remove();
   }
 
   function handleDateSelect(selectInfo) {
-    console.log("[Component] handleDateSelect received:", selectInfo);
     const offsetHours = Number(timeOffset) || 0;
 
     const applyInverseOffset = (dateInput) => {
@@ -207,8 +195,6 @@ export default function CalendarComponent({
 
     const originalStart = applyInverseOffset(selectInfo.startStr);
     const originalEnd = applyInverseOffset(selectInfo.endStr);
-
-    console.log(`[Component] handleDateSelect calculated original start: ${originalStart}, end: ${originalEnd}`);
 
     setSelectedDate({
       start: originalStart,
@@ -235,85 +221,22 @@ export default function CalendarComponent({
     handleSettingsDialogClose();
   }
 
-  function applyTimeOffsetToGrid(offset, theme) {
-    console.log('[Component] Applying time offset to grid labels:', offset);
-    const existingNewTimeElements = document.querySelectorAll(".newTimeElement");
-    existingNewTimeElements.forEach(el => {
-        if (el.parentNode && el.parentNode.style.position === 'relative') {
-            el.parentNode.style.position = '';
-        }
-        el.remove();
-    });
+  const slotLabelContent = useCallback(
+    (args) => {
+      const date = new Date(args.date);
+      date.setHours(date.getHours() + (Number(timeOffset) || 0));
+      const label = date.toLocaleTimeString(navigator.language, {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: false,
+      });
+      return { html: label };
+    },
+    [timeOffset]
+  );
 
-    if (offset === 0) {
-        console.log('[Component] Offset is zero, labels restored to default.');
-        return;
-    }
-
-    const cushionElements = document.querySelectorAll("td.fc-timegrid-slot-label .fc-timegrid-slot-label-cushion");
-    console.log(`[Component] Found ${cushionElements.length} cushion elements for time labels.`);
-
-    cushionElements.forEach((cushionElement) => {
-        let originalTimeText = "";
-        const textNode = Array.from(cushionElement.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
-        if (textNode) {
-            originalTimeText = textNode.textContent.trim();
-        } else {
-             originalTimeText = cushionElement.textContent.trim();
-        }
-
-        const match = originalTimeText.match(/^(\d{1,2}):(\d{2})$/);
-        if (match) {
-            const hours = parseInt(match[1], 10);
-            const minutes = parseInt(match[2], 10);
-
-            const date = new Date();
-            date.setHours(hours, minutes, 0, 0);
-
-            date.setHours(date.getHours() + offset);
-
-            const newHours = String(date.getHours()).padStart(2, "0");
-            const newMinutes = String(date.getMinutes()).padStart(2, "0");
-            const newTimeText = `${newHours}:${newMinutes}`;
-
-            const newTimeElement = document.createElement("div");
-            newTimeElement.className = "newTimeElement";
-            newTimeElement.style.position = "absolute";
-            newTimeElement.style.top = "0";
-            newTimeElement.style.left = "0";
-            newTimeElement.style.width = "100%";
-            newTimeElement.style.height = "100%";
-            newTimeElement.style.display = "flex";
-            newTimeElement.style.alignItems = "center";
-            newTimeElement.style.justifyContent = "center";
-            newTimeElement.style.color = theme.palette.text.primary;
-            newTimeElement.style.backgroundColor = theme.palette.background.paper;
-            newTimeElement.style.zIndex = "1";
-            newTimeElement.textContent = newTimeText;
-
-            cushionElement.style.position = 'relative';
-            cushionElement.appendChild(newTimeElement);
-
-        } else if (originalTimeText) {
-             console.warn("[Component] Could not parse time label format:", originalTimeText);
-        }
-    });
-  }
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-        if (currentTheme) {
-             applyTimeOffsetToGrid(timeOffset, currentTheme);
-        } else {
-             console.warn("[Component] Theme not available for applying time offset to grid.");
-        }
-    }, 150);
-
-    return () => clearTimeout(timer);
-  }, [timeOffset, currentTheme, processedEvents]);
 
   function renderEventMonthContent(eventInfo) {
-    console.log(`[Component] renderEventMonthContent for event ${eventInfo.event.id}.`);
 
     const formatTime = (date) => {
       if (!date) return "";
@@ -337,7 +260,6 @@ export default function CalendarComponent({
   }
 
   function renderEventContent(eventInfo) {
-    console.log(`[Component] renderEventContent for event ${eventInfo.event.id}. View: ${eventInfo.view.type}`);
 
     if (eventInfo.event.display === 'background' && !isToggledBGTasksEdit) {
         return { html: `<div class="fc-event-title fc-sticky">${eventInfo.event.title}</div>` };
@@ -358,7 +280,6 @@ export default function CalendarComponent({
     const startTime = formatTime(eventInfo.event.start);
     const endTime = formatTime(eventInfo.event.end);
 
-    console.log(`[Component] renderEventContent - Displaying (already offset) startTime: ${startTime}, endTime: ${endTime}`);
 
     return {
       html: `<div class="fc-event-time">${startTime}${endTime ? " - " + endTime : ""}</div>
@@ -416,6 +337,7 @@ export default function CalendarComponent({
       omitZeroMinute: false,
       meridiem: "short",
     },
+    slotLabelContent,
     select: handleDateSelect,
     datesSet: handleDatesSet,
     eventClick: handleEventClick,
@@ -535,8 +457,6 @@ export default function CalendarComponent({
                 projects={lists.projects}
                 isNeedContextMenu={false}
                 setSelectedListId={setSelectedListId}
-                updateAll={updateAll}
-                updateEvents={updateEvents}
               />
             </Paper>
             {selectedListId && (
@@ -546,9 +466,9 @@ export default function CalendarComponent({
                 <Button onClick={() => setSelectedListId(null)}>Back</Button>
                 <List ref={draggableEl}>
                   {/* Список невыполненных задач */}
-                  {tasks && tasks.length > 0 ? (
+                  {tasks.data && tasks.data.length > 0 ? (
                     <>
-                      {tasks
+                      {tasks.data
                         .filter((task) => task.status_id !== 2)
                         .map((task) => (
                           <ListItem
@@ -562,7 +482,7 @@ export default function CalendarComponent({
                         ))}
 
                       {/* Список выполненных задач */}
-                      {tasks.filter((task) => task.status_id === 2).length >
+                      {tasks.data.filter((task) => task.status_id === 2).length >
                         0 && (
                         <>
                           <ListItem>
@@ -571,7 +491,7 @@ export default function CalendarComponent({
                               sx={{ fontWeight: "bold", marginTop: 2 }}
                             />
                           </ListItem>
-                          {tasks
+                          {tasks.data
                             .filter((task) => task.status_id === 2)
                             .map((task) => (
                               <ListItem
@@ -613,3 +533,5 @@ CalendarComponent.propTypes = {
   eventReceive: PropTypes.func,
   datesSet: PropTypes.func,
 };
+
+export default React.memo(CalendarComponent);
