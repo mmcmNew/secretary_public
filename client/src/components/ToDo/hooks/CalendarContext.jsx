@@ -1,5 +1,6 @@
-import { createContext, useState, useCallback, useMemo, useRef } from "react";
+import { createContext, useState, useCallback, useMemo, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
+import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 
 const CalendarContext = createContext();
 
@@ -42,6 +43,15 @@ export const CalendarProvider = ({ children }) => {
       fetching.current = false;
     }
   }, [version]);
+
+  const { version: wsVersion } = useUpdateWebSocket();
+
+  useEffect(() => {
+    if (wsVersion) {
+      fetchCalendarEvents();
+      setVersion(wsVersion);
+    }
+  }, [wsVersion, fetchCalendarEvents, setVersion]);
 
   // Обновить событие календаря
   const updateCalendarEvent = useCallback((params) => api("/tasks/edit_task", "PUT", params), []);

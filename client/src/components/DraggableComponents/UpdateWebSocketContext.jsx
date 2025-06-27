@@ -1,12 +1,11 @@
-import { useEffect } from 'react';
+import { createContext, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import io from 'socket.io-client';
-import useLists from '../ToDo/hooks/useLists';
-import useTasks from '../ToDo/hooks/useTasks';
+
+export const UpdateWebSocketContext = createContext({ version: null });
 
 export default function UpdateWebSocketProvider({ children }) {
-  const { fetchLists, setVersion: setListsVersion } = useLists();
-  const { selectedTaskId, fetchTasks, setVersion: setTasksVersion } = useTasks();
+  const [version, setVersion] = useState(null);
 
   useEffect(() => {
     const socket = io('/updates', { transports: ['websocket'] });
@@ -15,12 +14,9 @@ export default function UpdateWebSocketProvider({ children }) {
       console.log('Connected to updates WebSocket');
     });
 
-    socket.on('data_updated', ({ version }) => {
-      console.log('data_updated', version);
-      if (typeof fetchLists === 'function') fetchLists();
-      if (typeof fetchTasks === 'function' && selectedTaskId) fetchTasks(selectedTaskId);
-      if (typeof setListsVersion === 'function') setListsVersion(version);
-      if (typeof setTasksVersion === 'function') setTasksVersion(version);
+    socket.on('data_updated', ({ version: newVersion }) => {
+      console.log('data_updated', newVersion);
+      setVersion(newVersion);
     });
 
     socket.on('disconnect', () => {
@@ -28,9 +24,13 @@ export default function UpdateWebSocketProvider({ children }) {
     });
 
     return () => socket.disconnect();
-  }, [fetchLists, fetchTasks, selectedTaskId, setListsVersion, setTasksVersion]);
+  }, []);
 
-  return children;
+  return (
+    <UpdateWebSocketContext.Provider value={{ version }}>
+      {children}
+    </UpdateWebSocketContext.Provider>
+  );
 }
 
 UpdateWebSocketProvider.propTypes = { children: PropTypes.node.isRequired };
