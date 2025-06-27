@@ -7,6 +7,7 @@ from .handlers import (get_lists_and_groups_data, add_object, add_task, edit_lis
                        add_anti_task, edit_anti_task, del_anti_task)
 from .versioning import check_version
 from .models import DataVersion, TaskTypes
+from app.main.routes import notify_data_update
 
 
 @to_do_app.route('/tasks/get_lists', methods=['GET'])
@@ -16,7 +17,7 @@ def get_lists_and_groups():
     data = get_lists_and_groups_data(client_timezone)
     if isinstance(data, dict) and 'error' in data:
         return jsonify(data), 500
-    data['version'] = DataVersion.get_version()
+    data['tasksVersion'] = DataVersion.get_version('tasksVersion')
     return data
 
 
@@ -25,8 +26,8 @@ def add_object_route():
     data = request.get_json()
     result, status_code = add_object(data)
     if status_code == 200:
-        # Update version
-        DataVersion.update_version()
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -35,8 +36,8 @@ def add_task_route():
     data = request.get_json()
     result, status_code = add_task(data)
     if status_code == 200:
-        # Update version
-        DataVersion.update_version()
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -45,8 +46,8 @@ def edit_list_route():
     data = request.get_json()
     result, status_code = edit_list(data)
     if status_code == 200:
-        # Update version
-        DataVersion.update_version()
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -55,8 +56,8 @@ def add_subtask_route():
     data = request.get_json()
     result, status_code = add_subtask(data)
     if status_code == 200:
-        # Update version
-        DataVersion.update_version()
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -65,8 +66,8 @@ def edit_task_route():
     data = request.get_json()
     result, status_code = edit_task(data)
     if status_code == 200:
-        # Update version
-        DataVersion.update_version()
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -75,8 +76,8 @@ def change_task_status_route():
     data = request.get_json()
     result, status_code = change_task_status(data)
     if status_code == 200:
-        # Update version
-        DataVersion.update_version()
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -87,17 +88,17 @@ def get_tasks_route():
     # current_app.logger.info(f'get_tasks, list_id: {list_id}')
     result, status_code = get_tasks(list_id, client_timezone)
     if status_code == 200:
-        result['version'] = DataVersion.get_version()
+        result['tasksVersion'] = DataVersion.get_version('tasksVersion')
     return jsonify(result), status_code
 
 
 @to_do_app.route('/tasks/get_anti_schedule', methods=['GET'])
-@check_version()
+@check_version('tasksVersion')
 def get_anti_schedule_route():
     current_app.logger.info('get_anti_schedule')
     result, status_code = get_anti_schedule()
     if status_code == 200:
-        result['version'] = DataVersion.get_version()
+        result['tasksVersion'] = DataVersion.get_version('tasksVersion')
     return jsonify(result), status_code
 
 
@@ -106,8 +107,8 @@ def add_anti_task_route():
     data = request.get_json()
     result, status_code = add_anti_task(data)
     if status_code == 200:
-        # Update version
-        DataVersion.update_version()
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -116,8 +117,8 @@ def edit_anti_task_route():
     data = request.get_json()
     result, status_code = edit_anti_task(data)
     if status_code == 200:
-        # Update version
-        DataVersion.update_version()
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -126,8 +127,8 @@ def del_anti_task_route():
     data = request.get_json()
     result, status_code = del_anti_task(data)
     if status_code == 200:
-        # Update version
-        DataVersion.update_version()
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -136,8 +137,8 @@ def del_task_route():
     data = request.get_json()
     result, status_code = del_task(data)
     if status_code == 200:
-        # Update version
-        DataVersion.update_version()
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -146,8 +147,8 @@ def link_group_list_route():
     data = request.get_json()
     result, status_code = link_group_list(data)
     if status_code == 200:
-        # Update version
-        DataVersion.update_version()
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -156,8 +157,8 @@ def delete_from_childes_route():
     data = request.get_json()
     result, status_code = delete_from_childes(data)
     if status_code == 200:
-        # Update version
-        DataVersion.update_version()
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -166,8 +167,8 @@ def link_task_route():
     data = request.get_json()
     result, status_code = link_task(data)
     if status_code == 200:
-        # Update version
-        DataVersion.update_version()
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 

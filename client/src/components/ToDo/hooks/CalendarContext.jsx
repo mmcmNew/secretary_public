@@ -31,10 +31,10 @@ export const CalendarProvider = ({ children }) => {
     if (fetching.current) return;
     fetching.current = true;
     setCalendarEvents(prev => ({ ...prev, loading: true, error: null }));
-    try {
-      const data = await api(`/tasks/get_tasks?list_id=events&version=${version}`);
-      setCalendarEvents({ data: data.tasks || data, loading: false, error: null });
-      setVersion(data.version || version);
+      try {
+        const data = await api(`/tasks/get_tasks?list_id=events&version=${version}`);
+        setCalendarEvents({ data: data.tasks || data, loading: false, error: null });
+        setVersion(data.tasksVersion || version);
       return data.tasks || data;
     } catch (error) {
       setCalendarEvents(prev => ({ ...prev, loading: false, error }));
@@ -44,7 +44,7 @@ export const CalendarProvider = ({ children }) => {
     }
   }, [version]);
 
-  const { version: wsVersion } = useUpdateWebSocket();
+  const { tasksVersion: wsVersion } = useUpdateWebSocket();
 
   useEffect(() => {
     if (wsVersion) {

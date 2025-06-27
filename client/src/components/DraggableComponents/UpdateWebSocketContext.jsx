@@ -2,10 +2,10 @@ import { createContext, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import io from 'socket.io-client';
 
-export const UpdateWebSocketContext = createContext({ version: null });
+export const UpdateWebSocketContext = createContext({});
 
 export default function UpdateWebSocketProvider({ children }) {
-  const [version, setVersion] = useState(null);
+  const [versions, setVersions] = useState({});
 
   useEffect(() => {
     const socket = io('/updates', { transports: ['websocket'] });
@@ -14,9 +14,9 @@ export default function UpdateWebSocketProvider({ children }) {
       console.log('Connected to updates WebSocket');
     });
 
-    socket.on('data_updated', ({ version: newVersion }) => {
-      console.log('data_updated', newVersion);
-      setVersion(newVersion);
+    socket.on('data_updated', (data) => {
+      console.log('data_updated', data);
+      setVersions((prev) => ({ ...prev, ...data }));
     });
 
     socket.on('disconnect', () => {
@@ -27,7 +27,7 @@ export default function UpdateWebSocketProvider({ children }) {
   }, []);
 
   return (
-    <UpdateWebSocketContext.Provider value={{ version }}>
+    <UpdateWebSocketContext.Provider value={versions}>
       {children}
     </UpdateWebSocketContext.Provider>
   );
