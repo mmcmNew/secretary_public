@@ -110,9 +110,9 @@ function MainContainer() {
     sendContainersToServer();
   }, [sendContainersToServer]);
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[MainContainer] Rendering with mode:', mode);
-  }
+  // if (process.env.NODE_ENV === 'development') {
+  //   console.log('[MainContainer] Rendering with mode:', mode);
+  // }
 
   return (
     <ColorModeContext.Provider value={colorMode}>
