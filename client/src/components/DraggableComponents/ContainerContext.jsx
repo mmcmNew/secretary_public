@@ -148,23 +148,31 @@ const ContainerProvider = ({ children }) => {
                 console.log("ContainerProvider: dashboard загружен", data, Date.now() - (window.mainStart || 0), "мс с начала main.jsx");
                 setDashboardData({ id: data.id, name: data.name });
 
-                // Validate calendarSettings before setting state
-                const receivedSettings = data.calendarSettings;
-                if (typeof receivedSettings === 'object' && receivedSettings !== null &&
+                // Parse and validate calendarSettings before setting state
+                let receivedSettings = data.calendarSettings;
+                if (typeof receivedSettings === 'string') {
+                    try {
+                        receivedSettings = JSON.parse(receivedSettings);
+                    } catch (e) {
+                        console.error('Failed to parse calendarSettings:', e);
+                        receivedSettings = null;
+                    }
+                }
+
+                if (receivedSettings && typeof receivedSettings === 'object' &&
                     typeof receivedSettings.slotDuration === 'number' &&
                     Array.isArray(receivedSettings.timeRange) &&
                     typeof receivedSettings.timeOffset === 'number' &&
                     typeof receivedSettings.currentView === 'string') {
-                  setCalendarSettings(receivedSettings);
+                    setCalendarSettings(receivedSettings);
                 } else {
-                  console.warn('Received invalid calendarSettings from server, using default:', receivedSettings);
-                  // Optionally set default settings if server data is bad
-                  setCalendarSettings({
-                    slotDuration: 30,
-                    timeRange: [8, 24],
-                    timeOffset: 0,
-                    currentView: "dayGridMonth",
-                  });
+                    console.warn('Received invalid calendarSettings from server, using default:', receivedSettings);
+                    setCalendarSettings({
+                        slotDuration: 30,
+                        timeRange: [8, 24],
+                        timeOffset: 0,
+                        currentView: "dayGridMonth",
+                    });
                 }
 
                 const loadedTimers = data.timers || null;
