@@ -9,12 +9,13 @@ import CalendarComponent from "./CalendarComponent";
 
 export default function CalendarLayout({
   containerId = null,
-  handleDatesSet = null
+  handleDatesSet = null,
+  calendarSettingsProp = null,
 }) {
   const { updateTask, addTask, fetchTasks, taskFields, addSubTask, changeTaskStatus, deleteTask } = useTasks();
   const { lists, selectedListId, selectedList } = useLists();
   const { calendarEvents } = useCalendar();
-  const { setUpdates } = useContainer();
+  const { setUpdates, handleUpdateCalendarSettings } = useContainer();
   const calendarRef = useRef(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [dialogScroll, setDialogScroll] = useState("paper");
@@ -28,6 +29,20 @@ export default function CalendarLayout({
     views: "timeGridWeek,timeGridDay,dayGridMonth,listWeek",
     isToggledBGTasksEdit: false,
   });
+
+  // инициализация настроек из пропсов
+  useEffect(() => {
+    if (calendarSettingsProp) {
+      setCalendarSettings(calendarSettingsProp);
+    }
+  }, [calendarSettingsProp]);
+
+  // обновление настроек в общем контексте
+  useEffect(() => {
+    if (handleUpdateCalendarSettings) {
+      handleUpdateCalendarSettings(calendarSettings);
+    }
+  }, [calendarSettings, handleUpdateCalendarSettings]);
 
   async function handleDelDateClick(taskId) {
     await updateTask({ taskId, start: null, end: null });
@@ -152,4 +167,5 @@ export default function CalendarLayout({
 CalendarLayout.propTypes = {
   containerId: PropTypes.string,
   handleDatesSet: PropTypes.func,
+  calendarSettingsProp: PropTypes.object,
 };
