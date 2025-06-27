@@ -36,8 +36,8 @@ function App() {
       <ErrorProvider>
         <UpdateWebSocketProvider>
           <ContainerProvider>
-            <TasksProvider>
-              <ListsProvider>
+            <ListsProvider>
+              <TasksProvider>
                 <CalendarProvider>
                   <Router future={{
                   v7_fetcherPersist: true,
@@ -50,8 +50,8 @@ function App() {
                   <AppRoutes />
                   </Router>
                 </CalendarProvider>
-              </ListsProvider>
-            </TasksProvider>
+              </TasksProvider>
+            </ListsProvider>
           </ContainerProvider>
         </UpdateWebSocketProvider>
       </ErrorProvider>

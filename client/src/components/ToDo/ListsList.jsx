@@ -27,7 +27,6 @@ export default function ListsList({
   setSelectedListId = null,
   fetchLists = null,
   addList = null,
-  updateList = null,
   deleteList = null,
   linkListGroup = null,
   deleteFromChildes = null,
@@ -47,7 +46,7 @@ export default function ListsList({
   const [actionType, setActionType] = useState(null); // Хранит текущее действие: "move" или "link"
   const inputRef = useRef(null);
   const { fetchTasks } = useTasks();
-  const { fetchLists: fetchListsHook } = useLists();
+  const { fetchLists: fetchListsHook, updateList } = useLists();
   const { fetchCalendarEvents } = useCalendar();
 
   function handleToggleGroup(id) {

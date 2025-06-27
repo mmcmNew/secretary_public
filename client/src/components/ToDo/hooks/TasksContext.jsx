@@ -1,6 +1,7 @@
 import { createContext, useState, useCallback, useMemo, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
+import useLists from './useLists';
 
 const TasksContext = createContext();
 
@@ -13,8 +14,9 @@ const api = async (url, method = 'GET', body = null) => {
   return response.json();
 };
 
-export const TasksProvider = ({ children, onError, setLoading, fetchLists }) => {
+export const TasksProvider = ({ children, onError, setLoading }) => {
   const [tasks, setTasks] = useState({ data: [], loading: false, error: null });
+  const { fetchLists } = useLists();
   const [taskFields, setTaskFields] = useState({});
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [version, setVersion] = useState(null);
@@ -22,7 +24,11 @@ export const TasksProvider = ({ children, onError, setLoading, fetchLists }) => 
 
   // Получить задачи для списка
   const fetchTasks = useCallback(async (listId) => {
-    if (!listId || fetching.current) return;
+    if (!listId) return;
+    // Если уже есть выполняющийся запрос, дожидаемся его завершения
+    while (fetching.current) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
     if (setLoading) setLoading(true);
     fetching.current = true;
     setTasks(prev => ({ ...prev, loading: true, error: null }));
@@ -47,8 +53,9 @@ export const TasksProvider = ({ children, onError, setLoading, fetchLists }) => 
   // CRUD операции
   const addTask = useCallback(async (params) => {
     const res = await api("/tasks/add_task", "POST", params);
-    if (fetchLists) await fetchLists();
-    if (params.listId && typeof fetchTasks === 'function') {
+    await fetchLists();
+    console.log(params)
+    if (params.listId) {
       console.log('addTask: fetchTasks', params.listId);
       await fetchTasks(params.listId);
     }

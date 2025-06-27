@@ -78,7 +78,7 @@ export default function TasksList({
     }, [tasks, containerId]);
 
     if (!tasks || !selectedList) {
-        console.log('TasksList render blocked:', { tasks, selectedList });
+        // console.log('TasksList render blocked:', { tasks, selectedList });
         return null;
     }
 
