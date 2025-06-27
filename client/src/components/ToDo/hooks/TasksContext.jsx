@@ -1,5 +1,6 @@
 import { createContext, useState, useCallback, useMemo, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
+import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 
 const TasksContext = createContext();
 
@@ -97,6 +98,15 @@ export const TasksProvider = ({ children, onError, setLoading, fetchLists }) => 
   useEffect(() => {
     fetchTaskFields();
   }, [fetchTaskFields]);
+
+  const { version: wsVersion } = useUpdateWebSocket();
+
+  useEffect(() => {
+    if (wsVersion && selectedTaskId) {
+      fetchTasks(selectedTaskId);
+      setVersion(wsVersion);
+    }
+  }, [wsVersion, selectedTaskId, fetchTasks, setVersion]);
 
   const contextValue = useMemo(() => ({
     tasks,
