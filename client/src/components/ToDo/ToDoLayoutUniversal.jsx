@@ -61,65 +61,20 @@ function ToDoLayoutUniversal() {
     setNewTask('');
   }, [newTask, addTask]);
 
-  if (loading) {
-    return <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-      <Box sx={{ opacity: 0.5, pointerEvents: 'none' }}>
-        {/* Основной UI */}
-        {isMobile ? (
-          <Box sx={{ height: '100%', width: '100%' }}>
-            <ToDoListsPanel mobile />
-            <ToDoTasksPanel mobile additionalButtonClick={handleAdditionalButtonClick} />
-            {showEditor && <ToDoTaskEditorPanel mobile />}
-          </Box>
-        ) : (
-          <Box sx={{ padding: 2, height: '100%', width: '100%' }}>
-            <Grid container spacing={0.5} sx={{ height: '100%' }}>
-              {/* 1. Списки задач (фиксировано md=3) */}
-              <Grid item xs={12} md={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column', width: '350px' }}>
-                <ToDoListsPanel />
-              </Grid>
-    
-              {/* 2. Задачи (адаптивная ширина) */}
-              <Grid
-                item
-                xs={12}
-                md={showEditor ? 5 : 9}
-                sx={{ height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}
-              >
-                <ToDoTasksPanel 
-                  additionalButtonClick={handleAdditionalButtonClick}
-                />
-              </Grid>
-    
-              {/* 3. Редактор задачи (отображается по условию, md=4) */}
-              {showEditor && (
-                <Grid
-                  item
-                  xs={12}
-                  md={4}
-                  sx={{ height: '100%', display: 'flex', flexDirection: 'column', width: '400px' }}
-                >
-                  <ToDoTaskEditorPanel />
-                </Grid>
-              )}
-            </Grid>
-          </Box>
-        )}
-      </Box>
-      <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', bgcolor: 'rgba(255,255,255,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Typography variant="h5">Загрузка...</Typography>
-      </Box>
-    </Box>;
-  }
-  
-  return (
+  const content = isMobile ? (
+    <Box sx={{ height: '100%', width: '100%' }}>
+      <ToDoListsPanel mobile />
+      <ToDoTasksPanel mobile additionalButtonClick={handleAdditionalButtonClick} />
+      {showEditor && <ToDoTaskEditorPanel mobile />}
+    </Box>
+  ) : (
     <Box sx={{ padding: 2, height: '100%', width: '100%' }}>
       <Grid container spacing={0.5} sx={{ height: '100%' }}>
         {/* 1. Списки задач (фиксировано md=3) */}
         <Grid item xs={12} md={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column', width: '350px' }}>
           <ToDoListsPanel />
         </Grid>
-  
+
         {/* 2. Задачи (адаптивная ширина) */}
         <Grid
           item
@@ -127,11 +82,9 @@ function ToDoLayoutUniversal() {
           md={showEditor ? 5 : 9}
           sx={{ height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}
         >
-          <ToDoTasksPanel 
-            additionalButtonClick={handleAdditionalButtonClick}
-          />
+          <ToDoTasksPanel additionalButtonClick={handleAdditionalButtonClick} />
         </Grid>
-  
+
         {/* 3. Редактор задачи (отображается по условию, md=4) */}
         {showEditor && (
           <Grid
@@ -144,6 +97,32 @@ function ToDoLayoutUniversal() {
           </Grid>
         )}
       </Grid>
+    </Box>
+  );
+
+  return (
+    <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+      <Box sx={{ opacity: loading ? 0.5 : 1, pointerEvents: loading ? 'none' : 'auto', height: '100%' }}>
+        {content}
+      </Box>
+      {loading && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            bgcolor: 'rgba(255,255,255,0.7)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Typography variant="h5">Загрузка...</Typography>
+        </Box>
+      )}
     </Box>
   );
 }
