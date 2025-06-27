@@ -158,11 +158,11 @@ function CalendarComponent({
 
   useEffect(() => {
     const calendarApi = calendarRef.current?.getApi();
-    if (calendarApi && calendarEvents) {
+    if (calendarApi) {
       calendarApi.removeAllEvents();
-      calendarApi.addEventSource(calendarEvents);
+      calendarApi.addEventSource(processedEvents);
     }
-  }, [calendarEvents, calendarRef]);
+  }, [processedEvents, calendarRef]);
 
   useEffect(() => {
     if (draggableEl.current && tasks.data?.length > 0) {
