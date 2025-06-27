@@ -123,10 +123,10 @@ function CalendarComponent({
       updatedEvent.backgroundColor = color;
       updatedEvent.borderColor = color;
 
-      updatedEvent.display = event.is_background ? "background" : "block";
-      if (newSettings?.currentView === "dayGridMonth" && updatedEvent.display === "background") {
-        updatedEvent.display = "block";
-      }
+      // updatedEvent.display = event.is_background ? "background" : "block";
+      // if (newSettings?.currentView === "dayGridMonth" && updatedEvent.display === "background") {
+        // updatedEvent.display = "block";
+      // }
 
       return updatedEvent;
 
@@ -353,14 +353,17 @@ function CalendarComponent({
     eventChange: handleEventChange,
     eventReceive: handleEventReceive,
     eventDragStart: () => setIsCollapsed(true),
-    eventContent: (arg) => {
-        if (arg.view.type.startsWith('timeGrid') || arg.view.type === 'dayGridDay') {
-            return renderEventContent(arg);
-        }
-        return null;
-    },
+    // eventContent: (arg) => {
+    //     if (arg.view.type.startsWith('timeGrid') || arg.view.type === 'dayGridDay') {
+    //         return renderEventContent(arg);
+    //     }
+    //     return null;
+    // },
     nowIndicator: true,
   };
+
+  if (newSettings?.currentView.startsWith('timeGrid') || newSettings?.currentView == 'dayGridDay') 
+    calendarProps.eventContent = (arg) => renderEventContent(arg);
 
   return (
     <Box
