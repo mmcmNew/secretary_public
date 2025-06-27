@@ -42,7 +42,10 @@ function CalendarComponent({
     tasks,
   } = useTasks();
   const { lists } = useLists();
-  const { calendarEvents } = useCalendar();
+  const {
+    calendarEvents,
+    fetchCalendarEvents,
+  } = useCalendar();
   const draggableEl = useRef(null);
   const draggableInstance = useRef(null);
   const [selectedListId, setSelectedListId] = useState(null);
@@ -52,6 +55,12 @@ function CalendarComponent({
   const [selectedDate, setSelectedDate] = useState(null);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const currentTheme = useTheme();
+
+  const handleNewTaskDialogOpen = useCallback((scrollType) => {
+    setNewTaskDialogOpen(true);
+    setDialogScroll(scrollType);
+  }, []);
+
 
   const timeOffset = newSettings?.timeOffset || 0;
   const isToggledBGTasksEdit = newSettings?.isToggledBGTasksEdit || false;
@@ -131,6 +140,10 @@ function CalendarComponent({
       fetchTasks(selectedListId);
     }
   }, [selectedListId, fetchTasks]);
+
+  useEffect(() => {
+    fetchCalendarEvents();
+  }, [fetchCalendarEvents]);
 
   useEffect(() => {
     const calendarApi = calendarRef.current?.getApi();
@@ -402,6 +415,7 @@ function CalendarComponent({
         sx={{
           flexGrow: 1,
           overflowY: "auto",
+          overflowX: "hidden",
           height: "100%",
           position: "relative",
         }}
@@ -432,10 +446,11 @@ function CalendarComponent({
               position: "absolute",
               top: 0,
               bottom: 0,
-              right: isCollapsed ? "-100%" : "0",
+              right: 0,
               width: "500px",
               maxWidth: "100%",
-              transition: "right 0.3s ease",
+              transform: isCollapsed ? "translateX(100%)" : "translateX(0)",
+              transition: "transform 0.3s ease",
               zIndex: 10,
               backgroundColor: currentTheme.palette.background.paper,
             }}
