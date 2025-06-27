@@ -61,6 +61,7 @@ function CalendarComponent({
     setDialogScroll(scrollType);
   }, []);
 
+
   const timeOffset = newSettings?.timeOffset || 0;
   const isToggledBGTasksEdit = newSettings?.isToggledBGTasksEdit || false;
   const currentView = newSettings?.currentView || "timeGridMonth";

@@ -22,7 +22,6 @@ export default function ToDoTasksPanel({ mobile = false, setSelectedListId }) {
     selectedListId,
     selectedList,
     updateList,
-    defaultLists,
     linkListGroup,
     deleteFromChildes,
   } = useLists();
@@ -30,7 +29,7 @@ export default function ToDoTasksPanel({ mobile = false, setSelectedListId }) {
   // Для редактирования названия списка
   const [editingTitle, setEditingTitle] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const isDefaultList = selectedList && defaultLists && defaultLists.some(list => list.id === selectedList.id);
+  const isDefaultList = selectedList && lists?.default_lists && lists.default_lists.some(list => list.id === selectedList.id);
 
   // Для добавления новой задачи
   const [newTask, setNewTask] = useState('');
