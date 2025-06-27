@@ -43,6 +43,11 @@ function TaskDetails({
 
     const taskMap = useMemo(() => new Map(tasks.map(t => [t.id, t])), [tasks]);
     const task = taskMap.get(+selectedTaskId) || null;
+    const [taskStatus, setTaskStatus] = useState(task?.status_id || 1);
+
+    useEffect(() => {
+        if (task) setTaskStatus(task.status_id);
+    }, [task]);
 
     // Инициализация полей задачи
     useEffect(() => {
@@ -98,6 +103,7 @@ function TaskDetails({
             } else if (selectedListId) {
                 listId = selectedListId;
             }
+            setTaskStatus(status_id);
         } else {
             const sub = taskMap.get(taskId);
             if (Array.isArray(sub?.lists) && sub.lists.length > 0) {
@@ -177,7 +183,7 @@ function TaskDetails({
             <Paper variant="outlined" sx={{ p: 1, my: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Checkbox
-                        checked={task.status_id === 2}
+                        checked={taskStatus === 2}
                         sx={{ mr: 1, p: 0 }}
                         onChange={(e) => handleToggle(task.id, e.target.checked)}
                     />
@@ -241,7 +247,7 @@ function TaskDetails({
                     </Box>
                 </Grid>
             </Paper>
-            {task.status_id === 2 && (
+            {taskStatus === 2 && (
                 <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
                     Завершено: {task.end_date ? dayjs(task.end_date).format('DD/MM/YYYY HH:mm') : ''}
                 </Typography>
@@ -312,7 +318,12 @@ function TaskDetails({
                                         </ToggleButton>
                                     </FormControl>
                                 ) : field.type === 'color' ? (
-                                    <ColorPicker fieldKey={key} fieldName={field.name} selectedColorProp={fields[key] || ''} onColorChange={(v) => handleUpdate(key, v)} />
+                                    <ColorPicker
+                                        fieldKey={key}
+                                        fieldName={field.name}
+                                        selectedColorProp={fields[key] || ''}
+                                        onColorChange={(_, color) => handleUpdate(key, color)}
+                                    />
                                 ) : field.type === 'multiselect' ? (
                                     <Autocomplete
                                         multiple
