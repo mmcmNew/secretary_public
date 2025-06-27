@@ -44,13 +44,13 @@ export default function ToDoListsPanel({ mobile = false, setSelectedListId }) {
         />
       </Box>
       <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', mt: 1 }}>
-        <Button variant="outlined" sx={{ width: '100%' }} onClick={() => { addList('list'); setListId && setListId(null); }}>
+        <Button variant="outlined" sx={{ width: '100%' }} onClick={() => { addList({type: 'list', order: lists.lists.length}); setListId && setListId(null); }}>
           Создать список
         </Button>
-        <IconButton variant="outlined" sx={{ alignSelf: 'center' }} onClick={() => { addList('group'); setListId && setListId(null); }}>
+        <IconButton variant="outlined" sx={{ alignSelf: 'center' }} onClick={() => { addList({type: 'group', order: lists.lists.length}); setListId && setListId(null); }}>
           <QueueIcon />
         </IconButton>
-        <IconButton variant="outlined" sx={{ alignSelf: 'center' }} onClick={() => { addList('project'); setListId && setListId(null); }}>
+        <IconButton variant="outlined" sx={{ alignSelf: 'center' }} onClick={() => { addList({type: 'project', order: lists.lists.length}); setListId && setListId(null); }}>
           <AccountTree />
         </IconButton>
       </Box>
