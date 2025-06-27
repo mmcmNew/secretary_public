@@ -89,6 +89,11 @@ function CalendarComponent({
         return null;
       }
       const updatedEvent = { ...event };
+      updatedEvent.extendedProps = {
+        ...(event.extendedProps || {}),
+        originalStart: event.start,
+        originalEnd: event.end,
+      };
 
       const processedStartDate = applyOffset(event.start);
       updatedEvent.start = processedStartDate ? processedStartDate.toISOString() : null;
@@ -144,6 +149,12 @@ function CalendarComponent({
   useEffect(() => {
     fetchCalendarEvents();
   }, [fetchCalendarEvents]);
+
+  useEffect(() => {
+    if (!isCollapsed) {
+      fetchCalendarEvents();
+    }
+  }, [isCollapsed, fetchCalendarEvents]);
 
   useEffect(() => {
     const calendarApi = calendarRef.current?.getApi();
@@ -249,28 +260,6 @@ function CalendarComponent({
   );
 
 
-  function renderEventMonthContent(eventInfo) {
-
-    const formatTime = (date) => {
-      if (!date) return "";
-      try {
-          const dateObj = (date instanceof Date) ? date : new Date(date);
-          if (isNaN(dateObj.getTime())) return "";
-          return dateObj.toLocaleTimeString(navigator.language, { hour: 'numeric', minute: '2-digit', hour12: false });
-      } catch (e) {
-          console.error("Error formatting date:", date, e);
-          return "";
-      }
-    };
-    const startTime = formatTime(eventInfo.event.start);
-    const dotColor = eventInfo.event.backgroundColor || eventInfo.event.borderColor || "#3788D8";
-
-    return {
-      html: `<div class="fc-daygrid-event-dot" style="border-color: ${dotColor};"></div>
-            <div class="fc-event-time">${startTime}</div>
-            <div class="fc-event-title">${eventInfo.event.title}</div>`,
-    };
-  }
 
   function renderEventContent(eventInfo) {
 
@@ -290,13 +279,16 @@ function CalendarComponent({
       }
     };
 
-    const startTime = formatTime(eventInfo.event.start);
-    const endTime = formatTime(eventInfo.event.end);
+    const originalStart = eventInfo.event.extendedProps?.originalStart || eventInfo.event.start;
+    const originalEnd = eventInfo.event.extendedProps?.originalEnd || eventInfo.event.end;
 
+    const startTime = formatTime(originalStart);
+    const endTime = formatTime(originalEnd);
+
+    const timeLabel = `${startTime}${endTime ? " - " + endTime : ""}`;
 
     return {
-      html: `<div class="fc-event-time">${startTime}${endTime ? " - " + endTime : ""}</div>
-             <div class="fc-event-title">${eventInfo.event.title}</div>`,
+      html: `<div class="fc-event-title fc-sticky">${timeLabel} - ${eventInfo.event.title}</div>`,
     };
   }
 
@@ -309,6 +301,7 @@ function CalendarComponent({
     if (!calendarApi) return;
     const currentView = calendarApi.view.type;
     const currentDate = calendarApi.getDate();
+    fetchCalendarEvents();
     if (newSettings.currentView !== currentView) {
       setNewSettings(prev => ({ ...prev, currentView }));
     }
@@ -358,9 +351,7 @@ function CalendarComponent({
     eventReceive: handleEventReceive,
     eventDragStart: () => setIsCollapsed(true),
     eventContent: (arg) => {
-        if (arg.view.type === 'dayGridMonth') {
-            return renderEventMonthContent(arg);
-        } else if (arg.view.type.startsWith('timeGrid') || arg.view.type === 'dayGridDay') {
+        if (arg.view.type.startsWith('timeGrid') || arg.view.type === 'dayGridDay') {
             return renderEventContent(arg);
         }
         return null;
