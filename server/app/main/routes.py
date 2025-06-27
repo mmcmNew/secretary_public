@@ -57,6 +57,16 @@ def handle_disconnect():
     print('Client disconnected')
 
 
+@socketio.on('connect', namespace='/updates')
+def updates_ws_connect():
+    current_app.logger.info('Client connected to updates websocket')
+
+
+@socketio.on('disconnect', namespace='/updates')
+def updates_ws_disconnect():
+    current_app.logger.info('Client disconnected from updates websocket')
+
+
 @socketio.on('request_messages', namespace='/chat')
 @main.route('/api/chat/messages', methods=['GET'])
 def get_messages():

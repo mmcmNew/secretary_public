@@ -1,5 +1,6 @@
 import { createContext, useState, useCallback, useMemo, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
+import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 
 const ListsContext = createContext();
 
@@ -75,6 +76,15 @@ export const ListsProvider = ({ children, onError, setLoading }) => {
       setSelectedList(null);
     }
   }, [selectedListId, lists]);
+
+  const { version: wsVersion } = useUpdateWebSocket();
+
+  useEffect(() => {
+    if (wsVersion) {
+      fetchLists();
+      setVersion(wsVersion);
+    }
+  }, [wsVersion, fetchLists, setVersion]);
 
   const contextValue = useMemo(() => ({
     lists,
