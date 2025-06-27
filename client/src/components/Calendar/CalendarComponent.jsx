@@ -124,6 +124,9 @@ function CalendarComponent({
       updatedEvent.borderColor = color;
 
       updatedEvent.display = event.is_background ? "background" : "block";
+      if (newSettings?.currentView === "dayGridMonth" && updatedEvent.display === "background") {
+        updatedEvent.display = "block";
+      }
 
       return updatedEvent;
 
@@ -138,7 +141,7 @@ function CalendarComponent({
 
     return calculatedEvents;
 
-  }, [calendarEvents, timeOffset, newSettings?.isToggledBGTasksEdit]);
+  }, [calendarEvents, timeOffset, newSettings?.isToggledBGTasksEdit, newSettings?.currentView]);
 
   useEffect(() => {
     if (selectedListId !== null) {
