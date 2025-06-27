@@ -15,12 +15,6 @@ const ContainerProvider = ({ children }) => {
     const [updates, setUpdates] = useState([]);
     const [isSecretarySpeak, setIsSecretarySpeak] = useState(false);
     const [windowOrder, setWindowOrder] = useState([]);
-    const [calendarSettings, setCalendarSettings] = useState({
-        slotDuration: 30,
-        timeRange: [8, 24],
-        timeOffset: 0,
-        currentView: "dayGridMonth",
-    },)
 
     function generateUniqueId() {
         const timePart = Date.now().toString();
@@ -40,8 +34,7 @@ const ContainerProvider = ({ children }) => {
             ...componentConfig.content?.props,
             containerId: id,
             ...containerData.content?.props,
-            ...containerData,
-            calendarSettingsProp: calendarSettings
+            ...containerData
         };
 
         const newContainer = {
@@ -148,32 +141,6 @@ const ContainerProvider = ({ children }) => {
                 console.log("ContainerProvider: dashboard загружен", data, Date.now() - (window.mainStart || 0), "мс с начала main.jsx");
                 setDashboardData({ id: data.id, name: data.name });
 
-                // Parse and validate calendarSettings before setting state
-                let receivedSettings = data.calendarSettings;
-                if (typeof receivedSettings === 'string') {
-                    try {
-                        receivedSettings = JSON.parse(receivedSettings);
-                    } catch (e) {
-                        console.error('Failed to parse calendarSettings:', e);
-                        receivedSettings = null;
-                    }
-                }
-
-                if (receivedSettings && typeof receivedSettings === 'object' &&
-                    typeof receivedSettings.slotDuration === 'number' &&
-                    Array.isArray(receivedSettings.timeRange) &&
-                    typeof receivedSettings.timeOffset === 'number' &&
-                    typeof receivedSettings.currentView === 'string') {
-                    setCalendarSettings(receivedSettings);
-                } else {
-                    console.warn('Received invalid calendarSettings from server, using default:', receivedSettings);
-                    setCalendarSettings({
-                        slotDuration: 30,
-                        timeRange: [8, 24],
-                        timeOffset: 0,
-                        currentView: "dayGridMonth",
-                    });
-                }
 
                 const loadedTimers = data.timers || null;
                 setTimers(loadedTimers);
@@ -205,12 +172,11 @@ const ContainerProvider = ({ children }) => {
                 body: JSON.stringify({
                     dashboard_data: dashboardData,
                     containers: sendingContainers.map(c => {
-                        const { componentType, componentProps, content, ...serializableContainer } = c;
-                        return serializableContainer;
+                        const { componentType, content, ...serializableContainer } = c;
+                        return { ...serializableContainer, content: { props: c.componentProps } };
                     }),
                     themeMode: themeMode,
-                    timers: timers,
-                    calendarSettings: calendarSettings
+                    timers: timers
                 }),
             });
             if (!response.ok) {
@@ -254,10 +220,6 @@ const ContainerProvider = ({ children }) => {
 
     const handleContainerPosition = (id, position) => {
         setContainers(containers.map((container) => (container.id === id ? { ...container, position } : container)));
-    };
-
-    const handleUpdateCalendarSettings = (newSettings) => {
-        setCalendarSettings(newSettings);
     };
 
     // Функция для обновления данных содержимого контейнера
@@ -351,7 +313,6 @@ const ContainerProvider = ({ children }) => {
                 handleContainerResize,
                 handleContainerPosition,
                 handleUpdateContent,
-                handleUpdateCalendarSettings,
                 isSecretarySpeak,
                 setIsSecretarySpeak,
                 createComponentFromType,

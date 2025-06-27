@@ -15,14 +15,6 @@ const api = async (url, method = 'GET', body = null) => {
 
 export const CalendarProvider = ({ children }) => {
   const [calendarEvents, setCalendarEvents] = useState({ data: [], loading: false, error: null });
-  const [calendarSettings, setCalendarSettings] = useState({
-    slotDuration: 30,
-    timeRange: [8, 24],
-    timeOffset: 0,
-    currentView: "timeGridWeek",
-    views: "timeGridWeek,timeGridDay,dayGridMonth,listWeek",
-    isToggledBGTasksEdit: false,
-  });
   const [version, setVersion] = useState(null);
   const fetching = useRef(false);
 
@@ -66,11 +58,9 @@ export const CalendarProvider = ({ children }) => {
     updateCalendarEvent,
     addCalendarEvent,
     deleteCalendarEvent,
-    calendarSettings,
-    setCalendarSettings,
     version,
     setVersion,
-  }), [calendarEvents, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, calendarSettings, version]);
+  }), [calendarEvents, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, version]);
 
   return <CalendarContext.Provider value={contextValue}>{children}</CalendarContext.Provider>;
 };

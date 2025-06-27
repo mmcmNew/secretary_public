@@ -15,7 +15,7 @@ export default function CalendarLayout({
   const { updateTask, addTask, fetchTasks, taskFields, addSubTask, changeTaskStatus, deleteTask } = useTasks();
   const { lists, selectedListId, selectedList } = useLists();
   const { calendarEvents } = useCalendar();
-  const { setUpdates, handleUpdateCalendarSettings } = useContainer();
+  const { setUpdates, handleUpdateContent } = useContainer();
   const calendarRef = useRef(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [dialogScroll, setDialogScroll] = useState("paper");
@@ -37,12 +37,12 @@ export default function CalendarLayout({
     }
   }, [calendarSettingsProp]);
 
-  // обновление настроек в общем контексте
+  // сохранение настроек в контейнере
   useEffect(() => {
-    if (handleUpdateCalendarSettings) {
-      handleUpdateCalendarSettings(calendarSettings);
+    if (handleUpdateContent && containerId) {
+      handleUpdateContent(containerId, { calendarSettingsProp: calendarSettings });
     }
-  }, [calendarSettings, handleUpdateCalendarSettings]);
+  }, [calendarSettings, handleUpdateContent, containerId]);
 
   async function handleDelDateClick(taskId) {
     await updateTask({ taskId, start: null, end: null });
