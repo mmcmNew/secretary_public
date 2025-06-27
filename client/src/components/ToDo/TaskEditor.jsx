@@ -25,6 +25,7 @@ import { renderTimeViewClock } from "@mui/x-date-pickers";
 import ColorPicker from "../ColorPicker";
 import NewRecordDialog from "../JournalEditor/NewRecordDialog";
 import PropTypes from "prop-types";
+import useCalendar from "./hooks/useCalendar";
 
 function TaskDetails({
     taskFields,
@@ -40,6 +41,7 @@ function TaskDetails({
     const [subTasks, setSubTasks] = useState({});
     const [newSubTask, setNewSubTask] = useState("");
     const [newRecordDialogOpen, setNewRecordDialogOpen] = useState(false);
+    const { fetchCalendarEvents } = useCalendar();
 
     const taskMap = useMemo(() => new Map(tasks.map(t => [t.id, t])), [tasks]);
     const task = taskMap.get(+selectedTaskId) || null;
@@ -81,7 +83,7 @@ function TaskDetails({
         setSubTasks(subs);
     }, [task, taskMap]);
 
-    const handleUpdate = useCallback((field, value) => {
+    const handleUpdate = useCallback(async (field, value) => {
         setFields(prev => ({ ...prev, [field]: value }));
         if (task[field] !== value) {
             let listId = null;
@@ -90,11 +92,12 @@ function TaskDetails({
             } else if (selectedListId) {
                 listId = selectedListId;
             }
-            updateTask({ taskId: task.id, [field]: value, listId });
+            await updateTask({ taskId: task.id, [field]: value, listId });
+            if (fetchCalendarEvents) await fetchCalendarEvents();
         }
-    }, [task, updateTask, selectedListId]);
+    }, [task, updateTask, selectedListId, fetchCalendarEvents]);
 
-    const handleToggle = useCallback((taskId, checked) => {
+    const handleToggle = useCallback(async (taskId, checked) => {
         const status_id = checked ? 2 : 1;
         let listId = null;
         if (taskId === task.id) {
@@ -118,10 +121,11 @@ function TaskDetails({
             const audio = new Audio("/sounds/isComplited.wav");
             audio.play();
         }
-        changeTaskStatus(payload);
-    }, [changeTaskStatus, task, taskMap, selectedListId]);
+        await changeTaskStatus(payload);
+        if (fetchCalendarEvents) await fetchCalendarEvents();
+    }, [changeTaskStatus, task, taskMap, selectedListId, fetchCalendarEvents]);
 
-    const handleSubBlur = useCallback((subId) => {
+    const handleSubBlur = useCallback(async (subId) => {
         const title = subTasks[subId]?.trim();
         const sub = taskMap.get(subId);
         if (!sub || sub.title === title) return;
@@ -131,8 +135,9 @@ function TaskDetails({
         } else if (selectedListId) {
             listId = selectedListId;
         }
-        updateTask({ taskId: subId, title, listId });
-    }, [subTasks, taskMap, updateTask, selectedListId]);
+        await updateTask({ taskId: subId, title, listId });
+        if (fetchCalendarEvents) await fetchCalendarEvents();
+    }, [subTasks, taskMap, updateTask, selectedListId, fetchCalendarEvents]);
 
     const handleKeyDown = useCallback((e, field, subId = null) => {
         if (e.key === 'Enter') {
@@ -142,7 +147,7 @@ function TaskDetails({
         }
     }, [handleSubBlur, handleUpdate]);
 
-    const handleAddSubTask = useCallback(() => {
+    const handleAddSubTask = useCallback(async () => {
         if (newSubTask.trim()) {
             let listId = null;
             if (Array.isArray(task.lists) && task.lists.length > 0) {
@@ -150,12 +155,13 @@ function TaskDetails({
             } else if (selectedListId) {
                 listId = selectedListId;
             }
-            addSubTask({ title: newSubTask, parentTaskId: task.id, listId });
+            await addSubTask({ title: newSubTask, parentTaskId: task.id, listId });
+            if (fetchCalendarEvents) await fetchCalendarEvents();
             setNewSubTask('');
         }
-    }, [newSubTask, addSubTask, task, selectedListId]);
+    }, [newSubTask, addSubTask, task, selectedListId, fetchCalendarEvents]);
 
-    const handleDeleteSubTask = useCallback((subId) => {
+    const handleDeleteSubTask = useCallback(async (subId) => {
         let listId = null;
         const sub = taskMap.get(subId);
         if (Array.isArray(sub?.lists) && sub.lists.length > 0) {
@@ -163,18 +169,20 @@ function TaskDetails({
         } else if (selectedListId) {
             listId = selectedListId;
         }
-        deleteTask({ taskId: subId, listId });
-    }, [deleteTask, taskMap, selectedListId]);
+        await deleteTask({ taskId: subId, listId });
+        if (fetchCalendarEvents) await fetchCalendarEvents();
+    }, [deleteTask, taskMap, selectedListId, fetchCalendarEvents]);
 
-    const handleDeleteTask = useCallback(() => {
+    const handleDeleteTask = useCallback(async () => {
         let listId = null;
         if (Array.isArray(task.lists) && task.lists.length > 0) {
             listId = task.lists[0].id;
         } else if (selectedListId) {
             listId = selectedListId;
         }
-        deleteTask({ taskId: task.id, listId });
-    }, [deleteTask, task, selectedListId]);
+        await deleteTask({ taskId: task.id, listId });
+        if (fetchCalendarEvents) await fetchCalendarEvents();
+    }, [deleteTask, task, selectedListId, fetchCalendarEvents]);
 
     if (!task) return null;
 

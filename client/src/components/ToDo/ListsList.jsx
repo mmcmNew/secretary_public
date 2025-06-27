@@ -12,6 +12,7 @@ import ContextMenu from './ListsList/ContextMenu';
 import { DndContext } from '@dnd-kit/core';
 import useTasks from './hooks/useTasks';
 import useLists from './hooks/useLists';
+import useCalendar from './hooks/useCalendar';
 
 export default function ListsList({
   listsList = [],
@@ -47,6 +48,7 @@ export default function ListsList({
   const inputRef = useRef(null);
   const { fetchTasks } = useTasks();
   const { fetchLists: fetchListsHook } = useLists();
+  const { fetchCalendarEvents } = useCalendar();
 
   function handleToggleGroup(id) {
     setOpenGroups((prevOpenGroups) => ({
@@ -59,6 +61,7 @@ export default function ListsList({
     if (typeof fetchLists === 'function') await fetchLists();
     else if (typeof fetchListsHook === 'function') await fetchListsHook();
     if (typeof fetchTasks === 'function' && selectedListId) await fetchTasks(selectedListId);
+    if (typeof fetchCalendarEvents === 'function') await fetchCalendarEvents();
   }
 
   function handleListItemClick(event, index) {
