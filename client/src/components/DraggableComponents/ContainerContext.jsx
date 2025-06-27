@@ -164,6 +164,7 @@ const ContainerProvider = ({ children }) => {
         // отправляем все контейнеры кроме таймеров
         const sendingContainers = containers.filter((container) => container.type !== "timersToolbar");
         try {
+            console.log()
             const response = await fetch("/dashboard", {
                 method: "POST",
                 headers: {
@@ -172,8 +173,8 @@ const ContainerProvider = ({ children }) => {
                 body: JSON.stringify({
                     dashboard_data: dashboardData,
                     containers: sendingContainers.map(c => {
-                        const { componentType, content, ...serializableContainer } = c;
-                        return { ...serializableContainer, content: { props: c.componentProps } };
+                        const { componentType, content, componentProps, ...serializableContainer } = c;
+                        return serializableContainer;
                     }),
                     themeMode: themeMode,
                     timers: timers
@@ -229,7 +230,7 @@ const ContainerProvider = ({ children }) => {
             prevContainers.map((container) => {
                 if (container.id === id) {
                     const newProps = { ...container.componentProps, ...updatedData };
-                    return { ...container, componentProps: newProps };
+                    return { ...container, ...updatedData, componentProps: newProps };
                 }
                 return container;
             }),
