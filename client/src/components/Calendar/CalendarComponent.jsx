@@ -30,7 +30,7 @@ import useCalendar from "../ToDo/hooks/useCalendar";
 function CalendarComponent({
   calendarRef,
   newSettings,
-  setNewSettings,
+  saveSettings,
   handleEventClick,
   handleEventChange,
   eventReceive,
@@ -239,12 +239,12 @@ function CalendarComponent({
     tempTimeRange,
     tempTimeOffset
   ) {
-    setNewSettings(prevSettings => ({
-        ...prevSettings,
+    saveSettings({
+        ...newSettings,
         slotDuration: tempSlotDuration,
         timeRange: tempTimeRange,
         timeOffset: tempTimeOffset,
-    }));
+    });
     handleSettingsDialogClose();
   }
 
@@ -306,7 +306,7 @@ function CalendarComponent({
     const currentDate = calendarApi.getDate();
     fetchCalendarEvents();
     if (newSettings.currentView !== currentView) {
-      setNewSettings(prev => ({ ...prev, currentView }));
+      saveSettings({ ...newSettings, currentView });
     }
     if (datesSet && typeof datesSet === "function")
       datesSet(currentView, currentDate);
@@ -386,10 +386,10 @@ function CalendarComponent({
           <Button onClick={handleSettingsDialogOpen}>Настройки</Button>
           <ToggleButton
             onClick={() => {
-              setNewSettings(prevSettings => ({
-                ...prevSettings,
-                isToggledBGTasksEdit: !prevSettings.isToggledBGTasksEdit,
-              }));
+              saveSettings({
+                ...newSettings,
+                isToggledBGTasksEdit: !newSettings.isToggledBGTasksEdit,
+              });
             }}
             selected={isToggledBGTasksEdit}
             value="backgroundsEdit"
@@ -539,7 +539,7 @@ function CalendarComponent({
 CalendarComponent.propTypes = {
   calendarRef: PropTypes.object,
   newSettings: PropTypes.object.isRequired,
-  setNewSettings: PropTypes.func.isRequired,
+  saveSettings: PropTypes.func.isRequired,
   handleEventClick: PropTypes.func,
   handleEventChange: PropTypes.func,
   eventReceive: PropTypes.func,

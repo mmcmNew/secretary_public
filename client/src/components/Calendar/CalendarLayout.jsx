@@ -21,28 +21,30 @@ export default function CalendarLayout({
   const [dialogScroll, setDialogScroll] = useState("paper");
   const [selectedTaskId, setSelectedTaskId] = useState(null);
 
-  const [calendarSettings, setCalendarSettings] = useState({
+  const defaultCalendarSettings = {
     slotDuration: 30,
     timeRange: [8, 24],
     timeOffset: 0,
     currentView: "timeGridWeek",
     views: "timeGridWeek,timeGridDay,dayGridMonth,listWeek",
     isToggledBGTasksEdit: false,
-  });
-
-  // инициализация настроек из пропсов
-  useEffect(() => {
-    if (calendarSettingsProp) {
-      setCalendarSettings(calendarSettingsProp);
-    }
-  }, [calendarSettingsProp]);
+  }
+  const [calendarSettings, setCalendarSettings] = useState(calendarSettingsProp || defaultCalendarSettings);
 
   // сохранение настроек в контейнере
-  useEffect(() => {
+  // useEffect(() => {
+  //   console.log(containerId, calendarSettings)
+  //   if (handleUpdateContent && containerId) {
+  //     handleUpdateContent(containerId, { calendarSettingsProp: calendarSettings });
+  //   }
+  // }, [calendarSettings, handleUpdateContent, containerId]);
+
+  const handleSaveCalendarSettings = (settings) => {
+    setCalendarSettings(settings);
     if (handleUpdateContent && containerId) {
-      handleUpdateContent(containerId, { calendarSettingsProp: calendarSettings });
+      handleUpdateContent(containerId, { calendarSettingsProp: settings });
     }
-  }, [calendarSettings, handleUpdateContent, containerId]);
+  };
 
   async function handleDelDateClick(taskId) {
     await updateTask({ taskId, start: null, end: null });
@@ -134,7 +136,7 @@ export default function CalendarLayout({
       <CalendarComponent
         calendarRef={calendarRef}
         newSettings={calendarSettings}
-        setNewSettings={setCalendarSettings}
+        saveSettings={handleSaveCalendarSettings}
         calendarEvents={calendarEvents.data}
         handleEventClick={handleEventClick}
         handleEventChange={handleEventChange}
