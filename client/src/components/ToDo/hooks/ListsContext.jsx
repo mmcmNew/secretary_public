@@ -34,7 +34,7 @@ export const ListsProvider = ({ children, onError, setLoading }) => {
         lists: data.lists,
         default_lists: data.default_lists,
         projects: data.projects,
-        version: data.version,
+        version: data.tasksVersion,
         loading: false,
         error: null,
       });
@@ -77,7 +77,7 @@ export const ListsProvider = ({ children, onError, setLoading }) => {
     }
   }, [selectedListId, lists]);
 
-  const { version: wsVersion } = useUpdateWebSocket();
+  const { tasksVersion: wsVersion } = useUpdateWebSocket();
 
   useEffect(() => {
     if (wsVersion) {

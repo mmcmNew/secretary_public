@@ -30,7 +30,7 @@ export const TasksProvider = ({ children, onError, setLoading, fetchLists }) => 
       console.log('fetchTasks: start', listId);
       const data = await api(`/tasks/get_tasks?list_id=${listId}&time_zone=${new Date().getTimezoneOffset()}`);
       console.log('fetchTasks: data', data);
-      setTasks({ data: data.tasks || [], version: data.version, loading: false, error: null });
+      setTasks({ data: data.tasks || [], version: data.tasksVersion, loading: false, error: null });
       if (setLoading) setLoading(false);
       fetching.current = false;
       console.log('fetchTasks: success');
@@ -99,7 +99,7 @@ export const TasksProvider = ({ children, onError, setLoading, fetchLists }) => 
     fetchTaskFields();
   }, [fetchTaskFields]);
 
-  const { version: wsVersion } = useUpdateWebSocket();
+  const { tasksVersion: wsVersion } = useUpdateWebSocket();
 
   useEffect(() => {
     if (wsVersion && selectedTaskId) {

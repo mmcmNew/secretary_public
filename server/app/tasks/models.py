@@ -7,7 +7,7 @@ import json
 import random
 import uuid
 
-from app import db, socketio
+from app import db
 
 # Вспомогательные таблицы для связи между задачами и подзадачами
 task_subtasks_relations = db.Table('task_subtasks_relations',
@@ -50,55 +50,57 @@ class DataVersion(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     @classmethod
-    def get_version(cls):
-        """Get current version for all data"""
+    def get_version(cls, key='version'):
+        """Get current version for the specified key."""
         version_record = cls.query.first()
         if not version_record:
-            # If no version exists, create one
-            version_record = cls(version_metadata={'version': str(uuid.uuid4())})
+            version_record = cls(version_metadata={})
             db.session.add(version_record)
             db.session.commit()
-        return version_record.version_metadata.get('version')
+        if key not in version_record.version_metadata:
+            version_record.version_metadata[key] = str(uuid.uuid4())
+            db.session.commit()
+        return version_record.version_metadata.get(key)
 
     @classmethod
-    def check_version(cls, client_version):
-        """Check if client version matches server version"""
+    def check_version(cls, key, client_version):
+        """Check if client version matches server version for the key."""
         version_record = cls.query.first()
         if not version_record:
-            # If no version exists, create one
-            version_record = cls(version_metadata={'version': str(uuid.uuid4())})
+            version_record = cls(version_metadata={})
             db.session.add(version_record)
             db.session.commit()
-        
+        current = version_record.version_metadata.get(key)
+        if not current:
+            version_record.version_metadata[key] = str(uuid.uuid4())
+            db.session.commit()
+            current = version_record.version_metadata[key]
+
         return {
-            'version': version_record.version_metadata.get('version'),
-            'has_changed': version_record.version_metadata.get('version') != client_version
+            'version': current,
+            'has_changed': current != client_version
         }
 
     @classmethod
-    def update_version(cls):
-        """Update version for all data"""
+    def update_version(cls, key='version'):
+        """Update version for the specified key."""
         version_record = cls.query.first()
         if not version_record:
-            version_record = cls(version_metadata={'version': str(uuid.uuid4())})
+            version_record = cls(version_metadata={})
             db.session.add(version_record)
-        else:
-            version_record.version_metadata = {'version': str(uuid.uuid4())}
+        version_record.version_metadata[key] = str(uuid.uuid4())
         db.session.commit()
-        new_version = version_record.version_metadata.get('version')
-        # Notify clients about updated version
-        socketio.emit('data_updated', {'version': new_version}, namespace='/updates')
-        return new_version
+        return version_record.version_metadata.get(key)
 
     @classmethod
-    def get_version_info(cls):
-        """Get detailed version information."""
+    def get_version_info(cls, key='version'):
+        """Get detailed version information for the key."""
         version_record = cls.query.first()
         if not version_record:
             return None
-        
+
         return {
-            'version': version_record.version_metadata.get('version'),
+            'version': version_record.version_metadata.get(key),
             'updated_at': version_record.updated_at,
         }
 
