@@ -23,6 +23,7 @@ import { Draggable } from "@fullcalendar/interaction";
 export default function TasksList({
     containerId,
     listsList,
+    projects = [],
     selectedList,
     isNeedContextMenu = false,
     setSelectedTaskId = null,
@@ -159,12 +160,12 @@ export default function TasksList({
         if (!actionTypeName) actionTypeName = actionType;
         console.log(`handleToListAction: `, actionTypeName, targetItemId, targetId);
         if (actionTypeName === "move") {
-            if (typeof linkTaskList === "function") await linkTaskList(targetItemId, targetId);
+            if (typeof linkTaskList === "function") await linkTaskList({ source_id: targetItemId, target_id: targetId });
             if (typeof deleteFromChildes === "function")
                 await deleteFromChildes(`task_${targetItemId}`, selectedList.id);
             console.log(`Перемещаем задачу с id ${targetItemId} в ${targetId}`);
         } else if (actionTypeName === "link") {
-            if (typeof linkTaskList === "function") await linkTaskList(targetItemId, targetId);
+            if (typeof linkTaskList === "function") await linkTaskList({ source_id: targetItemId, target_id: targetId });
             console.log(`Связываем задачу с id ${targetItemId} с ${targetId}`);
         }
         // Закрываем все меню после выполнения действия
@@ -354,16 +355,16 @@ export default function TasksList({
             {isNeedContextMenu && (
                 <Menu anchorEl={listsMenuAnchorEl} open={Boolean(listsMenuAnchorEl)} onClose={handleCloseListsMenu}>
                     {(() => {
-                        const itemsMap = new Map(listsList.map(item => [item.id, item]));
-                        const rootItems = listsList
-                            .filter(item => item.inGeneralList && !item.deleted)
-                            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
+                        const allItems = listsList.concat(projects);
+                        const itemsMap = new Map(allItems.map(item => [item.id, item]));
+                        // Корневые проекты
+                        const rootProjects = projects.filter(item => !item.deleted);
                         const elements = [];
+                        let menuIndex = 0;
                         const traverse = (item, depth = 0) => {
-                            if (item.type === 'group') {
+                            if (item.type === 'project' || item.type === 'group') {
                                 elements.push(
-                                    <MenuItem key={item.id} disabled sx={{ pl: depth * 2 }}>
+                                    <MenuItem key={menuIndex++} disabled sx={{ pl: depth * 2 }} data-id={item.id}>
                                         {item.title}
                                     </MenuItem>
                                 );
@@ -372,15 +373,18 @@ export default function TasksList({
                                     if (child) traverse(child, depth + 1);
                                 });
                             } else if (item.type === 'list') {
+                                const currentIndex = menuIndex++;
                                 elements.push(
-                                    <MenuItem key={item.id} onClick={() => handleToListAction(item.id)} sx={{ pl: depth * 2 }}>
+                                    <MenuItem key={currentIndex} data-id={item.id} onClick={() => handleToListAction(item.id)} sx={{ pl: depth * 2 }}>
                                         {item.title}
                                     </MenuItem>
                                 );
                             }
                         };
-
-                        rootItems.forEach(item => traverse(item));
+                        rootProjects.forEach(item => traverse(item));
+                        // Также добавим списки вне проектов (inGeneralList)
+                        const rootLists = listsList.filter(item => item.inGeneralList && !item.deleted && !item.parent_id);
+                        rootLists.forEach(item => traverse(item));
                         return elements;
                     })()}
                 </Menu>
@@ -412,6 +416,7 @@ TasksList.propTypes = {
     tasks: PropTypes.array,
     selectedTaskId: PropTypes.number,
     listsList: PropTypes.array,
+    projects: PropTypes.array,
     isNeedContextMenu: PropTypes.bool,
     selectedList: PropTypes.object,
     setSelectedTaskId: PropTypes.func,

@@ -143,6 +143,7 @@ export default function ToDoTasksPanel({ mobile = false, setSelectedListId }) {
           tasks={tasks.data}
           selectedTaskId={selectedTaskId}
           listsList={lists.lists}
+          projects={lists.projects}
           selectedList={selectedList}
           isNeedContextMenu={true}
           setSelectedTaskId={setSelectedTaskId}
