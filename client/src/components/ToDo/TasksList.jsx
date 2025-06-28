@@ -353,13 +353,36 @@ export default function TasksList({
 
             {isNeedContextMenu && (
                 <Menu anchorEl={listsMenuAnchorEl} open={Boolean(listsMenuAnchorEl)} onClose={handleCloseListsMenu}>
-                    {listsList
-                        .filter((item) => item.type === "list")
-                        .map((list) => (
-                            <MenuItem key={list.id} onClick={() => handleToListAction(list.id)}>
-                                {list.title}
-                            </MenuItem>
-                        ))}
+                    {(() => {
+                        const itemsMap = new Map(listsList.map(item => [item.id, item]));
+                        const rootItems = listsList
+                            .filter(item => item.inGeneralList && !item.deleted)
+                            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+                        const elements = [];
+                        const traverse = (item, depth = 0) => {
+                            if (item.type === 'group') {
+                                elements.push(
+                                    <MenuItem key={item.id} disabled sx={{ pl: depth * 2 }}>
+                                        {item.title}
+                                    </MenuItem>
+                                );
+                                (item.childes_order || []).forEach(childId => {
+                                    const child = itemsMap.get(childId);
+                                    if (child) traverse(child, depth + 1);
+                                });
+                            } else if (item.type === 'list') {
+                                elements.push(
+                                    <MenuItem key={item.id} onClick={() => handleToListAction(item.id)} sx={{ pl: depth * 2 }}>
+                                        {item.title}
+                                    </MenuItem>
+                                );
+                            }
+                        };
+
+                        rootItems.forEach(item => traverse(item));
+                        return elements;
+                    })()}
                 </Menu>
             )}
 
