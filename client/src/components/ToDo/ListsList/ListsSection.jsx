@@ -22,7 +22,9 @@ export default function ListsSection({
   editingTitle,
   listsList, // Needed for GroupItem to find children
   projects, // Needed for GroupItem to find children
-  onTaskDrop
+  onTaskDrop,
+  onDragStart,
+  onListDrop
 }) {
 
   const renderItem = (item, parentId = null) => {
@@ -35,6 +37,7 @@ export default function ListsSection({
       handleBlur,
       handleTitleChange,
       editingTitle,
+      onDragStart,
     };
 
     if (item.type === 'group' || item.type === 'project') {
@@ -48,6 +51,7 @@ export default function ListsSection({
           renderListItem={(childItem) => renderItem(childItem, item.id)} // Pass renderItem recursively
           renderGroupItem={(childItem) => renderItem(childItem, item.id)} // Pass renderItem recursively
           isDraggable={sectionType !== 'default'}
+          onListDrop={onListDrop}
           {
             ...commonProps
           }
@@ -107,4 +111,6 @@ ListsSection.propTypes = {
   listsList: PropTypes.array.isRequired,
   projects: PropTypes.array.isRequired,
   onTaskDrop: PropTypes.func,
+  onDragStart: PropTypes.func,
+  onListDrop: PropTypes.func,
 };
