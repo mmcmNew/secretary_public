@@ -620,6 +620,8 @@ def link_task(data):
     try:
         task_id = data['task_id']
         target_id = data['list_id']
+        action = data.get('action', 'link')
+        source_list_id = data.get('source_list_id')
 
         task = Task.query.get(task_id)
         if str(target_id).startswith('task_'):
@@ -632,16 +634,17 @@ def link_task(data):
             target = List.query.get(int(target_id))
             if task_id not in target.tasks:
                 task.lists.append(target)
-        # print(f'link_task: task: {task}, target: {target}')
         if task_id not in target.childes_order:
             updated_childes_order = target.childes_order.copy() or []
             updated_childes_order.append(task_id)
             target.childes_order = updated_childes_order
-            # print(f'link_task: target.childes_order: {target.childes_order}')
 
         db.session.add(target)
         db.session.add(task)
         db.session.commit()
+
+        if action == 'move' and source_list_id:
+            delete_from_childes({'source_id': f'task_{task_id}', 'group_id': source_list_id})
 
         return {"success": True}, 200
 

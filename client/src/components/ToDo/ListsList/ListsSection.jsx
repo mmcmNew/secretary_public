@@ -21,7 +21,8 @@ export default function ListsSection({
   handleTitleChange,
   editingTitle,
   listsList, // Needed for GroupItem to find children
-  projects // Needed for GroupItem to find children
+  projects, // Needed for GroupItem to find children
+  onTaskDrop
 }) {
 
   const renderItem = (item, parentId = null) => {
@@ -61,6 +62,7 @@ export default function ListsSection({
           onSelect={(event) => onSelect(event, item.id)}
           showProgress={false} // Lists don't show progress in the original renderListItem
           isDraggable={sectionType !== 'default'}
+          onTaskDrop={onTaskDrop}
           {
             ...commonProps
           }
@@ -104,4 +106,5 @@ ListsSection.propTypes = {
   editingTitle: PropTypes.string,
   listsList: PropTypes.array.isRequired,
   projects: PropTypes.array.isRequired,
+  onTaskDrop: PropTypes.func,
 };

@@ -44,6 +44,9 @@ export default function ListsList({
   const [groupMenuAnchorEl, setGroupMenuAnchorEl] = useState(null);
   const [projectMenuAnchorEl, setProjectMenuAnchorEl] = useState(null);
   const [actionType, setActionType] = useState(null); // Хранит текущее действие: "move" или "link"
+  const [dropMenuAnchorEl, setDropMenuAnchorEl] = useState(null);
+  const [droppedTask, setDroppedTask] = useState(null);
+  const [dropTargetListId, setDropTargetListId] = useState(null);
   const inputRef = useRef(null);
   const { fetchTasks } = useTasks();
   const { fetchLists: fetchListsHook, updateList } = useLists();
@@ -243,6 +246,33 @@ export default function ListsList({
     setAnchorEl(null);
   }
 
+  function handleTaskDrop(event, listId) {
+    event.preventDefault();
+    const taskData = event.dataTransfer.getData('task');
+    if (!taskData) return;
+    setDroppedTask(JSON.parse(taskData));
+    setDropTargetListId(listId);
+    setDropMenuAnchorEl(event.currentTarget);
+  }
+
+  async function handleDropAction(action) {
+    if (!droppedTask) return;
+    const params = { task_id: droppedTask.id, list_id: dropTargetListId, action };
+    if (action === 'move' && droppedTask.lists_ids?.length) {
+      params.source_list_id = droppedTask.lists_ids[0];
+    }
+    if (typeof linkTaskList === 'function') {
+      await linkTaskList(params);
+    }
+    handleCloseDropMenu();
+  }
+
+  function handleCloseDropMenu() {
+    setDropMenuAnchorEl(null);
+    setDroppedTask(null);
+    setDropTargetListId(null);
+  }
+
   function handleDragEnd(event) {
     console.log('Drag ended', event);
     // TODO: Implement drag and drop logic here
@@ -270,11 +300,12 @@ export default function ListsList({
             onContextMenu={handleContextMenu}
             inputRef={inputRef}
             handleKeyDown={handleKeyDown}
-            handleBlur={handleBlur}
-            handleTitleChange={handleTitleChange}
-            editingTitle={editingTitle}
-            listsList={listsList} // Pass listsList and projects for GroupItem children lookup
-          />
+          handleBlur={handleBlur}
+          handleTitleChange={handleTitleChange}
+          editingTitle={editingTitle}
+          listsList={listsList} // Pass listsList and projects for GroupItem children lookup
+          onTaskDrop={handleTaskDrop}
+        />
           <Divider />
           <ListsSection
             items={projects}
@@ -290,10 +321,11 @@ export default function ListsList({
             inputRef={inputRef}
             handleKeyDown={handleKeyDown}
             handleBlur={handleBlur}
-            handleTitleChange={handleTitleChange}
-            editingTitle={editingTitle}
-            listsList={listsList} // Pass listsList and projects for GroupItem children lookup
-          />
+          handleTitleChange={handleTitleChange}
+          editingTitle={editingTitle}
+          listsList={listsList} // Pass listsList and projects for GroupItem children lookup
+          onTaskDrop={handleTaskDrop}
+        />
           <Divider />
           <ListsSection
             items={listsList}
@@ -309,10 +341,11 @@ export default function ListsList({
             inputRef={inputRef}
             handleKeyDown={handleKeyDown}
             handleBlur={handleBlur}
-            handleTitleChange={handleTitleChange}
-            editingTitle={editingTitle}
-            listsList={listsList} // Pass listsList and projects for GroupItem children lookup
-          />
+          handleTitleChange={handleTitleChange}
+          editingTitle={editingTitle}
+          listsList={listsList} // Pass listsList and projects for GroupItem children lookup
+          onTaskDrop={handleTaskDrop}
+        />
         </Box>
       </DndContext>
       <ContextMenu
@@ -356,6 +389,15 @@ export default function ListsList({
           </MenuItem>
         ))}
       </Menu>
+
+      <Menu
+        anchorEl={dropMenuAnchorEl}
+        open={Boolean(dropMenuAnchorEl)}
+        onClose={handleCloseDropMenu}
+      >
+        <MenuItem onClick={() => handleDropAction('link')}>Связать</MenuItem>
+        <MenuItem onClick={() => handleDropAction('move')}>Переместить</MenuItem>
+      </Menu>
     </>
   );
 }
@@ -374,4 +416,6 @@ ListsList.propTypes = {
   updateEvents: PropTypes.func,
   linkListGroup: PropTypes.func,
   deleteFromChildes: PropTypes.func,
+  linkTaskList: PropTypes.func,
+  changeChildesOrder: PropTypes.func,
 };

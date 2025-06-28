@@ -11,6 +11,7 @@ export default function ToDoListsPanel({ mobile = false, setSelectedListId }) {
     setSelectedListId: setListId,
     deleteFromChildes,
     linkListGroup,
+    linkTaskList,
     addList,
     fetchLists,
   } = useLists();
@@ -40,6 +41,7 @@ export default function ToDoListsPanel({ mobile = false, setSelectedListId }) {
           setSelectedTaskId={setSelectedTaskId}
           selectedTaskId={selectedTaskId}
           linkListGroup={linkListGroup}
+          linkTaskList={linkTaskList}
           fetchLists={fetchLists}
         />
       </Box>
