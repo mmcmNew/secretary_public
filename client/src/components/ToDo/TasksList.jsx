@@ -159,14 +159,16 @@ export default function TasksList({
     async function handleToListAction(targetId, actionTypeName = null) {
         if (!actionTypeName) actionTypeName = actionType;
         console.log(`handleToListAction: `, actionTypeName, targetItemId, targetId);
-        if (actionTypeName === "move") {
-            if (typeof linkTaskList === "function") await linkTaskList({ source_id: targetItemId, target_id: targetId });
-            if (typeof deleteFromChildes === "function")
-                await deleteFromChildes(`task_${targetItemId}`, selectedList.id);
-            console.log(`Перемещаем задачу с id ${targetItemId} в ${targetId}`);
-        } else if (actionTypeName === "link") {
-            if (typeof linkTaskList === "function") await linkTaskList({ source_id: targetItemId, target_id: targetId });
-            console.log(`Связываем задачу с id ${targetItemId} с ${targetId}`);
+        if (typeof linkTaskList === "function") {
+            const params = {
+                task_id: targetItemId,
+                list_id: targetId,
+                action: actionTypeName
+            };
+            if (actionTypeName === "move" && selectedList?.id) {
+                params.source_list_id = selectedList.id;
+            }
+            await linkTaskList(params);
         }
         // Закрываем все меню после выполнения действия
         handleCloseMenu();

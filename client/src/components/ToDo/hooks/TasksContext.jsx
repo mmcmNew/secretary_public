@@ -16,7 +16,7 @@ const api = async (url, method = 'GET', body = null) => {
 
 export const TasksProvider = ({ children, onError, setLoading }) => {
   const [tasks, setTasks] = useState({ data: [], loading: false, error: null });
-  const { fetchLists } = useLists();
+  const { fetchLists, selectedListId: listsSelectedListId } = useLists();
   const [taskFields, setTaskFields] = useState({});
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [version, setVersion] = useState(null);
@@ -91,6 +91,14 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     if (params.listId && typeof fetchTasks === 'function') await fetchTasks(params.listId);
     return res;
   }, [fetchLists, fetchTasks]);
+  const linkTaskList = useCallback(async (params) => {
+    const res = await api("/tasks/link_task", "PUT", params);
+    if (fetchLists) await fetchLists();
+    // Обновляем задачи для текущего выбранного списка, а не для целевого
+    const currentListId = listsSelectedListId;
+    if (typeof fetchTasks === 'function' && currentListId) await fetchTasks(currentListId);
+    return res;
+  }, [fetchLists, fetchTasks, listsSelectedListId]);
 
   // Получить конфиг полей задач
   const fetchTaskFields = useCallback(async () => {
@@ -126,10 +134,11 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     changeTaskStatus,
     addSubTask,
     deleteTask,
+    linkTaskList,
     version,
     setVersion,
     loading: tasks.loading,
-  }), [tasks, taskFields, selectedTaskId, fetchTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, version]);
+  }), [tasks, taskFields, selectedTaskId, fetchTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, version]);
 
   return <TasksContext.Provider value={contextValue}>{children}</TasksContext.Provider>;
 };

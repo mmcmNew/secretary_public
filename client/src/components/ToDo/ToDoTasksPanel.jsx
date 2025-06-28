@@ -16,6 +16,7 @@ export default function ToDoTasksPanel({ mobile = false, setSelectedListId }) {
     updateTask,
     changeTaskStatus,
     deleteTask,
+    linkTaskList,
   } = useTasks();
   const {
     lists,
@@ -150,7 +151,7 @@ export default function ToDoTasksPanel({ mobile = false, setSelectedListId }) {
           updateList={updateList}
           updateTask={updateTask}
           changeTaskStatus={changeTaskStatus}
-          linkTaskList={linkListGroup}
+          linkTaskList={linkTaskList}
           deleteFromChildes={deleteFromChildes}
         />
       </Box>
