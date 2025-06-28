@@ -36,7 +36,9 @@ export default function GroupItem({
   handleTitleChange,
   editingTitle,
   renderListItem,
-  renderGroupItem
+  renderGroupItem,
+  onDragStart,
+  onListDrop
 }) {
 
   let progress = 0;
@@ -45,7 +47,14 @@ export default function GroupItem({
   }
 
   const groupItemContent = (
-    <div key={item.id} style={{ left: "auto !important", top: "auto !important" }}>
+    <div
+      key={item.id}
+      style={{ left: "auto !important", top: "auto !important" }}
+      draggable={isDraggable}
+      onDragStart={(e) => onDragStart && onDragStart(e, item)}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => onListDrop && onListDrop(e, item.id)}
+    >
       <ListItemButton
         onClick={onToggle}
         onContextMenu={onContextMenu}
@@ -94,11 +103,7 @@ export default function GroupItem({
     </div>
   );
 
-  return isDraggable ? (
-    <div key={item.id}>
-      {groupItemContent}
-    </div>
-  ) : groupItemContent;
+  return groupItemContent;
 }
 
 GroupItem.propTypes = {
@@ -118,5 +123,7 @@ GroupItem.propTypes = {
   handleTitleChange: PropTypes.func,
   editingTitle: PropTypes.string,
   renderListItem: PropTypes.func.isRequired,
-  renderGroupItem: PropTypes.func.isRequired
+  renderGroupItem: PropTypes.func.isRequired,
+  onDragStart: PropTypes.func,
+  onListDrop: PropTypes.func
 };

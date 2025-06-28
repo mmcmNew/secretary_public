@@ -255,6 +255,21 @@ export default function ListsList({
     setDropMenuAnchorEl(event.currentTarget);
   }
 
+  function handleListDragStart(event, item) {
+    event.dataTransfer.setData('list', JSON.stringify(item));
+  }
+
+  async function handleListDrop(event, targetId) {
+    event.preventDefault();
+    const listData = event.dataTransfer.getData('list');
+    if (!listData) return;
+    const dropped = JSON.parse(listData);
+    if (typeof linkListGroup === 'function') {
+      await linkListGroup(dropped.id, targetId);
+      if (typeof updateAll === 'function') await updateAll();
+    }
+  }
+
   async function handleDropAction(action) {
     if (!droppedTask) return;
     const params = { task_id: droppedTask.id, list_id: dropTargetListId, action };
@@ -297,14 +312,16 @@ export default function ListsList({
             onToggleGroup={handleToggleGroup}
             isNeedContextMenu={false} // Default lists do not have context menu
             editingItemId={editingItemId}
-            onContextMenu={handleContextMenu}
-            inputRef={inputRef}
-            handleKeyDown={handleKeyDown}
+          onContextMenu={handleContextMenu}
+          inputRef={inputRef}
+          handleKeyDown={handleKeyDown}
           handleBlur={handleBlur}
           handleTitleChange={handleTitleChange}
           editingTitle={editingTitle}
           listsList={listsList} // Pass listsList and projects for GroupItem children lookup
           onTaskDrop={handleTaskDrop}
+          onDragStart={handleListDragStart}
+          onListDrop={handleListDrop}
         />
           <Divider />
           <ListsSection
@@ -318,13 +335,15 @@ export default function ListsList({
             isNeedContextMenu={isNeedContextMenu}
             editingItemId={editingItemId}
             onContextMenu={handleContextMenu}
-            inputRef={inputRef}
-            handleKeyDown={handleKeyDown}
-            handleBlur={handleBlur}
+          inputRef={inputRef}
+          handleKeyDown={handleKeyDown}
+          handleBlur={handleBlur}
           handleTitleChange={handleTitleChange}
           editingTitle={editingTitle}
           listsList={listsList} // Pass listsList and projects for GroupItem children lookup
           onTaskDrop={handleTaskDrop}
+          onDragStart={handleListDragStart}
+          onListDrop={handleListDrop}
         />
           <Divider />
           <ListsSection
@@ -340,11 +359,13 @@ export default function ListsList({
             onContextMenu={handleContextMenu}
             inputRef={inputRef}
             handleKeyDown={handleKeyDown}
-            handleBlur={handleBlur}
+          handleBlur={handleBlur}
           handleTitleChange={handleTitleChange}
           editingTitle={editingTitle}
           listsList={listsList} // Pass listsList and projects for GroupItem children lookup
           onTaskDrop={handleTaskDrop}
+          onDragStart={handleListDragStart}
+          onListDrop={handleListDrop}
         />
         </Box>
       </DndContext>
