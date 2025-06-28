@@ -30,7 +30,8 @@ export default function ListItem({
   handleTitleChange,
   editingTitle,
   selectedTaskId,
-  onTaskDrop
+  onTaskDrop,
+  onDragStart
 }) {
 
   const { setNodeRef, isOver } = useDroppable({
@@ -57,6 +58,8 @@ export default function ListItem({
       key={`div_${item.id}`}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => onTaskDrop && onTaskDrop(e, item.id)}
+      draggable={isDraggable}
+      onDragStart={(e) => onDragStart && onDragStart(e, item)}
     >
       <ListItemButton
         selected={isSelected}
@@ -121,5 +124,6 @@ ListItem.propTypes = {
   handleTitleChange: PropTypes.func,
   editingTitle: PropTypes.string,
   selectedTaskId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  onTaskDrop: PropTypes.func
+  onTaskDrop: PropTypes.func,
+  onDragStart: PropTypes.func
 };
