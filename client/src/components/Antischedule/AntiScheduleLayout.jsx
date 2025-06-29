@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, useMediaQuery } from "@mui/system";
-import FocusModeComponent from "./FocuseMode";
+import FocusModeComponent from "./FocusMode";
 import { Button, IconButton, ToggleButton } from "@mui/material";
 import SmartphoneIcon from '@mui/icons-material/Smartphone';
 import CalendarComponent from "../Calendar/CalendarComponent";
@@ -21,7 +21,7 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default function AntiScheduleLayout({ containerId }) {
-  const { lists } = useLists();
+  const { lists, setSelectedListId } = useLists();
   const {
     fetchTasks,
     updateTask,
@@ -140,6 +140,7 @@ export default function AntiScheduleLayout({ containerId }) {
 
     const selectedList = lists?.default_lists?.find((list) => list.id === "my_day");
     setMyDayList(selectedList);
+    if (selectedList) setSelectedListId(selectedList.id);
   }, []);
 
   async function handleUpdateTasks() {
@@ -147,6 +148,7 @@ export default function AntiScheduleLayout({ containerId }) {
     const newCalendarEvents = await fetchAntiSchedule();
     const selectedList = lists?.default_lists?.find((list) => list.id === "my_day");
     setMyDayList(selectedList);
+    if (selectedList) setSelectedListId(selectedList.id);
     setCalendarEvents(newCalendarEvents || []);
     setMyDayTasks(newTasks);
   }
@@ -521,11 +523,6 @@ export default function AntiScheduleLayout({ containerId }) {
           ) : (
             <FocusModeComponent
               containerId={containerId}
-              updateTask={updateTask}
-              tasks={myDayTasks}
-              selectedList={myDayList}
-              changeTaskStatus={handleChangeTaskStatus}
-              handleUpdateTasks={handleUpdateTasks}
               onTaskClick={handleTaskClick}
               additionalButtonClick={handleAdditionalButtonClick}
             />
