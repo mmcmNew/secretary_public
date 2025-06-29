@@ -41,10 +41,12 @@ function ToDoLayoutUniversal() {
     }
   }, [selectedListId, fetchTasks]);
 
-  const handleAdditionalButtonClick = useCallback((task) => {
+  const handleAdditionalButtonClick = useCallback(async (task) => {
     const priority = task.priority_id === 3 ? 1 : 3;
+    console.log('task', task)
     if (typeof updateTask === 'function')
-      updateTask({ taskId: task.id, priority_id: priority });
+      console.log('updateTask', task.id, priority)
+      await updateTask({ taskId: task.id, priority_id: priority, listId: selectedListId });
   }, [updateTask]);
 
   const handleKeyDown = useCallback((event) => {

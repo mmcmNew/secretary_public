@@ -62,6 +62,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     return res;
   }, [fetchLists, fetchTasks]);
   const updateTask = useCallback(async (params) => {
+    console.log('updateTask: params', params);
     const res = await api("/tasks/edit_task", "PUT", params);
     if (fetchLists) await fetchLists();
     if (params.listId && typeof fetchTasks === 'function') {
