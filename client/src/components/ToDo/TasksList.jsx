@@ -59,7 +59,7 @@ export default function TasksList({
             return;
         }
 
-        console.log('Initializing draggable for tasks:', tasks);
+        // console.log('Initializing draggable for tasks:', tasks);
         const draggable = new Draggable(draggableEl, {
             itemSelector: '.draggable-task',
             eventData: (eventEl) => {
