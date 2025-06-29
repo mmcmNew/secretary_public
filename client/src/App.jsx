@@ -7,6 +7,7 @@ import { ContainerProvider } from './components/DraggableComponents/ContainerCon
 import { TasksProvider } from './components/ToDo/hooks/TasksContext';
 import { ListsProvider } from './components/ToDo/hooks/ListsContext';
 import { CalendarProvider } from './components/ToDo/hooks/CalendarContext';
+import { AntiScheduleProvider } from './components/Antischedule/hooks/AntiScheduleContext';
 import UpdateWebSocketProvider from './components/DraggableComponents/UpdateWebSocketContext';
 import TestPage from './TestPage.jsx';
 import MainContainerMobile from './components/MobileMain.jsx';
@@ -39,7 +40,8 @@ function App() {
             <ListsProvider>
               <TasksProvider>
                 <CalendarProvider>
-                  <Router future={{
+                  <AntiScheduleProvider>
+                    <Router future={{
                   v7_fetcherPersist: true,
                   v7_normalizeFormMethod: true,
                   v7_partialHydration: true,
@@ -49,6 +51,7 @@ function App() {
                 }}>
                   <AppRoutes />
                   </Router>
+                  </AntiScheduleProvider>
                 </CalendarProvider>
               </TasksProvider>
             </ListsProvider>
