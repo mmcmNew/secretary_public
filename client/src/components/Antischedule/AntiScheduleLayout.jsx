@@ -12,36 +12,15 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import NewRecordDialog from "../JournalEditor/NewRecordDialog";
 import TotalTimeTree from "./TotalTimeTree";
-import useLists from "../ToDo/hooks/useLists";
-import useTasks from "../ToDo/hooks/useTasks";
-import useAntiSchedule from "./hooks/useAntiSchedule";
 
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default function AntiScheduleLayout({ containerId }) {
-  const { lists } = useLists();
-  const listsList = lists?.lists || [];
-  const defaultLists = lists?.default_lists || [];
-  const projects = lists?.projects || [];
-
-  const {
-    fetchTasks,
-    updateTask,
-    changeTaskStatus,
-    deleteTask,
-  } = useTasks();
-
-  const {
-    antiSchedule,
-    fetchAntiSchedule,
-    addAntiTask,
-    updateAntiTask,
-    deleteAntiTask,
-  } = useAntiSchedule();
-
-  const sendUpdatedTaskToServer = updateAntiTask;
+  const { listsList, defaultLists, projects, updateAll, updateEvents } =
+    useToDo();
+  const { sendUpdatedTaskToServer, deleteAntiTask, addAntiTask } = useToDo();
   const [mode, setMode] = useState("focus");
   // const { setUpdates } = useContainer();
   const calendarRef = useRef(null);
@@ -126,8 +105,9 @@ export default function AntiScheduleLayout({ containerId }) {
   useEffect(() => {
     const getAndSetCalendarEvents = async () => {
       if (!calendarEvents?.loading) {
-        const newCalendarEvents = await fetchAntiSchedule();
-        setCalendarEvents(newCalendarEvents || []);
+        const newCalendarEvents = await getAntiSchedule();
+        console.log("newCalendarEvents", newCalendarEvents);
+        setCalendarEvents(newCalendarEvents?.anti_schedule || []);
       }
     };
 
@@ -147,7 +127,7 @@ export default function AntiScheduleLayout({ containerId }) {
 
   async function handleUpdateTasks() {
     const newTasks = await fetchTasks("my_day");
-    const newCalendarEvents = await fetchAntiSchedule();
+    const newCalendarEvents = await getAntiSchedule();
     // console.log("newTasks", newTasks);
     const selectedList = defaultLists?.find((list) => list.id === "my_day");
     setMyDayList(selectedList);
@@ -157,7 +137,7 @@ export default function AntiScheduleLayout({ containerId }) {
 
   async function handleDelDateClick(taskId) {
     console.log("handleDelDateClick, taskId", taskId);
-    deleteAntiTask({ taskId });
+    deleteAntiTask(taskId);
     setTaskDialogOpen(false);
     const newCalendarEvents = calendarEvents?.filter((event) => event.id != taskId);
     console.log("newCalendarEvents", newCalendarEvents);
@@ -223,7 +203,7 @@ export default function AntiScheduleLayout({ containerId }) {
     setUpdatedCalendarEvents(updatedCalendarEvents);
 
     if (sendUpdatedTaskToServer && typeof sendUpdatedTaskToServer === "function")
-      sendUpdatedTaskToServer({ taskId: eventId, ...updatedFields });
+      sendUpdatedTaskToServer(eventId, updatedFields, 'tasks/edit_anti_task');
   }
 
   function handleChangeTaskStatus(taskId, updatedFields) {
@@ -342,7 +322,7 @@ export default function AntiScheduleLayout({ containerId }) {
         event.id == eventInfo.event.id ? { ...event, ...eventDict } : event
       )
     );
-    await sendUpdatedTaskToServer({ taskId: eventInfo.event.id, ...eventDict });
+    await sendUpdatedTaskToServer(eventInfo.event.id, {...eventDict}, "/tasks/edit_anti_task");
   }
 
   async function handleUpdateTask(taskId, updatedFields) {
@@ -354,7 +334,7 @@ export default function AntiScheduleLayout({ containerId }) {
         switch (currentTaskType) {
             case "event":
                 console.log("Updating event type", taskId, updatedFields);
-                await sendUpdatedTaskToServer({ taskId, ...updatedFields });
+                await sendUpdatedTaskToServer(taskId, {...updatedFields}, "/tasks/edit_anti_task");
 
                 currentUpdatedTasks = calendarEvents?.map((task) =>
                     task.id == taskId ? { ...task, ...updatedFields } : task
@@ -512,12 +492,15 @@ export default function AntiScheduleLayout({ containerId }) {
               handleEventClick={handleEventClick}
               handleEventChange={handleEventChange}
               eventReceive={handleEventReceive}
+              handleUpdateTasks={updateAll}
               addTask={handleAddAntiTask}
               calendarEvents={updatedCalendarEvents}
               fetchTasks={fetchTasks}
               listsList={listsList}
               defaultLists={defaultLists}
               projects={projects}
+              updateAll={updateAll}
+              updateEvents={updateEvents}
               datesSet={handleDatesSet}
             />
           ) : (
@@ -543,12 +526,15 @@ export default function AntiScheduleLayout({ containerId }) {
             handleEventClick={handleEventClick}
             handleEventChange={handleEventChange}
             eventReceive={handleEventReceive}
+            handleUpdateTasks={updateAll}
             addTask={handleAddAntiTask}
             calendarEvents={updatedCalendarEvents}
             fetchTasks={fetchTasks}
             listsList={listsList}
             defaultLists={defaultLists}
             projects={projects}
+            updateAll={updateAll}
+            updateEvents={updateEvents}
             datesSet={handleDatesSet}
           />
           {selectedDayTasks&&
