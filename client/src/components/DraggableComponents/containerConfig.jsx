@@ -11,7 +11,7 @@ import JournalEditor from "../JournalEditor/JournalEditor";
 import Chat from "../Chat";
 // import ToDoLayoutMobile from "../ToDo/ToDoLayoutMobile";
 import JournalEditorDrawer from "../JournalEditor/JournalEditorDrawer";
-import FocusModeComponent from "../Antischedule/FocuseMode";
+import FocusModeComponent from "../Antischedule/FocusMode";
 import CalendarLayout from "../Calendar/CalendarLayout";
 import AntiScheduleLayout from "../Antischedule/AntiScheduleLayout";
 // import ToDoLayoutTree from "../ToDo/ToDoLayoutTest";
@@ -197,9 +197,9 @@ export const containerTypes = {
         isMinimized: false,
         content: <JournalEditorDrawer />,
     },
-    FocuseMode: {
-        type: "FocuseMode",
-        name: "FocuseMode",
+    FocusMode: {
+        type: "FocusMode",
+        name: "FocusMode",
         position: { x: 0, y: 0 },
         size: { width: 520, height: 800 },
         minSize: { width: 450, height: 500 },
