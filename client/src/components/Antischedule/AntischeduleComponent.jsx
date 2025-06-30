@@ -24,6 +24,7 @@ export default function AntischeduleComponent({
   listsList,
   defaultLists,
   projects,
+  myDayList,
   handleEventClick,
   handleEventChange,
   handleEventReceive,
@@ -47,6 +48,7 @@ export default function AntischeduleComponent({
   deleteTask,
   newRecordDialogOpen,
   handleNewRecordDialogClose,
+  updateTask,
 }) {
   return (
     <Box
@@ -105,6 +107,11 @@ export default function AntischeduleComponent({
           ) : (
             <FocusModeComponent
               containerId={containerId}
+              tasks={myDayTasks}
+              selectedList={myDayList}
+              updateTask={updateTask}
+              changeTaskStatus={handleChangeTaskStatus}
+              fetchTasks={fetchTasks}
               onTaskClick={handleTaskClick}
               additionalButtonClick={handleAdditionalButtonClick}
             />
@@ -170,6 +177,7 @@ AntischeduleComponent.propTypes = {
   listsList: PropTypes.array,
   defaultLists: PropTypes.array,
   projects: PropTypes.array,
+  myDayList: PropTypes.object,
   handleEventClick: PropTypes.func,
   handleEventChange: PropTypes.func,
   handleEventReceive: PropTypes.func,
@@ -187,6 +195,7 @@ AntischeduleComponent.propTypes = {
   selectedTaskId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   currentTaskFields: PropTypes.object,
   handleUpdateTask: PropTypes.func,
+  updateTask: PropTypes.func,
   currentTaskType: PropTypes.string,
   handleChangeTaskStatus: PropTypes.func,
   handleChangeEventStatus: PropTypes.func,
