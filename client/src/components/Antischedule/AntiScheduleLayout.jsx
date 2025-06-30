@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, useMediaQuery } from "@mui/system";
-import FocusModeComponent from "./FocusMode";
-import { Button, IconButton, ToggleButton } from "@mui/material";
-import SmartphoneIcon from '@mui/icons-material/Smartphone';
-import CalendarComponent from "../Calendar/CalendarComponent";
-import TaskDialog from "../Calendar/TaskDialog";
+import AntischeduleComponent from "./AntischeduleComponent";
 import useContainer from "../DraggableComponents/useContainer";
 import useLists from "../ToDo/hooks/useLists";
 import useTasks from "../ToDo/hooks/useTasks";
@@ -13,8 +9,6 @@ import PropTypes from "prop-types";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import NewRecordDialog from "../JournalEditor/NewRecordDialog";
-import TotalTimeTree from "./TotalTimeTree";
 
 
 dayjs.extend(utc);
@@ -463,114 +457,47 @@ export default function AntiScheduleLayout({ containerId }) {
   }
 
   return (
-    <Box
-      sx={{
-        flexGrow: 1,
-        padding: 2,
-        height: "100%",
-        width: "100%",
-        display: "flex",
-        flexDirection: "row",
-      }}
-    >
-      <Box
-        sx={{
-          minWidth: "500px",
-          // maxWidth: "600px",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <Box
-          sx={{
-            minWidth: "500px",
-            // maxWidth: "600px",
-            display: "flex",
-            flexDirection: "row",
-          }}
-        >
-          <ToggleButton
-            value="focus"
-            selected={mode === "focus"}
-            onChange={() => handleSetMode()}
-          >
-            Фокус
-          </ToggleButton>
-          <IconButton onClick={() => setIsMobile(!isMobile)} color="inherit">
-            <SmartphoneIcon />
-          </IconButton>
-          <Button onClick={handleNewRecordDialogOpen}>
-            Добавить запись в журнал
-          </Button>
-        </Box>
-        <Box sx={{ height: "95%", width: "100%" }}>
-          {mode !== "focus" && isMobile ? (
-            <CalendarComponent
-              calendarRef={calendarRef}
-              newSettings={newSettings}
-              saveSettings={setNewSettings}
-              events={updatedCalendarEvents}
-              tasks={myDayTasks}
-              lists={{ lists: listsList, default_lists: defaultLists, projects }}
-              handleEventClick={handleEventClick}
-              handleEventChange={handleEventChange}
-              eventReceive={handleEventReceive}
-              addTask={handleAddAntiTask}
-              fetchTasks={fetchTasks}
-              fetchEvents={fetchAntiSchedule}
-              datesSet={handleDatesSet}
-            />
-          ) : (
-            <FocusModeComponent
-              containerId={containerId}
-              onTaskClick={handleTaskClick}
-              additionalButtonClick={handleAdditionalButtonClick}
-            />
-          )}
-        </Box>
-      </Box>
-      {mode !== "focus" && !isMobile &&
-        <Box sx={{ width: "100%", height: '98%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <CalendarComponent
-            calendarRef={calendarRef}
-            newSettings={newSettings}
-            saveSettings={setNewSettings}
-            events={updatedCalendarEvents}
-            tasks={myDayTasks}
-            lists={{ lists: listsList, default_lists: defaultLists, projects }}
-            handleEventClick={handleEventClick}
-            handleEventChange={handleEventChange}
-            eventReceive={handleEventReceive}
-            addTask={handleAddAntiTask}
-            fetchTasks={fetchTasks}
-            fetchEvents={fetchAntiSchedule}
-            datesSet={handleDatesSet}
-          />
-          {selectedDayTasks&&
-            <Box sx={{ width: "100%" }}>
-              <TotalTimeTree tasks={selectedDayTasks} />
-            </Box>
-          }
-        </Box>
-      }
-      <TaskDialog
-        open={taskDialogOpen}
-        handleClose={handleDialogClose}
-        handleDelDateClick={handleDelDateClick}
-        scroll={dialogScroll}
-        setSelectedTaskId={setSelectedTaskId}
-        tasks={currentTasks}
-        selectedTaskId={selectedTaskId}
-        taskFields={currentTaskFields}
-        updateTask={handleUpdateTask}
-        changeTaskStatus={currentTaskType == 'task' ? handleChangeTaskStatus: handleChangeEventStatus}
-        deleteTask={deleteTask}
-      />
-      <NewRecordDialog
-        open={newRecordDialogOpen}
-        handleClose={handleNewRecordDialogClose}
-      />
-    </Box>
+    <AntischeduleComponent
+      containerId={containerId}
+      mode={mode}
+      isMobile={isMobile}
+      setIsMobile={setIsMobile}
+      handleSetMode={handleSetMode}
+      handleNewRecordDialogOpen={handleNewRecordDialogOpen}
+      handleTaskClick={handleTaskClick}
+      handleAdditionalButtonClick={handleAdditionalButtonClick}
+      calendarRef={calendarRef}
+      newSettings={newSettings}
+      setNewSettings={setNewSettings}
+      updatedCalendarEvents={updatedCalendarEvents}
+      myDayTasks={myDayTasks}
+      listsList={listsList}
+      defaultLists={defaultLists}
+      projects={projects}
+      handleEventClick={handleEventClick}
+      handleEventChange={handleEventChange}
+      eventReceive={handleEventReceive}
+      handleAddAntiTask={handleAddAntiTask}
+      fetchTasks={fetchTasks}
+      fetchAntiSchedule={fetchAntiSchedule}
+      handleDatesSet={handleDatesSet}
+      selectedDayTasks={selectedDayTasks}
+      taskDialogOpen={taskDialogOpen}
+      handleDialogClose={handleDialogClose}
+      handleDelDateClick={handleDelDateClick}
+      dialogScroll={dialogScroll}
+      setSelectedTaskId={setSelectedTaskId}
+      currentTasks={currentTasks}
+      selectedTaskId={selectedTaskId}
+      currentTaskFields={currentTaskFields}
+      handleUpdateTask={handleUpdateTask}
+      currentTaskType={currentTaskType}
+      handleChangeTaskStatus={handleChangeTaskStatus}
+      handleChangeEventStatus={handleChangeEventStatus}
+      deleteTask={deleteTask}
+      newRecordDialogOpen={newRecordDialogOpen}
+      handleNewRecordDialogClose={handleNewRecordDialogClose}
+    />
   );
 }
 
