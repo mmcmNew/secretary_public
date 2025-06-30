@@ -137,6 +137,10 @@ export default function AntiScheduleLayout({ containerId }) {
     if (selectedList) setSelectedListId(selectedList.id);
   }, []);
 
+  useEffect(() => {
+    setCalendarEvents(antiSchedule.data || []);
+  }, [antiSchedule.data]);
+
   async function handleUpdateTasks() {
     const newTasks = await fetchTasks("my_day");
     const newCalendarEvents = await fetchAntiSchedule();
@@ -201,7 +205,7 @@ export default function AntiScheduleLayout({ containerId }) {
   }
 
   function handleChangeEventStatus(eventId, updatedFields) {
-    console.log("handleChangeEventStatus", eventId, updatedFields);
+    // console.log("handleChangeEventStatus", eventId, updatedFields);
     const eventColor = updatedFields.status_id == 2 ? "green" : "#3788D8";
     const updatedEvents = calendarEvents.map((event) => (event.id == eventId ? { ...event, ...updatedFields, color: eventColor } : event));
     setCalendarEvents(updatedEvents);
@@ -267,7 +271,7 @@ export default function AntiScheduleLayout({ containerId }) {
   }
 
   async function handleAddAntiTask(taskParams){
-    console.log('handleAddAntiTask: task_params: ', taskParams);
+    // console.log('handleAddAntiTask: task_params: ', taskParams);
     taskParams.is_background = 0;
     // taskParams.task_id = taskParams.id || null;
     let newAntiTask = {};
@@ -304,8 +308,7 @@ export default function AntiScheduleLayout({ containerId }) {
   };
 
   async function handleEventChange(eventInfo) {
-    console.log('handleEventChange: eventInfo: ', eventInfo);
-
+    // console.log('handleEventChange: eventInfo:', eventInfo);
     const eventDict = {
       title: eventInfo.event.title,
     };
@@ -334,58 +337,65 @@ export default function AntiScheduleLayout({ containerId }) {
         event.id == eventInfo.event.id ? { ...event, ...eventDict } : event
       )
     );
-    if (updateAntiTask && typeof updateAntiTask === "function")
+    if (updateAntiTask && typeof updateAntiTask === "function") {
+      // console.log('[DEBUG] handleEventChange: calling updateAntiTask with', { taskId: eventInfo.event.id, ...eventDict });
       await updateAntiTask({ taskId: eventInfo.event.id, ...eventDict });
+    }
   }
 
-  async function handleUpdateTask(taskId, updatedFields) {
-    let currentUpdatedTasks = null;
-    let updatedEvents = null;
-    console.log("handleUpdateTask", taskId, updatedFields, currentTaskType);
-
+  // Отдельная функция для обновления антизадачи (antiSchedule event) — принимает только payload
+  const handleUpdateAntiTask = async (payload) => {
     try {
-        switch (currentTaskType) {
-            case "event":
-                console.log("Updating event type", taskId, updatedFields);
-                if (updateAntiTask && typeof updateAntiTask === "function")
-                  await updateAntiTask({ taskId, ...updatedFields });
-
-                currentUpdatedTasks = calendarEvents?.map((task) =>
-                    task.id == taskId ? { ...task, ...updatedFields } : task
-                );
-                console.log("Updated tasks", currentUpdatedTasks);
-                setCalendarEvents(currentUpdatedTasks);
-                setCurrentTasks(currentUpdatedTasks);
-
-                updatedEvents = updateEventsForCalendar(
-                  currentUpdatedTasks,
-                  newSettings?.timeOffset
-                );
-                console.log("Updated calendar events", updatedEvents);
-                setUpdatedCalendarEvents(updatedEvents);
-
-                // Принудительно обновляем selectedDayTasks
-                if (updatedEvents) {
-                  const newSelectedDayTasks = updatedEvents.filter((task) => {
-                    const taskDate = dayjs(task.start);
-                    return taskDate.isSame(selectedDate, 'day');
-                  });
-                  console.log("Updated selected day tasks", newSelectedDayTasks);
-                  setSelectedDayTasks(newSelectedDayTasks);
-                }
-                break;
-
-            case "task":
-                await updateTask(taskId, updatedFields);
-                currentUpdatedTasks = myDayTasks?.map((task) =>
-                    task.id == taskId ? { ...task, ...updatedFields } : task
-                );
-                setMyDayTasks(currentUpdatedTasks);
-                setCurrentTasks(currentUpdatedTasks);
-                break;
-        }
+      // console.log('[DEBUG] handleUpdateAntiTask: calling updateAntiTask with', payload);
+      if (updateAntiTask && typeof updateAntiTask === "function") {
+        await updateAntiTask(payload);
+      }
+      // Локальное обновление
+      const currentUpdatedTasks = calendarEvents?.map((task) =>
+        task.id == payload.taskId ? { ...task, ...payload } : task
+      );
+      setCalendarEvents(currentUpdatedTasks);
+      setCurrentTasks(currentUpdatedTasks);
+      const updatedEvents = updateEventsForCalendar(
+        currentUpdatedTasks,
+        newSettings?.timeOffset
+      );
+      setUpdatedCalendarEvents(updatedEvents);
+      if (updatedEvents) {
+        const newSelectedDayTasks = updatedEvents.filter((task) => {
+          const taskDate = dayjs(task.start);
+          return taskDate.isSame(selectedDate, 'day');
+        });
+        setSelectedDayTasks(newSelectedDayTasks);
+      }
     } catch (error) {
-        console.error("Ошибка обновления задачи:", error);
+      console.error("[DEBUG] Ошибка обновления антизадачи:", error);
+    }
+  };
+
+  // Отдельная функция для обновления обычной задачи (ToDo)
+  const handleUpdateToDoTask = async (taskId, updatedFields) => {
+    try {
+      // console.log('[DEBUG] handleUpdateToDoTask: calling updateTask for ToDo', taskId, updatedFields);
+      await updateTask(taskId, updatedFields);
+      const currentUpdatedTasks = myDayTasks?.map((task) =>
+        task.id == taskId ? { ...task, ...updatedFields } : task
+      );
+      setMyDayTasks(currentUpdatedTasks);
+      setCurrentTasks(currentUpdatedTasks);
+    } catch (error) {
+      console.error("[DEBUG] Ошибка обновления задачи:", error);
+    }
+  };
+
+  // handleUpdateTask теперь принимает (taskId, updatedFields) для задач и (payload) для событий
+  async function handleUpdateTask(arg1, arg2) {
+    if (currentTaskType === "event") {
+      // Для событий антирасписания всегда передаем payload-объект
+      await handleUpdateAntiTask(arg1);
+    } else if (currentTaskType === "task") {
+      // Для задач ToDo — taskId, updatedFields
+      await handleUpdateToDoTask(arg1, arg2);
     }
   }
 
@@ -415,7 +425,7 @@ export default function AntiScheduleLayout({ containerId }) {
       });
     }
     setUpdatedCalendarEvents(updatedEvents);
-
+    // console.log('[DEBUG] useEffect calendarEvents/newSettings: updatedEvents', updatedEvents);
     // Обновляем selectedDayTasks при изменении календарных событий
     if (updatedEvents) {
       const newSelectedDayTasks = updatedEvents.filter((task) => {
@@ -423,6 +433,7 @@ export default function AntiScheduleLayout({ containerId }) {
         return taskDate.isSame(selectedDate, 'day');
       });
       setSelectedDayTasks(newSelectedDayTasks);
+      // console.log('[DEBUG] useEffect: setSelectedDayTasks', newSelectedDayTasks);
     }
   }, [newSettings, calendarEvents, myDayTasks, selectedDate]);
 
@@ -434,6 +445,7 @@ export default function AntiScheduleLayout({ containerId }) {
         return taskDate.isSame(selectedDate, 'day');
       });
       setSelectedDayTasks(initialSelectedDayTasks);
+      // console.log('[DEBUG] useEffect: updatedCalendarEvents changed, setSelectedDayTasks', initialSelectedDayTasks);
     }
   }, [updatedCalendarEvents, selectedDate]);
 
@@ -497,6 +509,8 @@ export default function AntiScheduleLayout({ containerId }) {
       deleteTask={deleteTask}
       newRecordDialogOpen={newRecordDialogOpen}
       handleNewRecordDialogClose={handleNewRecordDialogClose}
+      updateTask={handleUpdateToDoTask}
+      updateAntiTask={handleUpdateAntiTask}
     />
   );
 }
