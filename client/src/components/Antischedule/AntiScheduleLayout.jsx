@@ -508,16 +508,16 @@ export default function AntiScheduleLayout({ containerId }) {
             <CalendarComponent
               calendarRef={calendarRef}
               newSettings={newSettings}
-              setNewSettings={setNewSettings}
+              saveSettings={setNewSettings}
+              events={updatedCalendarEvents}
+              tasks={myDayTasks}
+              lists={{ lists: listsList, default_lists: defaultLists, projects }}
               handleEventClick={handleEventClick}
               handleEventChange={handleEventChange}
               eventReceive={handleEventReceive}
               addTask={handleAddAntiTask}
-              calendarEvents={updatedCalendarEvents}
               fetchTasks={fetchTasks}
-              listsList={listsList}
-              defaultLists={defaultLists}
-              projects={projects}
+              fetchEvents={fetchAntiSchedule}
               datesSet={handleDatesSet}
             />
           ) : (
@@ -534,16 +534,16 @@ export default function AntiScheduleLayout({ containerId }) {
           <CalendarComponent
             calendarRef={calendarRef}
             newSettings={newSettings}
-            setNewSettings={setNewSettings}
+            saveSettings={setNewSettings}
+            events={updatedCalendarEvents}
+            tasks={myDayTasks}
+            lists={{ lists: listsList, default_lists: defaultLists, projects }}
             handleEventClick={handleEventClick}
             handleEventChange={handleEventChange}
             eventReceive={handleEventReceive}
             addTask={handleAddAntiTask}
-            calendarEvents={updatedCalendarEvents}
             fetchTasks={fetchTasks}
-            listsList={listsList}
-            defaultLists={defaultLists}
-            projects={projects}
+            fetchEvents={fetchAntiSchedule}
             datesSet={handleDatesSet}
           />
           {selectedDayTasks&&
