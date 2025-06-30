@@ -20,6 +20,8 @@ export default function AntischeduleComponent({
   newSettings,
   setNewSettings,
   saveSettings,
+  focusSettings,
+  saveFocusSettings,
   updatedCalendarEvents,
   myDayTasks,
   listsList,
@@ -108,7 +110,8 @@ export default function AntischeduleComponent({
           ) : (
             <FocusModeComponent
               containerId={containerId}
-              saveSettings={saveSettings}
+              saveSettings={saveFocusSettings}
+              settingsProp={focusSettings}
               tasks={myDayTasks}
               selectedList={myDayList}
               updateTask={updateTask}
@@ -175,6 +178,8 @@ AntischeduleComponent.propTypes = {
   newSettings: PropTypes.object,
   setNewSettings: PropTypes.func,
   saveSettings: PropTypes.func,
+  focusSettings: PropTypes.object,
+  saveFocusSettings: PropTypes.func,
   updatedCalendarEvents: PropTypes.array,
   myDayTasks: PropTypes.array,
   listsList: PropTypes.array,

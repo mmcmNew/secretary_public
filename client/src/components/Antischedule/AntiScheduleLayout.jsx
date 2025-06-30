@@ -14,7 +14,7 @@ import timezone from "dayjs/plugin/timezone";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-export default function AntiScheduleLayout({ containerId, antiScheduleSettingsProp = null }) {
+export default function AntiScheduleLayout({ containerId, antiScheduleSettingsProp = null, focusSettingsProp = null }) {
   const { lists, setSelectedListId } = useLists();
   const {
     fetchTasks,
@@ -115,17 +115,41 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
     },
   );
 
+  const defaultFocusSettings = {
+    workIntervalDuration: 30 * 60,
+    breakDuration: 5 * 60,
+    additionalBreakDuration: 15 * 60,
+    isBackgroundTasks: true,
+  };
+
+  const [focusSettings, setFocusSettings] = useState(
+    focusSettingsProp || defaultFocusSettings
+  );
+
   useEffect(() => {
     if (antiScheduleSettingsProp) {
       setNewSettings(antiScheduleSettingsProp);
     }
   }, [antiScheduleSettingsProp]);
+
+  useEffect(() => {
+    if (focusSettingsProp) {
+      setFocusSettings(focusSettingsProp);
+    }
+  }, [focusSettingsProp]);
   const { handleContainerResize, handleUpdateContent } = useContainer();
 
   const handleSaveSettings = (settings) => {
     setNewSettings(settings);
     if (handleUpdateContent && containerId) {
       handleUpdateContent(containerId, { antiScheduleSettingsProp: settings });
+    }
+  };
+
+  const handleSaveFocusSettings = (settings) => {
+    setFocusSettings(settings);
+    if (handleUpdateContent && containerId) {
+      handleUpdateContent(containerId, { focusSettingsProp: settings });
     }
   };
 
@@ -523,6 +547,8 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
       calendarRef={calendarRef}
       newSettings={newSettings}
       saveSettings={handleSaveSettings}
+      focusSettings={focusSettings}
+      saveFocusSettings={handleSaveFocusSettings}
       updatedCalendarEvents={updatedCalendarEvents}
       myDayTasks={myDayTasks}
       myDayList={myDayList}
@@ -562,4 +588,5 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
 AntiScheduleLayout.propTypes = {
   containerId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   antiScheduleSettingsProp: PropTypes.object,
+  focusSettingsProp: PropTypes.object,
 };
