@@ -29,7 +29,15 @@ export default function CalendarLayout({
     views: "timeGridWeek,timeGridDay,dayGridMonth,listWeek",
     isToggledBGTasksEdit: false,
   }
-  const [calendarSettings, setCalendarSettings] = useState(calendarSettingsProp || defaultCalendarSettings);
+  const [calendarSettings, setCalendarSettings] = useState(
+    calendarSettingsProp || defaultCalendarSettings
+  );
+
+  useEffect(() => {
+    if (calendarSettingsProp) {
+      setCalendarSettings(calendarSettingsProp);
+    }
+  }, [calendarSettingsProp]);
 
   // сохранение настроек в контейнере
   // useEffect(() => {
