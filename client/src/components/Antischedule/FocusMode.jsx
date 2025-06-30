@@ -13,10 +13,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import TasksList from "../ToDo/TasksList";
 import React, { useEffect, useState } from "react";
-import useTasks from "../ToDo/hooks/useTasks";
-import useLists from "../ToDo/hooks/useLists";
 import useFocusTimer from "./hooks/useFocusTimer";
-import useFocusTasks from "./hooks/useFocusTasks";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -31,18 +28,25 @@ const MemoizedTaskList = React.memo(TasksList);
 
 const FocusModeComponent = ({
     containerId,
+    tasks = [],
+    selectedList,
+    updateTask,
+    changeTaskStatus,
+    fetchTasks,
     onTaskClick,
     additionalButtonClick
 }) => {
-    // const [isPaused, setIsPaused] = useState(false);
-    const {
-        timerState,
-        updateTimerState,
-        startTimer,
-        stopTimer,
-        formatRemainingTime,
-        progress,
-    } = useFocusTimer();
+    // Отладочные логи для props
+    console.log('[FocusModeComponent] props:', {
+        containerId,
+        tasks,
+        selectedList,
+        updateTask,
+        changeTaskStatus,
+        fetchTasks,
+        onTaskClick,
+        additionalButtonClick
+    });
     const [currentTaskParams, setCurrentTaskParams] = useState({intervals: []})
     const [modeSettings, setModeSettings] = useState({
         workIntervalDuration: 30 * 60,
@@ -51,19 +55,23 @@ const FocusModeComponent = ({
         isBackgroundTasks: true,
     });
     const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
-    // const [currentIntervalEndDate, setCurrentIntervalEndDate] = useState(null)
+    const [skippedTasks, setSkippedTasks] = useState([]);
+    const [currentTask, setCurrentTask] = useState(null);
+    const [timerState, setTimerState] = useState({
+        remainingTime: 0,
+        isOnBreak: true,
+        currentIntervalEndDate: null,
+        currentIntervalIndex: 0,
+        currentIntervalDuration: 0
+    });
+    const [progress, setProgress] = useState(0);
 
-    const { tasks: tasksState, updateTask, changeTaskStatus, fetchTasks } = useTasks();
-    const { selectedList } = useLists();
-    const tasks = tasksState?.data || [];
     const {
-        mainTasks,
-        currentTask,
-        skippedTasks,
-        setSkippedTasks,
-        handleSkipTask,
-        setCurrentTask,
-    } = useFocusTasks(modeSettings);
+        updateTimerState,
+        startTimer,
+        stopTimer,
+        formatRemainingTime,
+    } = useFocusTimer();
 
     useEffect(() => {
         return () => {
@@ -71,21 +79,17 @@ const FocusModeComponent = ({
         };
     }, []);
 
-
     useEffect(() => {
         const currentTime = dayjs().tz();
         const {currentIntervalEndDate} = timerState;
-        // console.log(currentIntervalEndDate, currentTime.toISOString(), dayjs(currentIntervalEndDate).isBefore(currentTime))
         if (dayjs(currentIntervalEndDate).isBefore(currentTime)) {
             stopTimer();
             playCheckedAudio();
             const {intervals} = currentTaskParams;
-            // console.log(intervals)
             const nextInterval = findNextInterval(intervals)
-            // console.log('nextInterval: ', nextInterval)
             let newCurrentTask = null
             if (!nextInterval) {
-                const nextTask = findNextTask(mainTasks, skippedTasks)
+                const nextTask = findNextTask(tasks, skippedTasks)
                 if (nextTask) {
                     newCurrentTask = {...nextTask, status: 'started'}
                 }
@@ -100,16 +104,13 @@ const FocusModeComponent = ({
                     isOnBreak: nextInterval.isOnBreak,
                 }
                 updateTimerState(newTimerParams)
-                // console.log('3', taskParams, timerParams)
                 startTimer(newTimerParams.currentIntervalEndDate)
             }
         }
-    }, [timerState, currentTaskParams])
+    }, [timerState, currentTaskParams, tasks, skippedTasks])
 
     useEffect(() => {
-        // console.log('2', currentTask)
         const {taskParams, timerParams} = findTaskAndTimerParams(currentTask, modeSettings)
-        // console.log('3', taskParams, timerParams)
         stopTimer()
         updateTimerState(timerParams)
         updateCurrentTaskParams(taskParams)
@@ -120,7 +121,6 @@ const FocusModeComponent = ({
         }
     }, [currentTask, modeSettings])
 
-
     function updateCurrentTaskParams(updates) {
         setCurrentTaskParams((prevState) => ({
         ...prevState,
@@ -129,14 +129,13 @@ const FocusModeComponent = ({
     }
 
     function handleTaskClick(taskId) {
-        if (handleTaskClick && typeof handleTaskClick === "function") {
+        if (onTaskClick && typeof onTaskClick === "function") {
             onTaskClick(taskId);
         }
     }
 
     function findTaskAndTimerParams(currentTask, modeSettings) {
         switch (true) {
-            // Случай, когда нет текущей задачи
             case !currentTask: {
                 return {
                     taskParams: {
@@ -154,7 +153,6 @@ const FocusModeComponent = ({
                 };
             }
 
-            // Случай, когда задача еще не началась
             case !checkIsTaskStart(currentTask): {
                 const newTaskRange = `${dayjs(currentTask.start).format("HH:mm")} - ${dayjs(currentTask.deadline).format("HH:mm")}`;
                 const newRemainingTime = calculateRemainingTime(currentTask.start);
@@ -181,7 +179,6 @@ const FocusModeComponent = ({
                 };
             }
 
-            // Случай, когда задача началась
             default: {
                 const intervals = divideTaskWithBreaks(currentTask, modeSettings);
                 const newTaskRange = `${dayjs(currentTask.start).format("HH:mm")} - ${dayjs(currentTask.deadline).format("HH:mm")}`;
@@ -210,9 +207,7 @@ const FocusModeComponent = ({
         if (timezone == null) timezone = dayjs.tz.guess();
         const taskStartTime = dayjs(checkedTime).tz(timezone);
         const currentTime = dayjs().tz(timezone);
-        // console.log("calculateReaminingTime", checkedTime, currentTime, taskStartTime, timezone);
 
-        // Извлекаем часы, минуты и секунды для обеих дат
         const taskStartSeconds = taskStartTime.hour() * 3600 + taskStartTime.minute() * 60 + taskStartTime.second();
         const currentSeconds = currentTime.hour() * 3600 + currentTime.minute() * 60 + currentTime.second();
         const remainingTime = Math.abs(currentSeconds - taskStartSeconds);
@@ -225,22 +220,19 @@ const FocusModeComponent = ({
         let intervalEndTime = null
         let nowTime = dayjs().tz(timezone)
         intervals.some((interval) => {
-            // console.log("findNextInterval", interval, nowTime);
             intervalEndTime = dayjs(interval.end).tz(timezone)
-            // console.log("findNextInterval", intervalEndTime.toISOString(), nowTime.toISOString(), intervalEndTime.isAfter(nowTime));
             if (intervalEndTime.isAfter(nowTime)) {
                 foundInterval = interval;
-                return true; // Останавливаем итерацию
+                return true;
             }
-            return false; // Продолжаем итерацию
+            return false;
         });
         return foundInterval;
     }
 
-
     const findNextTask = (tasksList, skipedTasksList) => {
         console.log("findNextTask: skippedTasksList", skipedTasksList)
-        const filtredTasks = tasksList?.filter((task) => !skipedTasksList.includes(task.id)); // отфильтровать те задачи которые в skipedTasks
+        const filtredTasks = tasksList?.filter((task) => !skipedTasksList.includes(task.id));
         const nextTask = filtredTasks?.find((task) => !isTaskInPast(task)) || null;
         return nextTask;
     }
@@ -250,14 +242,9 @@ const FocusModeComponent = ({
         const taskStartTime = dayjs(task.start).tz(timezone);
         const currentTime = dayjs().tz(timezone);
 
-        // Извлекаем часы, минуты и секунды для обеих дат
         const taskStartSeconds = taskStartTime.hour() * 3600 + taskStartTime.minute() * 60 + taskStartTime.second();
         const currentSeconds = currentTime.hour() * 3600 + currentTime.minute() * 60 + currentTime.second();
 
-        // Лог для проверки значений
-        // console.log("taskStartSeconds ", taskStartSeconds, "currentSeconds ", currentSeconds);
-
-        // Проверяем, началась ли задача, только по времени суток
         return currentSeconds >= taskStartSeconds;
     }
 
@@ -265,54 +252,45 @@ const FocusModeComponent = ({
         let playAudioPromise = Promise.resolve();
         let soundUrl = "/sounds/endTimer.mp3";
         if (soundUrl) {
-            // Воспроизводим звук завершения интервала
             const audio = new Audio(soundUrl);
             audio.volume = 0.5;
             playAudioPromise = new Promise((resolve) => {
-                audio.onended = resolve; // Ждём завершения звука
+                audio.onended = resolve;
                 audio.play();
             });
         }
 
-        // Возвращаем Promise, если нужно добавить другую логику после звука
         return playAudioPromise;
     };
 
-    // Расчет длительности задачи (время без учета даты)
     const calculateTaskDuration = (task) => {
         const startTime = dayjs(task.start);
         const endTime = dayjs(task.deadline);
 
-        // Преобразуем время начала и окончания задачи в количество секунд с начала суток
         const startInSeconds = startTime.hour() * 3600 + startTime.minute() * 60 + startTime.second();
         const endInSeconds = endTime.hour() * 3600 + endTime.minute() * 60 + endTime.second();
 
-        // Рассчитываем разницу в секундах
         let durationInSeconds = endInSeconds - startInSeconds;
 
-        // Если разница отрицательная, это значит, что конец наступает на следующий день, поэтому добавляем 24 часа
         if (durationInSeconds < 0) {
-            durationInSeconds += 24 * 3600; // Добавляем 24 часа в секундах
+            durationInSeconds += 24 * 3600;
         }
 
         return durationInSeconds;
     };
 
-    // Функция для разделения на интервалы
     const divideTaskWithBreaks = (task, modeSettings) => {
         let intervalDuration = modeSettings?.workIntervalDuration
         let breakDuration = modeSettings?.breakDuration
         let additionalBreakDuration = modeSettings?.additionalBreakDuration
         const intervals = [];
         let remainingTime = calculateTaskDuration(task);
-        let taskStartTime = dayjs(task.start);  // Время из задачи
-        let currentTime = dayjs();              // Текущая дата
+        let taskStartTime = dayjs(task.start);
+        let currentTime = dayjs();
         console.log("divideTaskWithBreaks", task, modeSettings)
-        // Заменяем дату текущего времени на дату из задачи (оставляем только время)
         currentTime = currentTime.hour(taskStartTime.hour()).minute(taskStartTime.minute()).second(taskStartTime.second());
 
-        // console.log("remainingTime", remainingTime);
-        // Добавить интервалы
+        console.log("remainingTime", remainingTime);
         let currentIntervalId = -1;
         let breakId = 0;
         let intervalType = "work";
@@ -342,7 +320,6 @@ const FocusModeComponent = ({
                     intervalType = "break";
                     continue;
                 case "break":
-                    // если оставшееся время меньше перерыва, то прибавляем это время к крайнему рабочему интервалу или создаем новый
                     if (remainingTime < currentBreakDuration) {
                         if (intervals && intervals.length > 0 && intervals[intervals.length - 1].type == "work") {
                             let lastIntervalId = intervals.length - 1;
@@ -350,7 +327,7 @@ const FocusModeComponent = ({
                             intervals[lastIntervalId].end = currentTime.add(remainingTime, 'second').toISOString();
                             remainingTime = 0;
                         } else {
-                            currentTime = currentTime.add(remainingTime, 'second'); // Обновляем текущее время
+                            currentTime = currentTime.add(remainingTime, 'second');
                             intervals.push({
                                 id: currentIntervalId,
                                 duration: remainingTime,
@@ -364,7 +341,6 @@ const FocusModeComponent = ({
                         intervalType = "work";
                         continue;
                     }
-                    // каждый третий перерыв дополнительно больше кроме случая когда последний интервал будет менее 5 минут
                     if (breakId == 2 && remainingTime > additionalBreakDuration + 5) {
                         currentBreakDuration = additionalBreakDuration;
                         breakId = 0;
@@ -386,21 +362,17 @@ const FocusModeComponent = ({
             }
         }
 
-        // console.log("intervals", intervals);
-        // проверяем чтоб последний интервал не был перерывом
+        console.log("intervals", intervals);
         if (intervals && intervals.length > 0 && intervals[intervals.length - 1].type == "break") {
-            // удаляем последний интервал и добавляем длительность перерыва к рабочему времени
             let lastBreakDuration = intervals[intervals.length - 1].duration;
-            let lastBreakEndTime = dayjs(intervals[intervals.length - 1].end); // Время окончания последнего перерыва
+            let lastBreakEndTime = dayjs(intervals[intervals.length - 1].end);
             let lastBreakStartTime = dayjs(intervals[intervals.length - 1].start);
             intervals.pop();
 
-            // если последний интервал перерыв и он равен обычному перерыву, то просто прибавляем его к времени задачи
             if (lastBreakDuration == breakDuration) {
                 intervals[intervals.length - 1].duration += breakDuration;
                 intervals[intervals.length - 1].end = lastBreakEndTime
             } else {
-                // если интервал длинее обычного перерыва, то создаем обычный перерыв, а оставшееся время как рабочее
                 let newBreakEndTime = lastBreakStartTime.add(breakDuration, 'second');
                 intervals.push({
                     id: currentIntervalId,
@@ -423,22 +395,17 @@ const FocusModeComponent = ({
             }
         }
 
-
         if (intervals && intervals.length > 0 && intervals[intervals.length - 1].duration < 1) intervals.pop();
 
         return intervals;
     };
 
-    // Функция для проверки прошла ли уже задача
     const isTaskInPast = (task, timezone = null) => {
-        // console.log('isTaskInPast:', task)
         if (timezone == null) timezone = dayjs.tz.guess();
         if (!task || !task.deadline) return false;
-        // console.log('isTaskInPast 2:', task.deadline)
         const currentTime = dayjs().tz(timezone);
         const taskEndTime = dayjs(task.deadline).tz(timezone);
 
-        // Получаем только время (часы и минуты) для текущего времени и времени задачи
         const currentHours = currentTime.hour();
         const currentMinutes = currentTime.minute();
         const taskEndHours = taskEndTime.hour();
@@ -446,8 +413,6 @@ const FocusModeComponent = ({
 
         const taskEndMin = taskEndHours * 60 + taskEndMinutes;
         const currentTimeMin = currentHours * 60 + currentMinutes;
-        // Сравниваем только время
-        // console.log("taskEndMin", taskEndMin, "currentTimeMin", currentTimeMin);
         if (taskEndMin <= currentTimeMin) {
             return true;
         }
@@ -460,9 +425,7 @@ const FocusModeComponent = ({
         }
     }
 
-
     function handleAdditionalButtonClick(task) {
-        //найти текущий интервал и если это перерыв, то взять предыдущий интервал и по времени интервала создать дату начала и окончания задачи
         const {intervals} = currentTaskParams;
         const currentIntervalIndex = timerState?.currentIntervalIndex;
         if (intervals && intervals.length > currentIntervalIndex) {
@@ -474,9 +437,9 @@ const FocusModeComponent = ({
             task.end = currentTask.end;
         } else {
             const now = dayjs();
-            const roundedStart = now.minute(Math.floor(now.minute() / 5) * 5).second(0); // Округляем вниз до 5 минут
+            const roundedStart = now.minute(Math.floor(now.minute() / 5) * 5).second(0);
             task.start = roundedStart;
-            task.end = roundedStart.add(60, 'minute'); // Добавляем час к началу
+            task.end = roundedStart.add(60, 'minute');
         }
         if (typeof additionalButtonClick === "function") additionalButtonClick(task);
     }
@@ -490,15 +453,19 @@ const FocusModeComponent = ({
         setModeSettings((prevSettings) => ({ ...prevSettings, ...updates }));
     }
 
-
     function handleRefresh() {
         setSkippedTasks([]);
-        if (selectedList?.id) fetchTasks(selectedList.id);
+        if (selectedList?.id && typeof fetchTasks === 'function') fetchTasks(selectedList.id);
     }
 
-    // const handleBack = () => {
-    //     setCurrentIntervalIndex((prevActiveStep) => prevActiveStep - 1);
-    // };
+    // Лог перед рендером TasksList
+    const filteredTasks = modeSettings?.isBackgroundTasks ? tasks : tasks.filter((task) => !task.is_background);
+    console.log('[FocusModeComponent] TasksList props:', {
+        containerId,
+        tasks: filteredTasks,
+        selectedList,
+        selectedTaskId: currentTaskParams?.currentTask?.id || null
+    });
 
     return (
         <Box
@@ -512,7 +479,6 @@ const FocusModeComponent = ({
                 overflowX: "none",
             }}
         >
-            {/* Верхняя панель */}
             <Box sx={{ display: "flex", flexDirection: "row", padding: 1 }}>
                 <IconButton edge="start" color="inherit" aria-label="settings" onClick={() => setSettingsDialogOpen(true)}>
                     <SettingsIcon />
@@ -521,7 +487,6 @@ const FocusModeComponent = ({
                     <Typography variant="h6" component="div">
                         {currentTaskParams.taskName}
                     </Typography>
-                    {/* время начала и окончания */}
                     {tasks?.length > 0 && (
                         <Typography variant="subtitle1" component="div" color="text.secondary">
                             {currentTaskParams.taskRange}
@@ -533,9 +498,7 @@ const FocusModeComponent = ({
                 </IconButton>
             </Box>
             <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: 1, width: "100%" }}>
-                {/* Таймер и название задачи */}
                 <Box sx={{ flex: 1, display: "flex", flexDirection: "row", justifyContent: "center", padding: 1 }}>
-                    {/* Таймер */}
                     <Box
                         key="focusMode"
                         sx={{
@@ -552,12 +515,9 @@ const FocusModeComponent = ({
                             variant="determinate"
                             value={progress}
                             color={
-                                // isPaused
-                                //     ? "warning" // Цвет паузы
-                                //     :
                                 timerState.isOnBreak
-                                    ? "success" // Зеленый цвет для перерыва
-                                    : "primary" // Синий цвет для работы
+                                    ? "success"
+                                    : "primary"
                             }
                             size="250px"
                         />
@@ -574,13 +534,9 @@ const FocusModeComponent = ({
                                 margin: "auto",
                             }}
                         >
-                            {/* {isPaused ? (
-                                <Icon color="action">pause</Icon> // Отображаем иконку паузы
-                            ) : ( */}
                             <Typography variant="h3" component="div" color="text.secondary">
                                 {formatRemainingTime(timerState.remainingTime)}
                             </Typography>
-                            {/* )} */}
                         </Box>
                     </Box>
                 </Box>
@@ -588,12 +544,10 @@ const FocusModeComponent = ({
                     <Stepper activeStep={timerState.currentIntervalIndex} alternativeLabel>
                         {currentTaskParams.intervals.map((step, index) => (
                             <Step key={`step_${index}`}>
-                                {/* Отображаем длительность в минутах */}
                                 <StepLabel>{`${Math.floor(step.duration / 60)} мин`}</StepLabel>
                             </Step>
                         ))}
                     </Stepper>
-                    <Button onClick={handleSkipTask}>Пропустить задачу</Button>
                 </Box>
             </Box>
             <Box
@@ -609,14 +563,14 @@ const FocusModeComponent = ({
             >
                 <MemoizedTaskList
                     containerId={containerId}
-                    tasks={modeSettings?.isBackgroundTasks ? tasks :  tasks.filter((task) => !task.is_background)}
-                    selectedTaskId={currentTaskParams?.currentTask?.id || null} // управляет выделением элемента списка
-                    selectedList={selectedList} //для получения порядка задач
+                    tasks={filteredTasks}
+                    selectedTaskId={currentTaskParams?.currentTask?.id || null}
+                    selectedList={selectedList}
                     isNeedContextMenu={false}
-                    setSelectedTaskId={handleTaskClick} // для окна редактирования задачи
+                    setSelectedTaskId={handleTaskClick}
                     updateTask={updateTask}
-                    additionalButtonClick={handleAdditionalButtonClick} //Получаем клик по спец кнопке для задачи
-                    changeTaskStatus={handleChangeTaskStatus} // для того чтоб можно было отметить задачу выполненной
+                    additionalButtonClick={handleAdditionalButtonClick}
+                    changeTaskStatus={handleChangeTaskStatus}
                     skippedTasks={skippedTasks}
                     additionalButton={ScheduleSendIcon}
                 />
@@ -635,6 +589,11 @@ export default FocusModeComponent;
 
 FocusModeComponent.propTypes = {
     containerId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    tasks: PropTypes.array,
+    selectedList: PropTypes.object,
+    updateTask: PropTypes.func,
+    changeTaskStatus: PropTypes.func,
+    fetchTasks: PropTypes.func,
     onTaskClick: PropTypes.func,
     additionalButtonClick: PropTypes.func,
 };

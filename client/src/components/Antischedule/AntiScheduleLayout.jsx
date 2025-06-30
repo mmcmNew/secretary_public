@@ -125,21 +125,41 @@ export default function AntiScheduleLayout({ containerId }) {
     const fetchAndSetTasks = async () => {
       if (!myDayTasks?.loading) {
         const newTasks = await fetchTasks("my_day");
-        setMyDayTasks(newTasks);
+        // Гарантируем, что в состоянии всегда массив задач
+        if (newTasks && Array.isArray(newTasks)) {
+          setMyDayTasks(newTasks);
+        } else if (newTasks && Array.isArray(newTasks.tasks)) {
+          setMyDayTasks(newTasks.tasks);
+        } else {
+          setMyDayTasks([]);
+        }
       }
     };
 
     fetchAndSetTasks();
     getAndSetCalendarEvents();
-
-    const selectedList = lists?.default_lists?.find((list) => list.id === "my_day");
-    setMyDayList(selectedList);
-    if (selectedList) setSelectedListId(selectedList.id);
   }, []);
+
+  // Корректно ищем myDayList при изменении lists
+  useEffect(() => {
+    if (lists?.default_lists) {
+      const selectedList = lists.default_lists.find((list) => list.id === "my_day");
+      setMyDayList(selectedList);
+      if (selectedList) setSelectedListId(selectedList.id);
+      console.log('[AntiScheduleLayout] lists:', lists);
+      console.log('[AntiScheduleLayout] selectedList for my_day:', selectedList);
+    }
+  }, [lists]);
 
   useEffect(() => {
     setCalendarEvents(antiSchedule.data || []);
   }, [antiSchedule.data]);
+
+  // Лог для props FocusModeComponent
+  useEffect(() => {
+    console.log('[AntiScheduleLayout] myDayTasks:', myDayTasks);
+    console.log('[AntiScheduleLayout] myDayList:', myDayList);
+  }, [myDayTasks, myDayList]);
 
   async function handleUpdateTasks() {
     const newTasks = await fetchTasks("my_day");
@@ -483,6 +503,7 @@ export default function AntiScheduleLayout({ containerId }) {
       setNewSettings={setNewSettings}
       updatedCalendarEvents={updatedCalendarEvents}
       myDayTasks={myDayTasks}
+      myDayList={myDayList}
       listsList={listsList}
       defaultLists={defaultLists}
       projects={projects}
@@ -509,8 +530,9 @@ export default function AntiScheduleLayout({ containerId }) {
       deleteTask={deleteTask}
       newRecordDialogOpen={newRecordDialogOpen}
       handleNewRecordDialogClose={handleNewRecordDialogClose}
-      updateTask={handleUpdateToDoTask}
+      updateTask={updateTask}
       updateAntiTask={handleUpdateAntiTask}
+      changeTaskStatus={changeTaskStatus}
     />
   );
 }
