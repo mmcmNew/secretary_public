@@ -35,8 +35,7 @@ const FocusModeComponent = ({
     fetchTasks,
     onTaskClick,
     additionalButtonClick,
-    settingsProp = null,
-    saveSettings = null,
+    saveSettings
 }) => {
     // Отладочные логи для props
     // console.log('[FocusModeComponent] props:', {
@@ -50,19 +49,12 @@ const FocusModeComponent = ({
     //     additionalButtonClick
     // });
     const [currentTaskParams, setCurrentTaskParams] = useState({intervals: []})
-    const defaultSettings = {
+    const [modeSettings, setModeSettings] = useState({
         workIntervalDuration: 30 * 60,
         breakDuration: 5 * 60,
         additionalBreakDuration: 15 * 60,
         isBackgroundTasks: true,
-    };
-    const [modeSettings, setModeSettings] = useState(settingsProp || defaultSettings);
-
-    useEffect(() => {
-        if (settingsProp) {
-            setModeSettings(settingsProp);
-        }
-    }, [settingsProp]);
+    });
     const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
     const [skippedTasks, setSkippedTasks] = useState([]);
     const [currentTask, setCurrentTask] = useState(null);
@@ -459,10 +451,10 @@ const FocusModeComponent = ({
 
     function handleSettingsApply(updates){
         setSettingsDialogOpen(false);
-        const updatedSettings = { ...modeSettings, ...updates };
-        setModeSettings(updatedSettings);
+        const newSettings = { ...modeSettings, ...updates };
+        setModeSettings(newSettings);
         if (typeof saveSettings === 'function') {
-            saveSettings(updatedSettings);
+            saveSettings(newSettings);
         }
     }
 
@@ -492,20 +484,22 @@ const FocusModeComponent = ({
                 overflowX: "none",
             }}
         >
-            <Box sx={{ display: "flex", flexDirection: "row", padding: 1 }}>
+            <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 1 }}>
                 <IconButton edge="start" color="inherit" aria-label="settings" onClick={() => setSettingsDialogOpen(true)}>
                     <SettingsIcon />
                 </IconButton>
-                <Grid container justifyContent="center" alignItems="center" direction="column">
-                    <Typography variant="h6" component="div">
-                        {currentTaskParams.taskName}
-                    </Typography>
-                    {tasks?.length > 0 && (
-                        <Typography variant="subtitle1" component="div" color="text.secondary">
-                            {currentTaskParams.taskRange}
+                <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                    <Grid container justifyContent="center" alignItems="center" direction="column">
+                        <Typography variant="h6" component="div">
+                            {currentTaskParams.taskName}
                         </Typography>
-                    )}
-                </Grid>
+                        {tasks?.length > 0 && (
+                            <Typography variant="subtitle1" component="div" color="text.secondary">
+                                {currentTaskParams.taskRange}
+                            </Typography>
+                        )}
+                    </Grid>
+                </Box>
                 <IconButton edge="end" color="inherit" aria-label="refresh" onClick={handleRefresh}>
                     <RefreshIcon />
                 </IconButton>
@@ -609,6 +603,5 @@ FocusModeComponent.propTypes = {
     fetchTasks: PropTypes.func,
     onTaskClick: PropTypes.func,
     additionalButtonClick: PropTypes.func,
-    settingsProp: PropTypes.object,
     saveSettings: PropTypes.func,
 };
