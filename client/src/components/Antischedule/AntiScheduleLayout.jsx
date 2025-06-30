@@ -14,7 +14,7 @@ import timezone from "dayjs/plugin/timezone";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-export default function AntiScheduleLayout({ containerId }) {
+export default function AntiScheduleLayout({ containerId, antiScheduleSettingsProp = null }) {
   const { lists, setSelectedListId } = useLists();
   const {
     fetchTasks,
@@ -105,14 +105,23 @@ export default function AntiScheduleLayout({ containerId }) {
             note: { type: "text", name: "Заметка" },
           })
 
-  const [newSettings, setNewSettings] = useState({
-    slotDuration: 30,
-    timeRange: [8, 24],
-    timeOffset: 0,
-    currentView: "timeGridDay",
-    views: "timeGridWeek,timeGridDay",
-  });
-  const { handleContainerResize } = useContainer();
+  const [newSettings, setNewSettings] = useState(
+    antiScheduleSettingsProp || {
+      slotDuration: 30,
+      timeRange: [8, 24],
+      timeOffset: 0,
+      currentView: "timeGridDay",
+      views: "timeGridWeek,timeGridDay",
+    },
+  );
+  const { handleContainerResize, handleUpdateContent } = useContainer();
+
+  const handleSaveSettings = (settings) => {
+    setNewSettings(settings);
+    if (handleUpdateContent && containerId) {
+      handleUpdateContent(containerId, { antiScheduleSettingsProp: settings });
+    }
+  };
 
   useEffect(() => {
     const getAndSetCalendarEvents = async () => {
@@ -500,7 +509,7 @@ export default function AntiScheduleLayout({ containerId }) {
       handleAdditionalButtonClick={handleAdditionalButtonClick}
       calendarRef={calendarRef}
       newSettings={newSettings}
-      setNewSettings={setNewSettings}
+      setNewSettings={handleSaveSettings}
       updatedCalendarEvents={updatedCalendarEvents}
       myDayTasks={myDayTasks}
       myDayList={myDayList}
@@ -539,4 +548,5 @@ export default function AntiScheduleLayout({ containerId }) {
 
 AntiScheduleLayout.propTypes = {
   containerId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  antiScheduleSettingsProp: PropTypes.object,
 };
