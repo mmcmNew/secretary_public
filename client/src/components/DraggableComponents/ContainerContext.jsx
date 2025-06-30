@@ -139,7 +139,7 @@ const ContainerProvider = ({ children }) => {
                     throw new Error("Network response was not ok");
                 }
                 const data = await response.json();
-                console.log("ContainerProvider: dashboard загружен", data, Date.now() - (window.mainStart || 0), "мс с начала main.jsx");
+                // console.log("ContainerProvider: dashboard загружен", data, Date.now() - (window.mainStart || 0), "мс с начала main.jsx");
                 setDashboardData({ id: data.id, name: data.name });
 
 
@@ -150,7 +150,7 @@ const ContainerProvider = ({ children }) => {
                 );
 
                 setContainers(loadedContainers);
-                console.log("ContainerProvider: контейнеры установлены", loadedContainers, Date.now() - (window.mainStart || 0), "мс с начала main.jsx");
+                // console.log("ContainerProvider: контейнеры установлены", loadedContainers, Date.now() - (window.mainStart || 0), "мс с начала main.jsx");
                 setThemeMode(data.themeMode);
             } catch (error) {
                 console.error("Failed to fetch dashboard from server:", error);
@@ -161,10 +161,10 @@ const ContainerProvider = ({ children }) => {
     }, [dashboard_id]);
 
     const sendContainersToServer = async () => {
-        console.log('[ContainerContext] sendContainersToServer called');
+        // console.log('[ContainerContext] sendContainersToServer called');
         // отправляем все контейнеры кроме таймеров
         const sendingContainers = containers.filter((container) => container.type !== "timersToolbar");
-        console.log('[ContainerContext] Containers to send:', sendingContainers);
+        // console.log('[ContainerContext] Containers to send:', sendingContainers);
         try {
             const response = await fetch("/dashboard", {
                 method: "POST",
@@ -175,7 +175,7 @@ const ContainerProvider = ({ children }) => {
                     dashboard_data: dashboardData,
                     containers: sendingContainers.map(c => {
                         const { componentType, content, componentProps, ...serializableContainer } = c;
-                        console.log('[ContainerContext] Container props to send:', serializableContainer, 'componentProps:', componentProps);
+                        // console.log('[ContainerContext] Container props to send:', serializableContainer, 'componentProps:', componentProps);
                         return serializableContainer;
                     }),
                     themeMode: themeMode,
@@ -206,7 +206,7 @@ const ContainerProvider = ({ children }) => {
     };
 
     const handleContainerResize = (id, newSize = {}, newPosition = {}) => {
-        console.log("Container resized:", id, newSize, newPosition);
+        // console.log("Container resized:", id, newSize, newPosition);
 
         setContainers(
             containers.map((container) =>
@@ -233,7 +233,7 @@ const ContainerProvider = ({ children }) => {
                 if (container.id === id) {
                     const newProps = { ...container.componentProps, ...updatedData };
                     const updatedContainer = { ...container, ...updatedData, componentProps: newProps };
-                    console.log('[ContainerContext] Updated container:', updatedContainer);
+                    // console.log('[ContainerContext] Updated container:', updatedContainer);
                     return updatedContainer;
                 }
                 return container;
@@ -271,7 +271,7 @@ const ContainerProvider = ({ children }) => {
 
     function sendTimersToServer(updatedTimers) {
         // отправляем таймеры на сервер
-        console.log(updatedTimers);
+        // console.log(updatedTimers);
         fetch("/post_timers", {
             method: "POST",
             headers: {

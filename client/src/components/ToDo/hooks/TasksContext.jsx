@@ -33,13 +33,13 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     fetching.current = true;
     setTasks(prev => ({ ...prev, loading: true, error: null }));
     try {
-      console.log('fetchTasks: start', listId);
+      // console.log('fetchTasks: start', listId);
       const data = await api(`/tasks/get_tasks?list_id=${listId}&time_zone=${new Date().getTimezoneOffset()}`);
-      console.log('fetchTasks: data', data);
+      // console.log('fetchTasks: data', data);
       setTasks({ data: data.tasks || [], version: data.tasksVersion, loading: false, error: null });
       if (setLoading) setLoading(false);
       fetching.current = false;
-      console.log('fetchTasks: success');
+      // console.log('fetchTasks: success');
       return data;
     } catch (err) {
       if (onError) onError(err);
@@ -54,44 +54,49 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const addTask = useCallback(async (params) => {
     const res = await api("/tasks/add_task", "POST", params);
     await fetchLists();
-    console.log(params)
+    // console.log(params)
     if (params.listId) {
-      console.log('addTask: fetchTasks', params.listId);
+      // console.log('addTask: fetchTasks', params.listId);
       await fetchTasks(params.listId);
     }
     return res;
   }, [fetchLists, fetchTasks]);
+
   const updateTask = useCallback(async (params) => {
-    console.log('updateTask: params', params);
+    // console.log('updateTask: params', params);
     const res = await api("/tasks/edit_task", "PUT", params);
     if (fetchLists) await fetchLists();
     if (params.listId && typeof fetchTasks === 'function') {
-      console.log('updateTask: fetchTasks', params.listId);
+      // console.log('updateTask: fetchTasks', params.listId);
       await fetchTasks(params.listId);
     }
     return res;
   }, [fetchLists, fetchTasks]);
+
   const changeTaskStatus = useCallback(async (params) => {
     const res = await api("/tasks/change_status", "PUT", params);
     if (fetchLists) await fetchLists();
     if (params.listId && typeof fetchTasks === 'function') await fetchTasks(params.listId);
     return res;
   }, [fetchLists, fetchTasks]);
+
   const addSubTask = useCallback(async (params) => {
     const res = await api("/tasks/add_subtask", "POST", params);
     if (fetchLists) await fetchLists();
     if (params.listId && typeof fetchTasks === 'function') {
-      console.log('addSubTask: fetchTasks', params.listId);
+      // console.log('addSubTask: fetchTasks', params.listId);
       await fetchTasks(params.listId);
     }
     return res;
   }, [fetchLists, fetchTasks]);
+
   const deleteTask = useCallback(async (params) => {
     const res = await api("/tasks/del_task", "DELETE", params);
     if (fetchLists) await fetchLists();
     if (params.listId && typeof fetchTasks === 'function') await fetchTasks(params.listId);
     return res;
   }, [fetchLists, fetchTasks]);
+  
   const linkTaskList = useCallback(async (params) => {
     const res = await api("/tasks/link_task", "PUT", params);
     if (fetchLists) await fetchLists();

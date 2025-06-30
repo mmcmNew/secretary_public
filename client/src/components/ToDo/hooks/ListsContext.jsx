@@ -27,9 +27,9 @@ export const ListsProvider = ({ children, onError, setLoading }) => {
     fetching.current = true;
     setLists(prev => ({ ...prev, loading: true, error: null }));
     try {
-      console.log('fetchLists: start');
+      // console.log('fetchLists: start');
       const data = await api(`/tasks/get_lists?time_zone=${new Date().getTimezoneOffset()}`);
-      console.log('fetchLists: data', data);
+      // console.log('fetchLists: data', data);
       setLists({
         lists: data.lists,
         default_lists: data.default_lists,
@@ -40,7 +40,7 @@ export const ListsProvider = ({ children, onError, setLoading }) => {
       });
       if (setLoading) setLoading(false);
       fetching.current = false;
-      console.log('fetchLists: success');
+      // console.log('fetchLists: success');
       return data;
     } catch (err) {
       if (onError) onError(err);

@@ -229,9 +229,7 @@ function CalendarComponent({
 
   function handleApplySettings(tempSlotDuration, tempTimeRange, tempTimeOffset) {
     handleSettingsDialogClose();
-    console.log("applySettings")
     const updatedSettings = { ...newSettings, slotDuration: tempSlotDuration, timeRange: tempTimeRange, timeOffset: tempTimeOffset, }
-    console.log(updatedSettings)
     saveSettings(updatedSettings);
   }
 

@@ -87,11 +87,11 @@ function MainContainer() {
     [mode, setThemeMode],
   );
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.mainStart) {
-      console.log("MainContainer.jsx: первый рендер завершён, время:", Date.now() - window.mainStart, "мс");
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (typeof window !== 'undefined' && window.mainStart) {
+  //     console.log("MainContainer.jsx: первый рендер завершён, время:", Date.now() - window.mainStart, "мс");
+  //   }
+  // }, []);
 
   const theme = useMemo(
     () => createTheme({

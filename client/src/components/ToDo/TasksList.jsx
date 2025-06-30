@@ -43,19 +43,19 @@ export default function TasksList({
     const [actionType, setActionType] = useState(null);
     const [targetItemId, setTargetItemId] = useState(null);
 
-    useEffect(() => {
-        console.log('TasksList received props:', {
-            tasks,
-            selectedList,
-            selectedTaskId,
-            containerId
-        });
-    }, [tasks, selectedList, selectedTaskId, containerId]);
+    // useEffect(() => {
+    //     console.log('TasksList received props:', {
+    //         tasks,
+    //         selectedList,
+    //         selectedTaskId,
+    //         containerId
+    //     });
+    // }, [tasks, selectedList, selectedTaskId, containerId]);
 
     useEffect(() => {
         const draggableEl = document.getElementById(`tasksList${containerId}`);
         if (!draggableEl) {
-            console.log('Draggable element not found:', `tasksList${containerId}`);
+            // console.log('Draggable element not found:', `tasksList${containerId}`);
             return;
         }
 
@@ -158,7 +158,7 @@ export default function TasksList({
 
     async function handleToListAction(targetId, actionTypeName = null) {
         if (!actionTypeName) actionTypeName = actionType;
-        console.log(`handleToListAction: `, actionTypeName, targetItemId, targetId);
+        // console.log(`handleToListAction: `, actionTypeName, targetItemId, targetId);
         if (typeof linkTaskList === "function") {
             const params = {
                 task_id: targetItemId,

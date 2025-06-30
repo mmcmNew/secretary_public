@@ -25,12 +25,12 @@ const AppRoutes = memo(() => (
 ));
 
 function App() {
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && window.mainStart) {
-      const renderTime = performance.now() - window.mainStart;
-      console.log(`Initial render completed in ${renderTime.toFixed(2)}ms`);
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (process.env.NODE_ENV === 'development' && window.mainStart) {
+  //     const renderTime = performance.now() - window.mainStart;
+  //     console.log(`Initial render completed in ${renderTime.toFixed(2)}ms`);
+  //   }
+  // }, []);
 
   return (
     <div className="App">

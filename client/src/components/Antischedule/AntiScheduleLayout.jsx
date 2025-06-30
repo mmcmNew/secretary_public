@@ -181,10 +181,10 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
 
   // Корректно ищем myDayList при изменении lists
   useEffect(() => {
-    console.log('[AntiScheduleLayout] lists:', lists);
+    // console.log('[AntiScheduleLayout] lists:', lists);
     if (lists?.default_lists) {
       const selectedList = lists.default_lists.find((list) => list.id === "my_day");
-      console.log('[AntiScheduleLayout] found selectedList:', selectedList);
+      // console.log('[AntiScheduleLayout] found selectedList:', selectedList);
       setMyDayList(selectedList);
       // if (selectedList) setSelectedListId(selectedList.id);
     }
@@ -195,10 +195,10 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
   }, [antiSchedule.data]);
 
   // Лог для props FocusModeComponent
-  useEffect(() => {
-    console.log('[AntiScheduleLayout] myDayTasks:', myDayTasks);
-    console.log('[AntiScheduleLayout] myDayList:', myDayList);
-  }, [myDayTasks, myDayList]);
+  // useEffect(() => {
+  //   console.log('[AntiScheduleLayout] myDayTasks:', myDayTasks);
+  //   console.log('[AntiScheduleLayout] myDayList:', myDayList);
+  // }, [myDayTasks, myDayList]);
 
   async function handleUpdateTasks() {
     const newTasks = await fetchTasks("my_day");
@@ -211,11 +211,11 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
   }
 
   async function handleDelDateClick(taskId) {
-    console.log("handleDelDateClick, taskId", taskId);
+    // console.log("handleDelDateClick, taskId", taskId);
     deleteAntiTask({ taskId });
     setTaskDialogOpen(false);
     const newCalendarEvents = calendarEvents?.filter((event) => event.id != taskId);
-    console.log("newCalendarEvents", newCalendarEvents);
+    // console.log("newCalendarEvents", newCalendarEvents);
     setCalendarEvents(newCalendarEvents);
     // setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
   }
@@ -390,7 +390,7 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
       endDate.setHours(endDate.getHours() + 1);
       eventDict.end = applyOffset(endDate, newSettings?.timeOffset);
     }
-    console.log('eventDict', eventDict);
+    // console.log('eventDict', eventDict);
     setCalendarEvents((prevEvents) =>
       prevEvents.map((event) =>
         event.id == eventInfo.event.id ? { ...event, ...eventDict } : event
@@ -509,7 +509,7 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
   }, [updatedCalendarEvents, selectedDate]);
 
   function handleSetMode(newMode=null) {
-    console.log(mode);
+    // console.log(mode);
     if (!newMode)
       newMode = mode
     if (mode == "focus") {
@@ -523,7 +523,7 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
   }
 
   function handleAdditionalButtonClick(task) {
-    console.log(task);
+    // console.log(task);
     handleAddAntiTask(task)
   }
 

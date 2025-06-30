@@ -75,13 +75,13 @@ export default function NewRecordDialog({ open, handleClose, taskId =null, table
   }, []);
 
   useEffect(() => {
-    console.log(tablesList);
+    // console.log(tablesList);
     if (tablesList)
       setTempTablesList(tablesList);
   }, [tablesList]);
 
   useEffect(() => {
-    console.log(tableSurvey);
+    // console.log(tableSurvey);
     if (tableSurvey)
       setTempTableSurvay(tableSurvey);
   }, [tableSurvey])
