@@ -18,7 +18,8 @@ export default function AntischeduleComponent({
   handleAdditionalButtonClick,
   calendarRef,
   newSettings,
-  saveCalendarSettings,
+  setNewSettings,
+  saveSettings,
   updatedCalendarEvents,
   myDayTasks,
   listsList,
@@ -92,8 +93,9 @@ export default function AntischeduleComponent({
             <CalendarComponent
               calendarRef={calendarRef}
               newSettings={newSettings}
-              saveSettings={saveCalendarSettings}
+              saveSettings={saveSettings}
               events={updatedCalendarEvents}
+              tasks={myDayTasks}
               lists={{ lists: listsList, default_lists: defaultLists, projects }}
               handleEventClick={handleEventClick}
               handleEventChange={handleEventChange}
@@ -106,6 +108,7 @@ export default function AntischeduleComponent({
           ) : (
             <FocusModeComponent
               containerId={containerId}
+              saveSettings={saveSettings}
               tasks={myDayTasks}
               selectedList={myDayList}
               updateTask={updateTask}
@@ -122,7 +125,8 @@ export default function AntischeduleComponent({
           <CalendarComponent
             calendarRef={calendarRef}
             newSettings={newSettings}
-            saveSettings={saveCalendarSettings}
+            setNewSettings={setNewSettings}
+            saveSettings={saveSettings}
             events={updatedCalendarEvents}
             lists={{ lists: listsList, default_lists: defaultLists, projects }}
             handleEventClick={handleEventClick}
@@ -168,8 +172,9 @@ AntischeduleComponent.propTypes = {
   handleTaskClick: PropTypes.func,
   handleAdditionalButtonClick: PropTypes.func,
   calendarRef: PropTypes.object,
-  saveCalendarSettings: PropTypes.func,
   newSettings: PropTypes.object,
+  setNewSettings: PropTypes.func,
+  saveSettings: PropTypes.func,
   updatedCalendarEvents: PropTypes.array,
   myDayTasks: PropTypes.array,
   listsList: PropTypes.array,

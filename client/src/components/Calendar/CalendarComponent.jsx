@@ -349,7 +349,7 @@ function CalendarComponent({
     nowIndicator: true,
   };
 
-  if (newSettings?.currentView.startsWith('timeGrid') || newSettings?.currentView == 'dayGridDay') 
+  if (newSettings?.currentView?.startsWith('timeGrid') || newSettings?.currentView == 'dayGridDay') 
     calendarProps.eventContent = (arg) => renderEventContent(arg);
 
   return (

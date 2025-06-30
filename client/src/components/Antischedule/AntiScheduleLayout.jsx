@@ -162,7 +162,7 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
       const selectedList = lists.default_lists.find((list) => list.id === "my_day");
       console.log('[AntiScheduleLayout] found selectedList:', selectedList);
       setMyDayList(selectedList);
-      if (selectedList) setSelectedListId(selectedList.id);
+      // if (selectedList) setSelectedListId(selectedList.id);
     }
   }, [lists]);
 
@@ -522,7 +522,7 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
       handleAdditionalButtonClick={handleAdditionalButtonClick}
       calendarRef={calendarRef}
       newSettings={newSettings}
-      setNewSettings={handleSaveSettings}
+      saveSettings={handleSaveSettings}
       updatedCalendarEvents={updatedCalendarEvents}
       myDayTasks={myDayTasks}
       myDayList={myDayList}
