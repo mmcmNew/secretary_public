@@ -34,10 +34,11 @@ const ContainerProvider = ({ children }) => {
             ...componentConfig.content?.props,
             containerId: id,
             ...containerData.content?.props,
-            ...containerData
+            ...containerData,
         };
 
         const newContainer = {
+            ...containerData,
             id,
             type,
             name: containerData.name || componentConfig.name,

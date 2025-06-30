@@ -14,7 +14,7 @@ import timezone from "dayjs/plugin/timezone";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-export default function AntiScheduleLayout({ containerId, calendarSettingsProp }) {
+export default function AntiScheduleLayout({ containerId, antiScheduleSettingsProp = null }) {
   const { lists, setSelectedListId } = useLists();
   const {
     fetchTasks,
@@ -105,30 +105,23 @@ export default function AntiScheduleLayout({ containerId, calendarSettingsProp }
             note: { type: "text", name: "Заметка" },
           })
 
-  const defaultAntiScheduleSettings = {
-    slotDuration: 30,
-    timeRange: [8, 24],
-    timeOffset: 0,
-    currentView: "timeGridDay",
-    views: "timeGridWeek,timeGridDay",
-    isToggledBGTasksEdit: false,
-  };
-  const [newSettings, setNewSettings] = useState(calendarSettingsProp || defaultAntiScheduleSettings);
+  const [newSettings, setNewSettings] = useState(
+    antiScheduleSettingsProp || {
+      slotDuration: 30,
+      timeRange: [8, 24],
+      timeOffset: 0,
+      currentView: "timeGridDay",
+      views: "timeGridWeek,timeGridDay",
+    },
+  );
   const { handleContainerResize, handleUpdateContent } = useContainer();
 
-  // Загружаем сохранённые настройки при инициализации, если они есть
-  useEffect(() => {
-    if (calendarSettingsProp) {
-      setNewSettings(calendarSettingsProp);
-    }
-  }, [calendarSettingsProp]);
-
-  // Синхронизируем newSettings с props контейнера при каждом изменении
-  useEffect(() => {
+  const handleSaveSettings = (settings) => {
+    setNewSettings(settings);
     if (handleUpdateContent && containerId) {
-      handleUpdateContent(containerId, { antiScheduleSettings: newSettings });
+      handleUpdateContent(containerId, { antiScheduleSettingsProp: settings });
     }
-  }, [newSettings, handleUpdateContent, containerId]);
+  };
 
   useEffect(() => {
     const getAndSetCalendarEvents = async () => {
@@ -523,8 +516,7 @@ export default function AntiScheduleLayout({ containerId, calendarSettingsProp }
       handleAdditionalButtonClick={handleAdditionalButtonClick}
       calendarRef={calendarRef}
       newSettings={newSettings}
-      setNewSettings={setNewSettings}
-      saveSettings={handleSaveCalendarSettings}
+      setNewSettings={handleSaveSettings}
       updatedCalendarEvents={updatedCalendarEvents}
       myDayTasks={myDayTasks}
       myDayList={myDayList}
@@ -563,4 +555,5 @@ export default function AntiScheduleLayout({ containerId, calendarSettingsProp }
 
 AntiScheduleLayout.propTypes = {
   containerId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  antiScheduleSettingsProp: PropTypes.object,
 };
