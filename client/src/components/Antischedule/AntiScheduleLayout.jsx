@@ -114,6 +114,12 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
       views: "timeGridWeek,timeGridDay",
     },
   );
+
+  useEffect(() => {
+    if (antiScheduleSettingsProp) {
+      setNewSettings(antiScheduleSettingsProp);
+    }
+  }, [antiScheduleSettingsProp]);
   const { handleContainerResize, handleUpdateContent } = useContainer();
 
   const handleSaveSettings = (settings) => {
@@ -500,7 +506,7 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
   const handleSaveCalendarSettings = (settings) => {
     setNewSettings(settings);
     if (handleUpdateContent && containerId) {
-      handleUpdateContent(containerId, { antiScheduleSettings: settings });
+      handleUpdateContent(containerId, { antiScheduleSettingsProp: settings });
     }
   };
 
