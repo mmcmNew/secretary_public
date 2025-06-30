@@ -34,7 +34,9 @@ const FocusModeComponent = ({
     changeTaskStatus,
     fetchTasks,
     onTaskClick,
-    additionalButtonClick
+    additionalButtonClick,
+    settingsProp = null,
+    saveSettings = null,
 }) => {
     // Отладочные логи для props
     // console.log('[FocusModeComponent] props:', {
@@ -48,12 +50,19 @@ const FocusModeComponent = ({
     //     additionalButtonClick
     // });
     const [currentTaskParams, setCurrentTaskParams] = useState({intervals: []})
-    const [modeSettings, setModeSettings] = useState({
+    const defaultSettings = {
         workIntervalDuration: 30 * 60,
         breakDuration: 5 * 60,
         additionalBreakDuration: 15 * 60,
         isBackgroundTasks: true,
-    });
+    };
+    const [modeSettings, setModeSettings] = useState(settingsProp || defaultSettings);
+
+    useEffect(() => {
+        if (settingsProp) {
+            setModeSettings(settingsProp);
+        }
+    }, [settingsProp]);
     const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
     const [skippedTasks, setSkippedTasks] = useState([]);
     const [currentTask, setCurrentTask] = useState(null);
@@ -450,7 +459,11 @@ const FocusModeComponent = ({
 
     function handleSettingsApply(updates){
         setSettingsDialogOpen(false);
-        setModeSettings((prevSettings) => ({ ...prevSettings, ...updates }));
+        const updatedSettings = { ...modeSettings, ...updates };
+        setModeSettings(updatedSettings);
+        if (typeof saveSettings === 'function') {
+            saveSettings(updatedSettings);
+        }
     }
 
     function handleRefresh() {
@@ -596,4 +609,6 @@ FocusModeComponent.propTypes = {
     fetchTasks: PropTypes.func,
     onTaskClick: PropTypes.func,
     additionalButtonClick: PropTypes.func,
+    settingsProp: PropTypes.object,
+    saveSettings: PropTypes.func,
 };
