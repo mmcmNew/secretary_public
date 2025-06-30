@@ -160,11 +160,11 @@ const ContainerProvider = ({ children }) => {
     }, [dashboard_id]);
 
     const sendContainersToServer = async () => {
-        console.log(containers);
+        console.log('[ContainerContext] sendContainersToServer called');
         // отправляем все контейнеры кроме таймеров
         const sendingContainers = containers.filter((container) => container.type !== "timersToolbar");
+        console.log('[ContainerContext] Containers to send:', sendingContainers);
         try {
-            console.log()
             const response = await fetch("/dashboard", {
                 method: "POST",
                 headers: {
@@ -174,6 +174,7 @@ const ContainerProvider = ({ children }) => {
                     dashboard_data: dashboardData,
                     containers: sendingContainers.map(c => {
                         const { componentType, content, componentProps, ...serializableContainer } = c;
+                        console.log('[ContainerContext] Container props to send:', serializableContainer, 'componentProps:', componentProps);
                         return serializableContainer;
                     }),
                     themeMode: themeMode,
@@ -225,12 +226,14 @@ const ContainerProvider = ({ children }) => {
 
     // Функция для обновления данных содержимого контейнера
     const handleUpdateContent = (id, updatedData) => {
-        console.log("Container content updated:", id, updatedData);
+        console.log('[ContainerContext] handleUpdateContent called:', id, updatedData);
         setContainers((prevContainers) =>
             prevContainers.map((container) => {
                 if (container.id === id) {
                     const newProps = { ...container.componentProps, ...updatedData };
-                    return { ...container, ...updatedData, componentProps: newProps };
+                    const updatedContainer = { ...container, ...updatedData, componentProps: newProps };
+                    console.log('[ContainerContext] Updated container:', updatedContainer);
+                    return updatedContainer;
                 }
                 return container;
             }),

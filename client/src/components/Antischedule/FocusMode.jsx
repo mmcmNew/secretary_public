@@ -37,16 +37,16 @@ const FocusModeComponent = ({
     additionalButtonClick
 }) => {
     // Отладочные логи для props
-    console.log('[FocusModeComponent] props:', {
-        containerId,
-        tasks,
-        selectedList,
-        updateTask,
-        changeTaskStatus,
-        fetchTasks,
-        onTaskClick,
-        additionalButtonClick
-    });
+    // console.log('[FocusModeComponent] props:', {
+    //     containerId,
+    //     tasks,
+    //     selectedList,
+    //     updateTask,
+    //     changeTaskStatus,
+    //     fetchTasks,
+    //     onTaskClick,
+    //     additionalButtonClick
+    // });
     const [currentTaskParams, setCurrentTaskParams] = useState({intervals: []})
     const [modeSettings, setModeSettings] = useState({
         workIntervalDuration: 30 * 60,
@@ -460,12 +460,12 @@ const FocusModeComponent = ({
 
     // Лог перед рендером TasksList
     const filteredTasks = modeSettings?.isBackgroundTasks ? tasks : tasks.filter((task) => !task.is_background);
-    console.log('[FocusModeComponent] TasksList props:', {
-        containerId,
-        tasks: filteredTasks,
-        selectedList,
-        selectedTaskId: currentTaskParams?.currentTask?.id || null
-    });
+    // console.log('[FocusModeComponent] TasksList props:', {
+    //     containerId,
+    //     tasks: filteredTasks,
+    //     selectedList,
+    //     selectedTaskId: currentTaskParams?.currentTask?.id || null
+    // });
 
     return (
         <Box

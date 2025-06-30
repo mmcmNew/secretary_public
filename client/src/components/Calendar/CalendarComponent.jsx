@@ -227,18 +227,12 @@ function CalendarComponent({
   const handleSettingsDialogOpen = () => setSettingsDialogOpen(true);
   const handleSettingsDialogClose = () => setSettingsDialogOpen(false);
 
-  function handleApplySettings(
-    tempSlotDuration,
-    tempTimeRange,
-    tempTimeOffset
-  ) {
-    saveSettings({
-        ...newSettings,
-        slotDuration: tempSlotDuration,
-        timeRange: tempTimeRange,
-        timeOffset: tempTimeOffset,
-    });
+  function handleApplySettings(tempSlotDuration, tempTimeRange, tempTimeOffset) {
     handleSettingsDialogClose();
+    console.log("applySettings")
+    const updatedSettings = { ...newSettings, slotDuration: tempSlotDuration, timeRange: tempTimeRange, timeOffset: tempTimeOffset, }
+    console.log(updatedSettings)
+    saveSettings(updatedSettings);
   }
 
   const slotLabelContent = useCallback(

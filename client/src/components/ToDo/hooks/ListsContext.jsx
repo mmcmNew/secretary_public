@@ -86,6 +86,10 @@ export const ListsProvider = ({ children, onError, setLoading }) => {
     }
   }, [wsVersion, fetchLists, setVersion]);
 
+  useEffect(() => {
+    fetchLists();
+  }, []);
+
   const contextValue = useMemo(() => ({
     lists,
     selectedListId,

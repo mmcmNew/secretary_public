@@ -14,7 +14,7 @@ import timezone from "dayjs/plugin/timezone";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-export default function AntiScheduleLayout({ containerId }) {
+export default function AntiScheduleLayout({ containerId, calendarSettingsProp }) {
   const { lists, setSelectedListId } = useLists();
   const {
     fetchTasks,
@@ -105,14 +105,30 @@ export default function AntiScheduleLayout({ containerId }) {
             note: { type: "text", name: "Заметка" },
           })
 
-  const [newSettings, setNewSettings] = useState({
+  const defaultAntiScheduleSettings = {
     slotDuration: 30,
     timeRange: [8, 24],
     timeOffset: 0,
     currentView: "timeGridDay",
     views: "timeGridWeek,timeGridDay",
-  });
-  const { handleContainerResize } = useContainer();
+    isToggledBGTasksEdit: false,
+  };
+  const [newSettings, setNewSettings] = useState(calendarSettingsProp || defaultAntiScheduleSettings);
+  const { handleContainerResize, handleUpdateContent } = useContainer();
+
+  // Загружаем сохранённые настройки при инициализации, если они есть
+  useEffect(() => {
+    if (calendarSettingsProp) {
+      setNewSettings(calendarSettingsProp);
+    }
+  }, [calendarSettingsProp]);
+
+  // Синхронизируем newSettings с props контейнера при каждом изменении
+  useEffect(() => {
+    if (handleUpdateContent && containerId) {
+      handleUpdateContent(containerId, { antiScheduleSettings: newSettings });
+    }
+  }, [newSettings, handleUpdateContent, containerId]);
 
   useEffect(() => {
     const getAndSetCalendarEvents = async () => {
@@ -142,12 +158,12 @@ export default function AntiScheduleLayout({ containerId }) {
 
   // Корректно ищем myDayList при изменении lists
   useEffect(() => {
+    console.log('[AntiScheduleLayout] lists:', lists);
     if (lists?.default_lists) {
       const selectedList = lists.default_lists.find((list) => list.id === "my_day");
+      console.log('[AntiScheduleLayout] found selectedList:', selectedList);
       setMyDayList(selectedList);
       if (selectedList) setSelectedListId(selectedList.id);
-      console.log('[AntiScheduleLayout] lists:', lists);
-      console.log('[AntiScheduleLayout] selectedList for my_day:', selectedList);
     }
   }, [lists]);
 
@@ -488,6 +504,13 @@ export default function AntiScheduleLayout({ containerId }) {
     handleAddAntiTask(task)
   }
 
+  const handleSaveCalendarSettings = (settings) => {
+    setNewSettings(settings);
+    if (handleUpdateContent && containerId) {
+      handleUpdateContent(containerId, { antiScheduleSettings: settings });
+    }
+  };
+
   return (
     <AntischeduleComponent
       containerId={containerId}
@@ -501,6 +524,7 @@ export default function AntiScheduleLayout({ containerId }) {
       calendarRef={calendarRef}
       newSettings={newSettings}
       setNewSettings={setNewSettings}
+      saveSettings={handleSaveCalendarSettings}
       updatedCalendarEvents={updatedCalendarEvents}
       myDayTasks={myDayTasks}
       myDayList={myDayList}

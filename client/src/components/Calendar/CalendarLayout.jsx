@@ -41,7 +41,9 @@ export default function CalendarLayout({
 
   const handleSaveCalendarSettings = (settings) => {
     setCalendarSettings(settings);
+    console.log(containerId, settings)
     if (handleUpdateContent && containerId) {
+      console.log("Saving settings:", settings);
       handleUpdateContent(containerId, { calendarSettingsProp: settings });
     }
   };
