@@ -12,9 +12,9 @@ export default function CalendarLayout({
   handleDatesSet = null,
   calendarSettingsProp = null,
 }) {
-  const { updateTask, addTask, fetchTasks, taskFields, addSubTask, changeTaskStatus, deleteTask } = useTasks();
+  const { updateTask, addTask, fetchTasks, tasks, taskFields, addSubTask, changeTaskStatus, deleteTask } = useTasks();
   const { lists, selectedListId, selectedList } = useLists();
-  const { calendarEvents } = useCalendar();
+  const { calendarEvents, fetchCalendarEvents } = useCalendar();
   const { setUpdates, handleUpdateContent } = useContainer();
   const calendarRef = useRef(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
@@ -137,15 +137,15 @@ export default function CalendarLayout({
         calendarRef={calendarRef}
         newSettings={calendarSettings}
         saveSettings={handleSaveCalendarSettings}
-        calendarEvents={calendarEvents.data}
+        events={calendarEvents.data}
+        tasks={tasks.data}
+        lists={lists}
         handleEventClick={handleEventClick}
         handleEventChange={handleEventChange}
         eventReceive={handleEventChange}
         addTask={addTask}
         fetchTasks={fetchTasks}
-        listsList={lists.lists}
-        defaultLists={lists.default_lists}
-        projects={lists.projects}
+        fetchEvents={fetchCalendarEvents}
         datesSet={handleDatesSet}
       />
       <TaskDialog

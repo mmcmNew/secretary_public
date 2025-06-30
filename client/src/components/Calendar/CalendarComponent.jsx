@@ -23,29 +23,22 @@ import ListsList from "../ToDo/ListsList";
 import NewTaskDialog from "./NewTaskDialog";
 import SettingsDialog from "./SettingsDialog";
 import PropTypes from "prop-types";
-import useTasks from "../ToDo/hooks/useTasks";
-import useLists from "../ToDo/hooks/useLists";
-import useCalendar from "../ToDo/hooks/useCalendar";
 
 function CalendarComponent({
   calendarRef,
+  events = [],
+  tasks = [],
+  lists = {},
+  fetchTasks = () => {},
+  fetchEvents = () => {},
+  addTask = () => {},
   newSettings,
   saveSettings,
   handleEventClick,
   handleEventChange,
   eventReceive,
-  datesSet = null
+  datesSet = null,
 }) {
-  const {
-    fetchTasks,
-    addTask,
-    tasks,
-  } = useTasks();
-  const { lists } = useLists();
-  const {
-    calendarEvents,
-    fetchCalendarEvents,
-  } = useCalendar();
   const draggableEl = useRef(null);
   const draggableInstance = useRef(null);
   const [selectedListId, setSelectedListId] = useState(null);
@@ -82,7 +75,7 @@ function CalendarComponent({
       return date;
     };
 
-    let eventsToProcess = Array.isArray(calendarEvents?.data) ? calendarEvents.data : [];
+    let eventsToProcess = Array.isArray(events) ? events : [];
 
     let calculatedEvents = eventsToProcess.map((event) => {
       if (!event) {
@@ -141,7 +134,7 @@ function CalendarComponent({
 
     return calculatedEvents;
 
-  }, [calendarEvents, timeOffset, newSettings?.isToggledBGTasksEdit, newSettings?.currentView]);
+  }, [events, timeOffset, newSettings?.isToggledBGTasksEdit, newSettings?.currentView]);
 
   useEffect(() => {
     if (selectedListId !== null) {
@@ -150,14 +143,14 @@ function CalendarComponent({
   }, [selectedListId, fetchTasks]);
 
   useEffect(() => {
-    fetchCalendarEvents();
-  }, [fetchCalendarEvents]);
+    fetchEvents();
+  }, [fetchEvents]);
 
   useEffect(() => {
     if (!isCollapsed) {
-      fetchCalendarEvents();
+      fetchEvents();
     }
-  }, [isCollapsed, fetchCalendarEvents]);
+  }, [isCollapsed, fetchEvents]);
 
   useEffect(() => {
     const calendarApi = calendarRef.current?.getApi();
@@ -168,7 +161,7 @@ function CalendarComponent({
   }, [processedEvents, calendarRef]);
 
   useEffect(() => {
-    if (draggableEl.current && tasks.data?.length > 0) {
+    if (draggableEl.current && tasks?.length > 0) {
       if (draggableInstance.current) {
         draggableInstance.current.destroy();
       }
@@ -176,7 +169,7 @@ function CalendarComponent({
         itemSelector: ".draggable-task",
         eventData: (eventEl) => {
           const id = eventEl.getAttribute("data-id");
-          const task = tasks.data.find((task) => String(task?.id) === id);
+          const task = tasks.find((task) => String(task?.id) === id);
 
           if (!task) return null;
 
@@ -198,7 +191,7 @@ function CalendarComponent({
             draggableInstance.current = null;
         }
     }
-  }, [tasks.data]);
+  }, [tasks]);
 
   function handleEventReceive(eventInfo) {
     if (eventReceive && typeof eventReceive === "function")
@@ -304,7 +297,7 @@ function CalendarComponent({
     if (!calendarApi) return;
     const currentView = calendarApi.view.type;
     const currentDate = calendarApi.getDate();
-    fetchCalendarEvents();
+    fetchEvents();
     if (newSettings.currentView !== currentView) {
       saveSettings({ ...newSettings, currentView });
     }
@@ -478,9 +471,9 @@ function CalendarComponent({
                 <Button onClick={() => setSelectedListId(null)}>Back</Button>
                 <List ref={draggableEl}>
                   {/* Список невыполненных задач */}
-                  {tasks.data && tasks.data.length > 0 ? (
+                  {tasks && tasks.length > 0 ? (
                     <>
-                      {tasks.data
+                      {tasks
                         .filter((task) => task.status_id !== 2)
                         .map((task) => (
                           <ListItem
@@ -494,7 +487,7 @@ function CalendarComponent({
                         ))}
 
                       {/* Список выполненных задач */}
-                      {tasks.data.filter((task) => task.status_id === 2).length >
+                      {tasks.filter((task) => task.status_id === 2).length >
                         0 && (
                         <>
                           <ListItem>
@@ -503,7 +496,7 @@ function CalendarComponent({
                               sx={{ fontWeight: "bold", marginTop: 2 }}
                             />
                           </ListItem>
-                          {tasks.data
+                          {tasks
                             .filter((task) => task.status_id === 2)
                             .map((task) => (
                               <ListItem
@@ -538,6 +531,12 @@ function CalendarComponent({
 
 CalendarComponent.propTypes = {
   calendarRef: PropTypes.object,
+  events: PropTypes.array,
+  tasks: PropTypes.array,
+  lists: PropTypes.object,
+  fetchTasks: PropTypes.func,
+  fetchEvents: PropTypes.func,
+  addTask: PropTypes.func,
   newSettings: PropTypes.object.isRequired,
   saveSettings: PropTypes.func.isRequired,
   handleEventClick: PropTypes.func,
