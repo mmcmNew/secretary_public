@@ -37,7 +37,7 @@ async function fetchTableData(tableName, date) {
         throw new Error('Network response was not ok');
       }
       const data = await response.json();
-      return data;
+      return data.records || [];
     } catch (error) {
       console.error('There was a problem with the fetch operation:', error);
     }
@@ -131,8 +131,8 @@ export default function JournalEditor() {
 
     if (!tableName) return;
 
-    const records = await fetchTableData(tableName, utcDate.toISOString());
-    editorRef?.current.setBlocks(records);
+    const data = await fetchTableData(tableName, utcDate.toISOString());
+    editorRef?.current.setBlocks(data.records || []);
 
     const formattedDate = utcDate.format('YYYY-MM-DD');
     const pageIndex = allRecordDates.findIndex(date => dayjs(date).format('YYYY-MM-DD') === formattedDate);
@@ -153,8 +153,8 @@ export default function JournalEditor() {
 
     if (!tableName) return;
 
-    const records = await fetchTableData(tableName, newDate);
-    editorRef?.current.setBlocks(records);
+    const data = await fetchTableData(tableName, newDate);
+    editorRef?.current.setBlocks(data.records || []);
   }
 
   async function handleTableChange(newValue) {

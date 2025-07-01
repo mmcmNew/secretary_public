@@ -122,9 +122,11 @@ export default function JournalEditorDrawer() {
   }, []);
 
   useEffect(() => {
+    const order = tableSurvey?.fields?.map(f => f.field_id) || [];
     editorRefs.current = records.map((rec, i) => {
       const refs = editorRefs.current[i] || {};
-      Object.keys(rec).forEach((field) => {
+      const fields = order.length ? order : Object.keys(rec);
+      fields.forEach((field) => {
         if (['id', 'date', 'time'].includes(field)) return;
         if (!refs[field]) refs[field] = React.createRef();
       });
@@ -142,7 +144,7 @@ export default function JournalEditorDrawer() {
       hasUnsavedChanges: false,
     }));
     setEditors(newEditors);
-  }, [records]);
+  }, [records, tableSurvey]);
 
   const handleFilterChange = (field, value) => {
     setFilters((prevFilters) => ({
@@ -167,7 +169,7 @@ export default function JournalEditorDrawer() {
     setLoadingFilteredRecords(true);
     try {
       const data = await fetchFilteredData(tableName, filters);
-      setRecords(data);
+      setRecords(data.records || []);
     } finally {
       setLoadingFilteredRecords(false);
     }
@@ -194,8 +196,8 @@ export default function JournalEditorDrawer() {
 
     if (!tableName) return;
 
-    const records = await fetchTableData(tableName, utcDate.toISOString());
-    setRecords(records);
+    const data = await fetchTableData(tableName, utcDate.toISOString());
+    setRecords(data.records || []);
 
     const formattedDate = utcDate.format('YYYY-MM-DD');
     const pageIndex = allRecordDates.findIndex(date => dayjs(date).format('YYYY-MM-DD') === formattedDate);
@@ -218,9 +220,9 @@ export default function JournalEditorDrawer() {
 
     if (!tableName) return;
 
-    const records = await fetchTableData(tableName, newDate);
-    console.log('Records for the selected date:', records);
-    setRecords(records)
+    const data = await fetchTableData(tableName, newDate);
+    console.log('Records for the selected date:', data.records);
+    setRecords(data.records || [])
   }
 
   async function handleTableChange(newValue) {
@@ -260,8 +262,9 @@ export default function JournalEditorDrawer() {
 
     const refs = editors[index].ref;
     const record = { id: editors[index].record.id };
-    for (const field in refs) {
-      const r = refs[field].current;
+    const order = tableSurvey?.fields?.map(f => f.field_id) || Object.keys(refs);
+    for (const field of order) {
+      const r = refs[field]?.current;
       if (r && r.getMarkdown) {
         record[field] = await r.getMarkdown();
       }
@@ -643,7 +646,9 @@ export default function JournalEditorDrawer() {
                       const editor = editors[index];
                       const record = editor.record || {};
                       const fieldRefs = editor.ref;
-                      const fields = Object.keys(record).filter(f => !['id','date','time'].includes(f));
+                      const fieldsOrder = tableSurvey?.fields?.map(f => f.field_id) || [];
+                      const fields = (fieldsOrder.length ? fieldsOrder : Object.keys(record))
+                        .filter(f => !['id','date','time'].includes(f));
                       const getFieldName = (field) => {
                         const found = tableSurvey?.fields?.find(fld => fld.field_id === field);
                         return found ? found.field_name : field;

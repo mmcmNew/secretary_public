@@ -10,10 +10,9 @@ from datetime import datetime
 import requests
 from flask import request, jsonify
 from . import ai_routes
-from ..utilites import save_to_base_modules, get_columns_names
+from ..utilites import save_to_base_modules
 
 from ..get_records_utils import get_records_by_ids
-from app.block_notes_utiltes import build_blocks_from_records
 
 
 @ai_routes.route('/ai_record_fix', methods=['POST'])
@@ -128,7 +127,6 @@ def generate_image():
     text = data.get("text")
     table_name = data.get("table_name")
     record_id = data.get("record_id")
-    columns_names = get_columns_names()
     if not text:
         return jsonify(success=False, message="Нет текста")
 
@@ -159,15 +157,6 @@ def generate_image():
         return jsonify(success=False, message="Нет обновлённых данных")
 
     record = result['params']
-    columns = list(record.keys())
 
-    # current_app.logger.info(f"--------------------------------")
-    # current_app.logger.info(f"AI image generation and upload columns: {columns}")
-    # current_app.logger.info(f"AI image generation and upload columns_names: {columns_names}")
-    # current_app.logger.info(f"AI image generation and upload record: {record}")
-    blocks = build_blocks_from_records([record], columns, columns_names)
-    # current_app.logger.info(f"AI image generation and upload blocks: {blocks}")
-    # current_app.logger.info(f"--------------------------------")
-
-    current_app.logger.info(f"AI image generation and upload success")
-    return jsonify(success=True, blocks=blocks)
+    current_app.logger.info("AI image generation and upload success")
+    return jsonify(success=True, record=record)
