@@ -13,7 +13,7 @@ import Chat from "../Chat";
 import JournalEditorDrawer from "../JournalEditor/JournalEditorDrawer";
 import FocusModeComponent from "../Antischedule/FocusMode";
 import CalendarWithContext from "../Calendar/CalendarWithContext";
-import AntiScheduleLayout from "../Antischedule/AntiScheduleLayout";
+import AntiScheduleWithContext from "../Antischedule/AntiScheduleWithContext";
 // import ToDoLayoutTree from "../ToDo/ToDoLayoutTest";
 // import ToDoLayout from "../ToDo/ToDoLayout";
 import ToDoLayoutUniversal from "../ToDo/ToDoLayoutUniversal";
@@ -221,6 +221,6 @@ export const containerTypes = {
         isDisableDragging: false,
         isLocked: false,
         isMinimized: false,
-        content: <AntiScheduleLayout />,
+        content: <AntiScheduleWithContext />,
     },
 };

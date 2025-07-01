@@ -14,7 +14,13 @@ import timezone from "dayjs/plugin/timezone";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-export default function AntiScheduleLayout({ containerId, antiScheduleSettingsProp = null, focusSettingsProp = null }) {
+export default function AntiScheduleLayout({
+  containerId,
+  antiScheduleSettingsProp = null,
+  focusSettingsProp = null,
+  onError = null,
+  onSuccess = null,
+}) {
   const { lists, setSelectedListId } = useLists();
   const {
     fetchTasks,
@@ -140,37 +146,56 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
   const { handleContainerResize, handleUpdateContent } = useContainer();
 
   const handleSaveSettings = (settings) => {
-    setNewSettings(settings);
-    if (handleUpdateContent && containerId) {
-      handleUpdateContent(containerId, { antiScheduleSettingsProp: settings });
+    try {
+      setNewSettings(settings);
+      if (handleUpdateContent && containerId) {
+        handleUpdateContent(containerId, { antiScheduleSettingsProp: settings });
+      }
+      if (onSuccess) onSuccess('Настройки сохранены');
+    } catch (err) {
+      console.error('Error saving anti schedule settings:', err);
+      if (onError) onError(err);
     }
   };
 
   const handleSaveFocusSettings = (settings) => {
-    setFocusSettings(settings);
-    if (handleUpdateContent && containerId) {
-      handleUpdateContent(containerId, { focusSettingsProp: settings });
+    try {
+      setFocusSettings(settings);
+      if (handleUpdateContent && containerId) {
+        handleUpdateContent(containerId, { focusSettingsProp: settings });
+      }
+      if (onSuccess) onSuccess('Настройки сохранены');
+    } catch (err) {
+      console.error('Error saving focus settings:', err);
+      if (onError) onError(err);
     }
   };
 
   useEffect(() => {
     const getAndSetCalendarEvents = async () => {
       if (!calendarEvents?.loading) {
-        const newCalendarEvents = await fetchAntiSchedule();
-        setCalendarEvents(newCalendarEvents || []);
+        try {
+          const newCalendarEvents = await fetchAntiSchedule();
+          setCalendarEvents(newCalendarEvents || []);
+        } catch (err) {
+          if (onError) onError(err);
+        }
       }
     };
 
     const fetchAndSetTasks = async () => {
       if (!myDayTasks?.loading) {
-        const newTasks = await fetchTasks("my_day");
-        // Гарантируем, что в состоянии всегда массив задач
-        if (newTasks && Array.isArray(newTasks)) {
-          setMyDayTasks(newTasks);
-        } else if (newTasks && Array.isArray(newTasks.tasks)) {
-          setMyDayTasks(newTasks.tasks);
-        } else {
-          setMyDayTasks([]);
+        try {
+          const newTasks = await fetchTasks("my_day");
+          if (newTasks && Array.isArray(newTasks)) {
+            setMyDayTasks(newTasks);
+          } else if (newTasks && Array.isArray(newTasks.tasks)) {
+            setMyDayTasks(newTasks.tasks);
+          } else {
+            setMyDayTasks([]);
+          }
+        } catch (err) {
+          if (onError) onError(err);
         }
       }
     };
@@ -211,13 +236,15 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
   }
 
   async function handleDelDateClick(taskId) {
-    // console.log("handleDelDateClick, taskId", taskId);
-    deleteAntiTask({ taskId });
-    setTaskDialogOpen(false);
-    const newCalendarEvents = calendarEvents?.filter((event) => event.id != taskId);
-    // console.log("newCalendarEvents", newCalendarEvents);
-    setCalendarEvents(newCalendarEvents);
-    // setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
+    try {
+      await deleteAntiTask({ taskId });
+      setTaskDialogOpen(false);
+      const newCalendarEvents = calendarEvents?.filter((event) => event.id != taskId);
+      setCalendarEvents(newCalendarEvents);
+      if (onSuccess) onSuccess('Дата удалена');
+    } catch (err) {
+      if (onError) onError(err);
+    }
   }
 
   const handleDialogOpen = (scrollType) => {
@@ -277,8 +304,13 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
     );
     setUpdatedCalendarEvents(updatedCalendarEvents);
 
-    if (updateAntiTask && typeof updateAntiTask === "function")
-      updateAntiTask({ taskId: eventId, ...updatedFields });
+    try {
+      if (updateAntiTask && typeof updateAntiTask === "function")
+        updateAntiTask({ taskId: eventId, ...updatedFields });
+      if (onSuccess) onSuccess('Статус обновлен');
+    } catch (err) {
+      if (onError) onError(err);
+    }
   }
 
   function handleChangeTaskStatus(taskId, updatedFields) {
@@ -287,8 +319,13 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
     setMyDayTasks(updatedTasks);
     setCurrentTasks(updatedTasks);
 
-    if (changeTaskStatus && typeof changeTaskStatus === "function")
-      changeTaskStatus(taskId, updatedFields);
+    try {
+      if (changeTaskStatus && typeof changeTaskStatus === "function")
+        changeTaskStatus(taskId, updatedFields);
+      if (onSuccess) onSuccess('Статус обновлен');
+    } catch (err) {
+      if (onError) onError(err);
+    }
   }
 
   function updateEventsForCalendar(calendarEvents, timeOffset) {
@@ -330,14 +367,18 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
   }
 
   async function handleAddAntiTask(taskParams){
-    // console.log('handleAddAntiTask: task_params: ', taskParams);
-    taskParams.is_background = 0;
-    // taskParams.task_id = taskParams.id || null;
-    let newAntiTask = {};
-    if (addAntiTask && typeof addAntiTask === "function")
-      newAntiTask = await addAntiTask(taskParams);
-    if (newAntiTask)
-      setCalendarEvents((prevEvents) => [...prevEvents, newAntiTask])
+    try {
+      taskParams.is_background = 0;
+      let newAntiTask = {};
+      if (addAntiTask && typeof addAntiTask === "function")
+        newAntiTask = await addAntiTask(taskParams);
+      if (newAntiTask) {
+        setCalendarEvents((prevEvents) => [...prevEvents, newAntiTask]);
+        if (onSuccess) onSuccess('Событие добавлено');
+      }
+    } catch (err) {
+      if (onError) onError(err);
+    }
   }
 
   function handleEventReceive(eventInfo) {
@@ -391,14 +432,18 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
       eventDict.end = applyOffset(endDate, newSettings?.timeOffset);
     }
     // console.log('eventDict', eventDict);
-    setCalendarEvents((prevEvents) =>
-      prevEvents.map((event) =>
-        event.id == eventInfo.event.id ? { ...event, ...eventDict } : event
-      )
-    );
-    if (updateAntiTask && typeof updateAntiTask === "function") {
-      // console.log('[DEBUG] handleEventChange: calling updateAntiTask with', { taskId: eventInfo.event.id, ...eventDict });
-      await updateAntiTask({ taskId: eventInfo.event.id, ...eventDict });
+    try {
+      setCalendarEvents((prevEvents) =>
+        prevEvents.map((event) =>
+          event.id == eventInfo.event.id ? { ...event, ...eventDict } : event
+        )
+      );
+      if (updateAntiTask && typeof updateAntiTask === "function") {
+        await updateAntiTask({ taskId: eventInfo.event.id, ...eventDict });
+      }
+      if (onSuccess) onSuccess('Событие обновлено');
+    } catch (err) {
+      if (onError) onError(err);
     }
   }
 
@@ -427,8 +472,10 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
         });
         setSelectedDayTasks(newSelectedDayTasks);
       }
+      if (onSuccess) onSuccess('Событие обновлено');
     } catch (error) {
       console.error("[DEBUG] Ошибка обновления антизадачи:", error);
+      if (onError) onError(error);
     }
   };
 
@@ -442,8 +489,10 @@ export default function AntiScheduleLayout({ containerId, antiScheduleSettingsPr
       );
       setMyDayTasks(currentUpdatedTasks);
       setCurrentTasks(currentUpdatedTasks);
+      if (onSuccess) onSuccess('Задача обновлена');
     } catch (error) {
       console.error("[DEBUG] Ошибка обновления задачи:", error);
+      if (onError) onError(error);
     }
   };
 
@@ -589,4 +638,6 @@ AntiScheduleLayout.propTypes = {
   containerId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   antiScheduleSettingsProp: PropTypes.object,
   focusSettingsProp: PropTypes.object,
+  onError: PropTypes.func,
+  onSuccess: PropTypes.func,
 };
