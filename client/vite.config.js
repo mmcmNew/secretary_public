@@ -245,6 +245,16 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
+      '/login': {
+        target: 'https://localhost:5000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/register': {
+        target: 'https://localhost:5000',
+        changeOrigin: true,
+        secure: false
+      },
     },
   }
 })
