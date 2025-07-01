@@ -21,7 +21,7 @@ export default function RegisterPage() {
     event.preventDefault();
     const error = await register(username, email, password);
     if (!error) {
-      navigate('/account');
+      navigate('/');
     } else {
       setError(error);
     }
