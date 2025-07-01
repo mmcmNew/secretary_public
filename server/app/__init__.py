@@ -37,6 +37,7 @@ def create_app(config_type='work'):
     csrf.init_app(app)
 
     app.config['DIST_FOLDER'] = dist_folder
+    app.config['CONFIG_TYPE'] = config_type
 
     # Загрузка конфигов
     if config_type == 'test':
@@ -71,12 +72,14 @@ def create_app(config_type='work'):
         db.create_all()
 
         from app.main.models import User
-        User.add_initial_users()
+        if config_type == 'test':
+            User.add_initial_users()
         login_manager.login_view = 'main.api_login'
 
         @login_manager.user_loader
         def load_user(user_id):
             return User.query.get(int(user_id))
+          
         from app.tasks.models import TaskTypes
         TaskTypes.add_initial_task_types()
         from app.tasks.models import Status
