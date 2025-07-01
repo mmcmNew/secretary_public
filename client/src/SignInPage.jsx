@@ -69,6 +69,14 @@ export default function SignInPage() {
           <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
             Sign In
           </Button>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => navigate('/register')}
+            sx={{ mb: 2 }}
+          >
+            Register
+          </Button>
         </Box>
       </Box>
     </Container>
