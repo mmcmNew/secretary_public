@@ -1,6 +1,8 @@
 import React, { createContext, useCallback, useState } from 'react';
 import axios from 'axios';
 
+axios.defaults.withCredentials = true;
+
 function getCookie(name) {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   return match ? decodeURIComponent(match[2]) : null;
@@ -19,7 +21,7 @@ export function AuthProvider({ children }) {
 
   const fetchCurrentUser = useCallback(async () => {
     try {
-      const { data } = await axios.get('/api/user');
+      const { data } = await axios.get('/api/user', { withCredentials: true });
       setUser(data);
       return data;
     } catch (err) {
@@ -33,7 +35,10 @@ export function AuthProvider({ children }) {
       const { data } = await axios.post(
         '/api/login',
         { username, password },
-        { headers: { 'X-CSRFToken': getCookie('csrf_token') } },
+        {
+          headers: { 'X-CSRFToken': getCookie('csrf_token') },
+          withCredentials: true,
+        },
       );
       setUser(data.user);
       return true;
@@ -47,7 +52,10 @@ export function AuthProvider({ children }) {
       const { data } = await axios.post(
         '/api/register',
         { username, email, password },
-        { headers: { 'X-CSRFToken': getCookie('csrf_token') } },
+        {
+          headers: { 'X-CSRFToken': getCookie('csrf_token') },
+          withCredentials: true,
+        },
       );
       setUser(data.user);
       return true;
@@ -58,7 +66,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
-      await axios.post('/api/logout');
+      await axios.post('/api/logout', {}, { withCredentials: true });
     } finally {
       setUser(null);
     }

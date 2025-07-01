@@ -41,7 +41,7 @@ def create_app(config_type='work'):
 
     # Загрузка конфигов
     if config_type == 'test':
-        CORS(app, resources={r"/*": {"origins": "*"}})
+        CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
         app.config.from_object(TestingConfig)
         TestingConfig.init_app(app)
     elif config_type == 'work':
@@ -54,6 +54,17 @@ def create_app(config_type='work'):
     migrate.init_app(app, db)
     socketio.init_app(app)
     login_manager.init_app(app)
+
+    @app.after_request
+    def set_csrf_cookie(response):
+        if app.config.get('WTF_CSRF_ENABLED', True):
+            response.set_cookie(
+                'csrf_token',
+                generate_csrf(),
+                secure=True,
+                samesite='Lax'
+            )
+        return response
     with app.app_context():
 
         from .main import main as main_blueprint
