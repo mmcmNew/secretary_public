@@ -8,7 +8,7 @@ import IconButton from '@mui/material/IconButton';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import EventIcon from '@mui/icons-material/Event';
-import { Autocomplete, Button, Checkbox, CircularProgress, Pagination, TextField, } from "@mui/material";
+import { Autocomplete, Button, Checkbox, CircularProgress, Pagination, TextField, Typography } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
 import ImageSearchIcon from '@mui/icons-material/ImageSearch';
@@ -22,13 +22,14 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateCalendar } from "@mui/x-date-pickers";
 import { useMemo, useState,useEffect } from "react";
-import NotionEditor from "./NotionEditor";
+import MarkdownEditor from "./MarkdownEditor";
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import NewRecordDialog from './NewRecordDialog';
 import { aiPostGenerate, sendMessageToAI, post_record_to_socials, fetchAllFilters, fetchFilteredData, fetchTableData,
   fetchDatesList, fetchTablesList, updateRecordFromBlocks, generateImageForRecord } from '../Chat/API/apiHandlers';
 import MDNotionEditor from './MDNotionEditor';
+import pathToUrl from '../../utils/pathToUrl';
 import FiltersPanel from './FiltersPanel';
 import { Virtuoso } from 'react-virtuoso';
 
@@ -88,7 +89,29 @@ export default function JournalEditorDrawer() {
   const [loadingFilteredRecords, setLoadingFilteredRecords] = useState(false);
   const [dropdownValues, setDropdownValues] = useState({});
 
- const [editors, setEditors] = useState([]);
+  const [editors, setEditors] = useState([]);
+  
+  const renderFiles = (files) => {
+    if (!files) return null;
+    const list = files.split(';').filter(Boolean);
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {list.map((f, i) => {
+          const url = pathToUrl(f.trim());
+          if (/\.(png|jpe?g|gif)$/i.test(url)) {
+            return <img key={i} src={url} alt="file" style={{ maxWidth: '100%' }} />;
+          }
+          if (/\.(mp4|mkv)$/i.test(url)) {
+            return <video key={i} src={url} controls style={{ maxWidth: '100%' }} />;
+          }
+          if (/\.(mp3|wav|ogg)$/i.test(url)) {
+            return <audio key={i} src={url} controls />;
+          }
+          return <Button key={i} href={url} target="_blank" startIcon={<AttachFileIcon />}>Файл {i+1}</Button>;
+        })}
+      </Box>
+    );
+  };
 
   // Стабильные refs для редакторов
   const editorRefs = React.useRef([]);
@@ -99,14 +122,18 @@ export default function JournalEditorDrawer() {
   }, []);
 
   useEffect(() => {
-    // Сохраняем refs по id записи
-    editorRefs.current = records.map((blocks, i) => {
-      if (!editorRefs.current[i]) editorRefs.current[i] = React.createRef();
-      return editorRefs.current[i];
+    editorRefs.current = records.map((rec, i) => {
+      const refs = editorRefs.current[i] || {};
+      Object.keys(rec).forEach((field) => {
+        if (['id', 'date', 'time'].includes(field)) return;
+        if (!refs[field]) refs[field] = React.createRef();
+      });
+      return refs;
     });
-    const newEditors = records.map((blocks, i) => ({
+
+    const newEditors = records.map((rec, i) => ({
       ref: editorRefs.current[i],
-      blocks,
+      record: rec,
       saveStatus: "idle",
       aiResponseStatus: "idle",
       sendToSocialsStatus: "idle",
@@ -115,8 +142,6 @@ export default function JournalEditorDrawer() {
       hasUnsavedChanges: false,
     }));
     setEditors(newEditors);
-    // console.log('Records:', records)
-    // console.log('Editors:', newEditors)
   }, [records]);
 
   const handleFilterChange = (field, value) => {
@@ -233,30 +258,16 @@ export default function JournalEditorDrawer() {
       )
     );
 
-    const editorRef = editors[index].ref;
-    if (editorRef?.current?.getBlocks) {
-      const allBlocks = await editorRef.current.getBlocks();
-
-      const modifiedBlocks = [];
-
-      for (const block of allBlocks) {
-        if (block.children && block.children.length > 0) {
-          let markdown = "";
-
-          for (const child of block.children) {
-            const singleBlockArray = [child]; // Преобразуем одного ребенка в массив
-            const childMarkdown = await editorRef.current.blocksToMarkdownLossy(singleBlockArray);
-            markdown += childMarkdown.trim() + "\n";
-          }
-
-          markdown = markdown.trim();
-          modifiedBlocks.push({ ...block, markdownContent: markdown });
-        } else {
-          modifiedBlocks.push({ ...block, markdownContent: "" });
-        }
+    const refs = editors[index].ref;
+    const record = { id: editors[index].record.id };
+    for (const field in refs) {
+      const r = refs[field].current;
+      if (r && r.getMarkdown) {
+        record[field] = await r.getMarkdown();
       }
+    }
 
-      await updateRecordFromBlocks(tableName, modifiedBlocks);
+    await updateRecordFromBlocks(tableName, [record]);
 
       // Сбрасываем флаг несохраненных изменений после успешного сохранения
       setEditors(prev =>
@@ -307,7 +318,7 @@ export default function JournalEditorDrawer() {
   }
 
   const handleAIPostGenerate = async () => {
-    const records_ids = editors.map(editor => editor.blocks[0]?.id?.split("-")[1]).filter(Boolean);
+    const records_ids = editors.map(editor => editor.record?.id).filter(Boolean);
     if (!records_ids.length) return;
     setIsPostGenerate("loading");
     try {
@@ -336,10 +347,9 @@ export default function JournalEditorDrawer() {
   }
 
   const handlePostRecordToSocials = async (index, type = "post") => {
-    const editorRef = editors[index]?.ref?.current;
-    if (!editorRef) return;
-    const blocks = editorRef.getBlocks();
-    const recordId = blocks?.[0]?.id?.split("-")[1];
+    const editorFields = editors[index]?.ref;
+    const recordId = editors[index]?.record?.id;
+    if (!editorFields || !recordId) return;
 
     if (tableName !== 'posts_journal') {
       console.log("Публикация пока доступна только из таблицы постов")
@@ -402,18 +412,20 @@ export default function JournalEditorDrawer() {
 
 
   const handleAIEnhance = async (index, type = "fix") => {
-    const editorRef = editors[index]?.ref?.current;
-    if (!editorRef) return;
+    const editorFields = editors[index]?.ref;
+    const recordId = editors[index]?.record?.id;
+    if (!editorFields || !recordId) return;
 
-    const blocks = editorRef.getBlocks();
-    const recordId = blocks?.[0]?.id?.split("-")[1];
+    let mdRecord = "";
+    for (const field in editorFields) {
+      const ref = editorFields[field].current;
+      if (ref && ref.getMarkdown) {
+        mdRecord += await ref.getMarkdown() + "\n";
+      }
+    }
+    mdRecord = mdRecord.trim();
 
-    const mdRecord = await editorRef.blocksToMarkdownLossy(blocks);
-    console.log(editorRef)
-    console.log(mdRecord)
-    if (!mdRecord) return;
-
-    if (!recordId || !tableName) {
+    if (!mdRecord || !tableName) {
       console.error("Нет ID записи или названия таблицы");
       return;
     }
@@ -463,28 +475,21 @@ export default function JournalEditorDrawer() {
       };
       return updated;
     });
-    const editorRef = editorRefs.current[index]?.current;
-    if (!editorRef) return;
-    const blocks = await editorRef.getBlocks();
-    const text = await editorRef.blocksToMarkdownLossy(blocks);
-    const recordId = blocks?.[0]?.id?.split("-")[1];
+    const fieldRefs = editorRefs.current[index] || {};
+    const recordId = editors[index]?.record?.id;
+    if (!recordId) return;
+    let text = "";
+    for (const key in fieldRefs) {
+      const ref = fieldRefs[key].current;
+      if (ref && ref.getMarkdown) text += await ref.getMarkdown() + "\n";
+    }
+    text = text.trim();
     try {
-      const newBlocks = await generateImageForRecord({
+      await generateImageForRecord({
         table_name: tableName,
         record_id: recordId,
         text
       });
-      // Валидация: newBlocks должен быть массивом объектов
-      const validBlocks = Array.isArray(newBlocks) && Array.isArray(newBlocks[0]) ? newBlocks[0] : newBlocks;
-      setRecords(prev => {
-        const updated = [...prev];
-        updated[index] = validBlocks;
-        return updated;
-      });
-      // Обновляем содержимое редактора через ref
-      if (editorRef.setBlocks) {
-        editorRef.setBlocks(validBlocks);
-      }
       setEditors(prev => {
         const updated = [...prev];
         updated[index] = {
@@ -528,7 +533,7 @@ export default function JournalEditorDrawer() {
           width: drawerWidth,
           flexShrink: 0,
           '& .MuiDrawer-paper': {
-            width: drawerWidth+30,
+            width: drawerWidth + 30,
             boxSizing: 'border-box',
             borderRadius: '10px',
           },
@@ -637,19 +642,15 @@ export default function JournalEditorDrawer() {
                     totalCount={editors.length}
                     itemContent={(index) => {
                       const editor = editors[index];
+                      const record = editor.record || {};
+                      const fieldRefs = editor.ref;
+                      const fields = Object.keys(record).filter(f => !['id','date','time'].includes(f));
+                      const getFieldName = (field) => {
+                        const found = tableSurvey?.fields?.find(fld => fld.field_id === field);
+                        return found ? found.field_name : field;
+                      };
                       return (
-                        <Box
-                          key={index}
-                          sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 0,
-                            padding: 0,
-                            alignItems: 'stretch',
-                            marginBottom: 0,
-                            background: 'transparent',
-                          }}
-                        >
+                        <Box key={index} sx={{ display: 'flex', flexDirection: 'column', gap: 0, padding: 0, alignItems: 'stretch', marginBottom: 0, background: 'transparent' }}>
                           {/* Кнопки управления */}
                           <Box sx={{
                             display: 'flex',
@@ -660,9 +661,6 @@ export default function JournalEditorDrawer() {
                             zIndex: 1,
                             backgroundColor: 'background.paper',
                             padding: 0,
-                            // borderTop: `2px solid ${editor.hasUnsavedChanges ? '#f44336' : '#ccc'}`,
-                            // borderLeft: `2px solid ${editor.hasUnsavedChanges ? '#f44336' : '#ccc'}`,
-                            // borderRight: `2px solid ${editor.hasUnsavedChanges ? '#f44336' : '#ccc'}`,
                             borderBottom: `2px solid  '#ccc'`,
                             boxShadow: '0 2px 8px -5px rgba(0,0,0,0.3)',
                             marginBottom: '-2px',
@@ -762,46 +760,36 @@ export default function JournalEditorDrawer() {
                           <Box sx={{
                             display: 'flex',
                             gap: 2,
-                            // borderLeft: `2px solid ${editor.hasUnsavedChanges ? '#f44336' : '#ccc'}`,
-                            // borderRight: `2px solid ${editor.hasUnsavedChanges ? '#f44336' : '#ccc'}`,
                             borderBottom: `2px solid ${editor.hasUnsavedChanges ? '#f44336' : '#ccc'}`,
                             background: 'white',
                             transition: 'border-color 0.5s ease',
                           }}>
-                            {/* Основной редактор */}
                             <Box sx={{ flex: editor.aiResponse ? 1 : '100%' }}>
-                              <NotionEditor
-                                ref={editor.ref}
-                                initialBlocks={editor.blocks}
-                                onChange={async () => {
-                                  const editorRef = editor.ref.current;
-                                  if (editorRef?.getBlocks) {
-                                    const newBlocks = await editorRef.getBlocks();
-                                    setEditors(prev => {
-                                      const updated = [...prev];
-                                      updated[index] = {
-                                        ...updated[index],
-                                        hasUnsavedChanges: true,
-                                        blocks: newBlocks
-                                      };
-                                      return updated;
-                                    });
-                                  }
-                                }}
-                              />
+                              {fields.map((field) => (
+                                field === 'files' ? (
+                                  <Box key={field} sx={{ mb: 1 }}>
+                                    {renderFiles(record[field])}
+                                  </Box>
+                                ) : (
+                                  <Box key={field} sx={{ mb: 1 }}>
+                                    <Typography variant="subtitle2">{getFieldName(field)}</Typography>
+                                    <MarkdownEditor
+                                      ref={fieldRefs[field]}
+                                      initialMarkdown={record[field] || ''}
+                                      onChange={() => setEditors(prev => prev.map((ed,i) => i===index ? { ...ed, hasUnsavedChanges: true } : ed))}
+                                    />
+                                  </Box>
+                                )
+                              ))}
                             </Box>
 
-                            {/* AI Ответ */}
                             {editor.aiResponse && (
                               <Box sx={{ width: '50%', height: '100%', position: 'relative' }}>
                                 <IconButton
                                   onClick={() => {
                                     setEditors(prev => {
                                       const updated = [...prev];
-                                      updated[index] = {
-                                        ...updated[index],
-                                        aiResponse: null,
-                                      };
+                                      updated[index] = { ...updated[index], aiResponse: null };
                                       return updated;
                                     });
                                   }}
