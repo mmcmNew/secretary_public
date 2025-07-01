@@ -12,15 +12,25 @@ import UpdateWebSocketProvider from './components/DraggableComponents/UpdateWebS
 import TestPage from './TestPage.jsx';
 import MainContainerMobile from './components/MobileMain.jsx';
 import { ErrorProvider } from './contexts/ErrorContext';
+import { AuthProvider } from './contexts/AuthContext.jsx';
+import SignInPage from './SignInPage.jsx';
+import AccountPage from './AccountPage.jsx';
+import RegisterPage from './RegisterPage.jsx';
+import RequireAuth from './RequireAuth.jsx';
 // import ReactGridLayout from "./components/GridLayout";
 
 // Memoize routes to prevent unnecessary re-renders
 const AppRoutes = memo(() => (
   <Routes>
-    <Route path="/" element={<HomePage />} />
-    <Route path="/second" element={<SecondPage />} />
-    <Route path="/test" element={<TestPage />} />
-    <Route path="/mobile" element={<MainContainerMobile />} />
+    <Route element={<RequireAuth />}> 
+      <Route path="/" element={<HomePage />} />
+      <Route path="/second" element={<SecondPage />} />
+      <Route path="/test" element={<TestPage />} />
+      <Route path="/mobile" element={<MainContainerMobile />} />
+      <Route path="/account" element={<AccountPage />} />
+    </Route>
+    <Route path="/login" element={<SignInPage />} />
+    <Route path="/register" element={<RegisterPage />} />
   </Routes>
 ));
 
@@ -35,6 +45,7 @@ function App() {
   return (
     <div className="App">
       <ErrorProvider>
+        <AuthProvider>
         <UpdateWebSocketProvider>
           <ContainerProvider>
             <ListsProvider>
@@ -57,6 +68,7 @@ function App() {
             </ListsProvider>
           </ContainerProvider>
         </UpdateWebSocketProvider>
+        </AuthProvider>
       </ErrorProvider>
     </div>
   );

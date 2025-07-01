@@ -1,4 +1,5 @@
 import sqlite3
+import re
 from datetime import timedelta
 
 from flask_socketio import emit
@@ -10,7 +11,10 @@ from .handlers import fetch_table_records
 from app.block_notes_utiltes import extract_record_data_from_block, build_blocks_from_records
 from app import socketio
 from flask import Response, current_app, abort, render_template, make_response
-from flask import request, jsonify, send_from_directory, send_file
+from flask import request, jsonify, send_from_directory, send_file, session
+from flask_login import login_user, logout_user, current_user, login_required
+from werkzeug.security import check_password_hash
+from sqlalchemy import or_
 from .models import *
 
 from app.secretary import answer_from_secretary
@@ -18,6 +22,25 @@ from app.utilites import update_record, save_to_base, get_tables, save_to_base_m
 from app.text_to_edge_tts import generate_tts, del_all_audio_files
 from ..tasks.handlers import create_daily_scenario
 from app.get_records_utils import get_all_filters, fetch_filtered_records
+
+
+EMAIL_REGEX = r'^[\w\.-]+@[\w\.-]+\.[A-Za-z]{2,}$'
+
+
+def validate_email(email: str) -> bool:
+    return re.match(EMAIL_REGEX, email) is not None
+
+
+def validate_password(password: str):
+    if len(password) < 8:
+        return False, 'Password must be at least 8 characters long'
+    if not re.search(r'[A-Z]', password):
+        return False, 'Password must contain an uppercase letter'
+    if not re.search(r'[a-z]', password):
+        return False, 'Password must contain a lowercase letter'
+    if not re.search(r'\d', password):
+        return False, 'Password must contain a digit'
+    return True, ''
 
 
 @current_app.route('/sw.js')
@@ -117,6 +140,58 @@ def static_files(filename):
 
     # Возвращаем файл из базовой директории
     return send_from_directory(base_dir, filename)
+
+
+@main.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json() or {}
+    username = data.get('username')
+    password = data.get('password')
+    if not username or not password:
+        return jsonify({'error': 'Missing credentials'}), 400
+    user = User.query.filter_by(user_name=username).first()
+    if user and user.check_password(password):
+        login_user(user)
+        return jsonify({'user': user.to_dict()}), 200
+    return jsonify({'error': 'Invalid credentials'}), 401
+
+
+@main.route('/api/register', methods=['POST'])
+def api_register():
+    data = request.get_json() or {}
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+    if not username or not email or not password:
+        return jsonify({'error': 'Missing data'}), 400
+
+    if not validate_email(email):
+        return jsonify({'error': 'Invalid email format'}), 400
+
+    is_valid, message = validate_password(password)
+    if not is_valid:
+        return jsonify({'error': message}), 400
+    existing = User.query.filter(or_(User.user_name == username, User.email == email)).first()
+    if existing:
+        return jsonify({'error': 'User already exists'}), 400
+    user = User(user_name=username, email=email)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+    login_user(user)
+    return jsonify({'user': user.to_dict()}), 201
+
+
+@main.route('/api/logout', methods=['POST'])
+def api_logout():
+    logout_user()
+    return jsonify({'result': 'OK'})
+
+
+@main.route('/api/user', methods=['GET'])
+@login_required
+def api_current_user():
+    return jsonify(current_user.to_dict()), 200
 
 
 @main.route('/temp/<path:filename>', methods=['GET'])
@@ -235,6 +310,7 @@ def message_emit(status_code, message, namespace='/chat'):
 
 
 @main.route('/chat/new_message', methods=['POST'])
+@login_required
 def new_message():
     data = request.form
     files = request.files
@@ -350,6 +426,7 @@ def post_edited_record(data, timezone=''):
 
 
 @main.route('/post_new_record', methods=['POST'])
+@login_required
 def post_new_record():
     data = request.form
     files = request.files
@@ -370,6 +447,7 @@ def post_new_record():
 
 
 @main.route('/post_edited_record_api', methods=['POST'])
+@login_required
 def post_edited_record_api():
     data = request.form
     files = request.files
@@ -388,6 +466,7 @@ def post_edited_record_api():
 
 
 @main.route('/get_tables', methods=['GET'])
+@login_required
 def get_tables_route():
     tables = get_tables()
     # print(f'get_tables: {tables}')
@@ -431,6 +510,7 @@ def get_table_survey(table_name, conn):
 
 # маршрут для получения списка дней на которые есть записи в журнале по имени таблицы
 @main.route('/get_days', methods=['GET'])
+@login_required
 def get_days_route():
     db_path = current_app.config.get('MAIN_DB_PATH', '')
     table_name = request.args.get('table_name')
@@ -516,6 +596,7 @@ def get_days_route():
 
 
 @main.route('/journals', methods=['GET'])
+@login_required
 def get_file():
     # print('get_file')
     # Получение параметров из запроса
@@ -540,6 +621,7 @@ def get_file():
 
 
 @main.route('/get_table_data', methods=['GET'])
+@login_required
 def get_table_data():
     columns_names = get_columns_names()
     table_name = request.args.get('table_name')
@@ -558,6 +640,7 @@ def get_table_data():
 
 
 @main.route('/update_record_from_blocks', methods=['POST'])
+@login_required
 def update_record_from_blocks():
     from werkzeug.exceptions import BadRequest
 
@@ -598,6 +681,7 @@ def update_record_from_blocks():
 
 
 @main.route('/get_records', methods=['POST'])
+@login_required
 def get_records_route():
     columns_names = get_columns_names()
     try:
@@ -628,5 +712,6 @@ def get_records_route():
 
 
 @main.route('/get_tables_filters/<table_name>', methods=['GET'])
+@login_required
 def api_get_filter_values(table_name):
     return get_all_filters(table_name)

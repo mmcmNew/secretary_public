@@ -1,36 +1,50 @@
 from app import db
+from flask_login import UserMixin
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Text
 from flask import current_app
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 # Модель для таблицы users
-class User(db.Model):
+class User(UserMixin, db.Model):
     __bind_key__ = 'main'
     __tablename__ = 'users'  # Название таблицы в нижнем регистре
     user_id = Column(Integer, primary_key=True)
-    user_name = Column(Text)
+    user_name = Column(Text, unique=True)
+    email = Column(String(255), unique=True)
+    password_hash = Column(String(255))
     avatar_src = Column(Text)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
 
     @staticmethod
     def add_initial_users():
+        """Create default users only for the test configuration."""
+        if current_app.config.get("CONFIG_TYPE") != "test":
+            return
+
         # Проверяем, есть ли пользователи уже в базе данных
         if not User.query.all():  # если база пуста
-            users = [
-                User(user_name="Me", avatar_src="me.png"),
-                User(user_name="Secretary", avatar_src="secretary.png"),
-            ]
-            db.session.bulk_save_objects(users)
+            admin = User(user_name="admin", email="admin@example.com", avatar_src="me.png")
+            admin.set_password("password")
+            secretary = User(user_name="Secretary", avatar_src="secretary.png")
+            db.session.add(admin)
+            db.session.add(secretary)
             db.session.commit()
             current_app.logger.info("Initial users added.")
-        else:
-            pass
-            # current_app.logger.info("Users already exist.")
 
     def to_dict(self):
         return {
             'id': self.user_id,
             'user_name': self.user_name,
+            'email': self.email,
             'avatar_src': self.avatar_src
         }
 
