@@ -67,11 +67,6 @@ def updates_ws_disconnect():
     current_app.logger.info('Client disconnected from updates websocket')
 
 
-def notify_data_update(**data):
-    """Emit update notifications to clients."""
-    socketio.emit('data_updated', data, namespace='/updates')
-
-
 @socketio.on('request_messages', namespace='/chat')
 @main.route('/api/chat/messages', methods=['GET'])
 def get_messages():
