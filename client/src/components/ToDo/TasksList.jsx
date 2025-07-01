@@ -219,7 +219,7 @@ export default function TasksList({
         event.dataTransfer.setData("task", JSON.stringify(task));
     }
 
-    function handleAddToMyDay() {
+    async function handleAddToMyDay() {
         // Найти задачу по targetItemId
         const task = tasks.find((t) => t.id === targetItemId);
         if (!task) return;
