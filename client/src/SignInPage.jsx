@@ -18,11 +18,11 @@ export default function SignInPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const ok = await login(username, password);
-    if (ok) {
-      navigate('/account');
+    const error = await login(username, password);
+    if (!error) {
+      navigate('/');
     } else {
-      setError('Invalid credentials');
+      setError(error);
     }
   };
 

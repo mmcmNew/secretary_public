@@ -19,11 +19,11 @@ export default function RegisterPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const ok = await register(username, email, password);
-    if (ok) {
+    const error = await register(username, email, password);
+    if (!error) {
       navigate('/account');
     } else {
-      setError('Registration failed');
+      setError(error);
     }
   };
 

@@ -32,6 +32,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (username, password) => {
     try {
+      console.log('LOGIN: sending', { username, password });
       const { data } = await axios.post(
         '/api/login',
         { username, password },
@@ -40,15 +41,19 @@ export function AuthProvider({ children }) {
           withCredentials: true,
         },
       );
+      console.log('LOGIN: response', data);
       setUser(data.user);
-      return true;
+      return null;
     } catch (err) {
-      return false;
+      const errorMsg = err?.response?.data?.error || 'Login failed';
+      console.log('LOGIN: error', errorMsg);
+      return errorMsg;
     }
   }, []);
 
   const register = useCallback(async (username, email, password) => {
     try {
+      console.log('REGISTER: sending', { username, email, password });
       const { data } = await axios.post(
         '/api/register',
         { username, email, password },
@@ -57,10 +62,13 @@ export function AuthProvider({ children }) {
           withCredentials: true,
         },
       );
+      console.log('REGISTER: response', data);
       setUser(data.user);
-      return true;
+      return null;
     } catch (err) {
-      return false;
+      const errorMsg = err?.response?.data?.error || 'Registration failed';
+      console.log('REGISTER: error', errorMsg);
+      return errorMsg;
     }
   }, []);
 

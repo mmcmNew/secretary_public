@@ -32,14 +32,14 @@ def validate_email(email: str) -> bool:
 
 
 def validate_password(password: str):
-    if len(password) < 8:
-        return False, 'Password must be at least 8 characters long'
-    if not re.search(r'[A-Z]', password):
-        return False, 'Password must contain an uppercase letter'
-    if not re.search(r'[a-z]', password):
-        return False, 'Password must contain a lowercase letter'
-    if not re.search(r'\d', password):
-        return False, 'Password must contain a digit'
+    if len(password) < 6:
+        return False, 'Password must be at least 6 characters long'
+    # if not re.search(r'[A-Z]', password):
+    #     return False, 'Password must contain an uppercase letter'
+    # if not re.search(r'[a-z]', password):
+    #     return False, 'Password must contain a lowercase letter'
+    # if not re.search(r'\d', password):
+    #     return False, 'Password must contain a digit'
     return True, ''
 
 
@@ -149,16 +149,20 @@ def api_login():
     password = data.get('password')
 
     if not username or not password:
+        current_app.logger.warning(f'LOGIN: missing username or password. Data: {data}')
         return jsonify({'error': 'Username and password are required'}), 400
 
     user = User.query.filter_by(user_name=username).first()
     if not user:
+        current_app.logger.warning(f'LOGIN: user not found: {username}')
         return jsonify({'error': 'User not found'}), 404
 
     if not user.check_password(password):
+        current_app.logger.warning(f'LOGIN: incorrect password for user: {username}')
         return jsonify({'error': 'Incorrect password'}), 401
 
     login_user(user)
+    current_app.logger.info(f'LOGIN: success for user: {username}')
     return jsonify({'user': user.to_dict()}), 200
 
 
@@ -170,21 +174,26 @@ def api_register():
     password = data.get('password')
 
     if not username or not email or not password:
+        current_app.logger.warning(f'REGISTER: missing username/email/password. Data: {data}')
         return jsonify({'error': 'Username, email and password are required'}), 400
 
     if not validate_email(email):
+        current_app.logger.warning(f'REGISTER: invalid email format: {email}')
         return jsonify({'error': 'Invalid email format'}), 400
 
     is_valid, message = validate_password(password)
     if not is_valid:
+        current_app.logger.warning(f'REGISTER: invalid password: {message}')
         return jsonify({'error': message}), 400
 
     existing_username = User.query.filter_by(user_name=username).first()
     if existing_username:
+        current_app.logger.warning(f'REGISTER: username already taken: {username}')
         return jsonify({'error': 'Username already taken'}), 400
 
     existing_email = User.query.filter_by(email=email).first()
     if existing_email:
+        current_app.logger.warning(f'REGISTER: email already registered: {email}')
         return jsonify({'error': 'Email already registered'}), 400
 
     user = User(user_name=username, email=email)
@@ -192,6 +201,7 @@ def api_register():
     db.session.add(user)
     db.session.commit()
     login_user(user)
+    current_app.logger.info(f'REGISTER: user created: {username}, {email}')
     return jsonify({'user': user.to_dict()}), 201
 
 
