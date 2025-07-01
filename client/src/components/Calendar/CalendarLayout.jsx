@@ -11,6 +11,8 @@ export default function CalendarLayout({
   containerId = null,
   handleDatesSet = null,
   calendarSettingsProp = null,
+  onSuccess = null,
+  onError = null,
 }) {
   const { updateTask, addTask, fetchTasks, tasks, taskFields, addSubTask, changeTaskStatus, deleteTask } = useTasks();
   const { lists, selectedListId, selectedList } = useLists();
@@ -39,6 +41,14 @@ export default function CalendarLayout({
     }
   }, [calendarSettingsProp]);
 
+  useEffect(() => {
+    if (tasks.error && onError) onError(tasks.error);
+  }, [tasks.error, onError]);
+
+  useEffect(() => {
+    if (calendarEvents.error && onError) onError(calendarEvents.error);
+  }, [calendarEvents.error, onError]);
+
   // сохранение настроек в контейнере
   // useEffect(() => {
   //   console.log(containerId, calendarSettings)
@@ -48,17 +58,29 @@ export default function CalendarLayout({
   // }, [calendarSettings, handleUpdateContent, containerId]);
 
   const handleSaveCalendarSettings = (settings) => {
-    setCalendarSettings(settings);
-    console.log(containerId, settings)
-    if (handleUpdateContent && containerId) {
-      console.log("Saving settings:", settings);
-      handleUpdateContent(containerId, { calendarSettingsProp: settings });
+    try {
+      setCalendarSettings(settings);
+      console.log(containerId, settings);
+      if (handleUpdateContent && containerId) {
+        console.log("Saving settings:", settings);
+        handleUpdateContent(containerId, { calendarSettingsProp: settings });
+      }
+      if (onSuccess) onSuccess('Настройки сохранены');
+    } catch (err) {
+      console.error('Error saving calendar settings:', err);
+      if (onError) onError(err);
     }
   };
 
   async function handleDelDateClick(taskId) {
-    await updateTask({ taskId, start: null, end: null });
-    setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
+    try {
+      await updateTask({ taskId, start: null, end: null });
+      setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
+      if (onSuccess) onSuccess('Дата удалена');
+    } catch (err) {
+      console.error('Error deleting date:', err);
+      if (onError) onError(err);
+    }
   }
 
   const handleDialogOpen = (scrollType) => {
@@ -136,9 +158,15 @@ export default function CalendarLayout({
        }
     }
 
-    await updateTask({ taskId: eventInfo.event.id, ...eventDict });
-    if (setUpdates && typeof setUpdates === "function")
-      setUpdates((prevUpdates) => [...prevUpdates, "todo"]);
+    try {
+      await updateTask({ taskId: eventInfo.event.id, ...eventDict });
+      if (setUpdates && typeof setUpdates === "function")
+        setUpdates((prevUpdates) => [...prevUpdates, "todo"]);
+      if (onSuccess) onSuccess('Событие обновлено');
+    } catch (err) {
+      console.error('Error updating event:', err);
+      if (onError) onError(err);
+    }
   }
 
   return (
@@ -180,4 +208,6 @@ CalendarLayout.propTypes = {
   containerId: PropTypes.string,
   handleDatesSet: PropTypes.func,
   calendarSettingsProp: PropTypes.object,
+  onSuccess: PropTypes.func,
+  onError: PropTypes.func,
 };
