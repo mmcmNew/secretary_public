@@ -533,7 +533,7 @@ export default function JournalEditorDrawer() {
           width: drawerWidth,
           flexShrink: 0,
           '& .MuiDrawer-paper': {
-            width: drawerWidth+30,
+            width: drawerWidth + 30,
             boxSizing: 'border-box',
             borderRadius: '10px',
           },
