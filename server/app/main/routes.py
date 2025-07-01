@@ -1,4 +1,5 @@
 import sqlite3
+import re
 from datetime import timedelta
 
 from flask_socketio import emit
@@ -21,6 +22,25 @@ from app.utilites import update_record, save_to_base, get_tables, save_to_base_m
 from app.text_to_edge_tts import generate_tts, del_all_audio_files
 from ..tasks.handlers import create_daily_scenario
 from app.get_records_utils import get_all_filters, fetch_filtered_records
+
+
+EMAIL_REGEX = r'^[\w\.-]+@[\w\.-]+\.[A-Za-z]{2,}$'
+
+
+def validate_email(email: str) -> bool:
+    return re.match(EMAIL_REGEX, email) is not None
+
+
+def validate_password(password: str):
+    if len(password) < 8:
+        return False, 'Password must be at least 8 characters long'
+    if not re.search(r'[A-Z]', password):
+        return False, 'Password must contain an uppercase letter'
+    if not re.search(r'[a-z]', password):
+        return False, 'Password must contain a lowercase letter'
+    if not re.search(r'\d', password):
+        return False, 'Password must contain a digit'
+    return True, ''
 
 
 @current_app.route('/sw.js')
@@ -144,6 +164,13 @@ def api_register():
     password = data.get('password')
     if not username or not email or not password:
         return jsonify({'error': 'Missing data'}), 400
+
+    if not validate_email(email):
+        return jsonify({'error': 'Invalid email format'}), 400
+
+    is_valid, message = validate_password(password)
+    if not is_valid:
+        return jsonify({'error': message}), 400
     existing = User.query.filter(or_(User.user_name == username, User.email == email)).first()
     if existing:
         return jsonify({'error': 'User already exists'}), 400

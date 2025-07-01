@@ -1,6 +1,11 @@
 import React, { createContext, useCallback, useState } from 'react';
 import axios from 'axios';
 
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 export const AuthContext = createContext({
   user: null,
   login: async () => false,
@@ -25,7 +30,11 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (username, password) => {
     try {
-      const { data } = await axios.post('/api/login', { username, password });
+      const { data } = await axios.post(
+        '/api/login',
+        { username, password },
+        { headers: { 'X-CSRFToken': getCookie('csrf_token') } },
+      );
       setUser(data.user);
       return true;
     } catch (err) {
@@ -35,7 +44,11 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (username, email, password) => {
     try {
-      const { data } = await axios.post('/api/register', { username, email, password });
+      const { data } = await axios.post(
+        '/api/register',
+        { username, email, password },
+        { headers: { 'X-CSRFToken': getCookie('csrf_token') } },
+      );
       setUser(data.user);
       return true;
     } catch (err) {

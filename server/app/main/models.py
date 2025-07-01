@@ -10,8 +10,8 @@ class User(db.Model):
     __bind_key__ = 'main'
     __tablename__ = 'users'  # Название таблицы в нижнем регистре
     user_id = Column(Integer, primary_key=True)
-    user_name = Column(Text)
-    email = Column(String(255))
+    user_name = Column(Text, unique=True)
+    email = Column(String(255), unique=True)
     password_hash = Column(String(255))
     avatar_src = Column(Text)
 
