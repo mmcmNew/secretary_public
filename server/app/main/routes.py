@@ -12,6 +12,7 @@ from app import socketio
 from flask import Response, current_app, abort, render_template, make_response
 from flask import request, jsonify, send_from_directory, send_file, session
 from werkzeug.security import check_password_hash
+from sqlalchemy import or_
 from .models import *
 
 from app.secretary import answer_from_secretary
@@ -132,6 +133,25 @@ def api_login():
         session['user_id'] = user.user_id
         return jsonify({'user': user.to_dict()}), 200
     return jsonify({'error': 'Invalid credentials'}), 401
+
+
+@main.route('/api/register', methods=['POST'])
+def api_register():
+    data = request.get_json() or {}
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+    if not username or not email or not password:
+        return jsonify({'error': 'Missing data'}), 400
+    existing = User.query.filter(or_(User.user_name == username, User.email == email)).first()
+    if existing:
+        return jsonify({'error': 'User already exists'}), 400
+    user = User(user_name=username, email=email)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+    session['user_id'] = user.user_id
+    return jsonify({'user': user.to_dict()}), 201
 
 
 @main.route('/api/logout', methods=['POST'])
