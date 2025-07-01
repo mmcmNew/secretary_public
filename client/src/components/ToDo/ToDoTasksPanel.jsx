@@ -7,7 +7,7 @@ import useTasks from './hooks/useTasks';
 import useLists from './hooks/useLists';
 import AddIcon from '@mui/icons-material/Add';
 
-export default function ToDoTasksPanel({ mobile = false, setSelectedListId, additionalButtonClick = null, additionalButton = null }) {
+export default function ToDoTasksPanel({ mobile = false, setSelectedListId, additionalButtonClick = null, additionalButton = null, onSuccess = null, onError = null }) {
   const {
     tasks,
     selectedTaskId,
@@ -155,6 +155,8 @@ export default function ToDoTasksPanel({ mobile = false, setSelectedListId, addi
           deleteFromChildes={deleteFromChildes}
           additionalButtonClick={additionalButtonClick}
           additionalButton={additionalButton}
+          onSuccess={onSuccess}
+          onError={onError}
         />
       </Box>
       {/* Поле для добавления новой задачи (фиксировано внизу) */}
