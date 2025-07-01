@@ -14,6 +14,7 @@ import ChatAccordion from './ChatAccordion';
 import MiniTimers from './Timer/MiniTimers';
 // import MiniScenario from './Scenario/MiniScenario';
 import SmartphoneIcon from '@mui/icons-material/Smartphone';
+import AccountButton from './AccountButton';
 
 // import AudioPlayer from './AudioPlayer';
 
@@ -31,7 +32,8 @@ const Header = memo(({ mode, colorMode, theme, onNavigateMobile, onSave }) => (
     justifyContent: 'space-between',
     alignItems: 'center'
   }}>
-    <Box sx={{maxWidth: '40vw'}}>
+    <Box sx={{ display: 'flex', alignItems: 'center', maxWidth: '40vw' }}>
+      <AccountButton />
       <MinimizedContainers />
     </Box>
     <Box sx={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
