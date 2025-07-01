@@ -1,3 +1,4 @@
+import os
 import eventlet
 eventlet.monkey_patch()
 
@@ -12,8 +13,9 @@ if __name__ == '__main__':
     with app.app_context():
         print(app.config.get('MAIN_DB_PATH', ''))
 
-    cert_path = 'localhost.pem'
-    key_path = 'localhost-key.pem'
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    cert_path = os.path.join(base_dir, 'localhost.pem')
+    key_path = os.path.join(base_dir, 'localhost-key.pem')
 
     print(f"Server running at: https://localhost:{port} or https://<your-IP>:{port}")
     socketio.run(app,
