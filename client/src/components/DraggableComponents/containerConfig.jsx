@@ -12,7 +12,7 @@ import Chat from "../Chat";
 // import ToDoLayoutMobile from "../ToDo/ToDoLayoutMobile";
 import JournalEditorDrawer from "../JournalEditor/JournalEditorDrawer";
 import FocusModeComponent from "../Antischedule/FocusMode";
-import CalendarLayout from "../Calendar/CalendarLayout";
+import CalendarWithContext from "../Calendar/CalendarWithContext";
 import AntiScheduleLayout from "../Antischedule/AntiScheduleLayout";
 // import ToDoLayoutTree from "../ToDo/ToDoLayoutTest";
 // import ToDoLayout from "../ToDo/ToDoLayout";
@@ -134,7 +134,7 @@ export const containerTypes = {
         isDisableDragging: false,
         isMinimized: false,
         isLocked: false,
-        content: <CalendarLayout />,
+        content: <CalendarWithContext />,
     },
     memory: {
         type: "Memory",
