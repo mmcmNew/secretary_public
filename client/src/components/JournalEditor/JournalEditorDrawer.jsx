@@ -269,22 +269,21 @@ export default function JournalEditorDrawer() {
 
     await updateRecordFromBlocks(tableName, [record]);
 
-      // Сбрасываем флаг несохраненных изменений после успешного сохранения
+    // Сбрасываем флаг несохраненных изменений после успешного сохранения
+    setEditors(prev =>
+      prev.map((editor, i) =>
+        i === index ? { ...editor, hasUnsavedChanges: false, saveStatus: "success" } : editor
+      )
+    );
+
+    setTimeout(() => {
       setEditors(prev =>
         prev.map((editor, i) =>
-          i === index ? { ...editor, hasUnsavedChanges: false, saveStatus: "success" } : editor
+          i === index ? { ...editor, saveStatus: "idle" } : editor
         )
       );
-
-      setTimeout(() => {
-        setEditors(prev =>
-          prev.map((editor, i) =>
-            i === index ? { ...editor, saveStatus: "idle" } : editor
-          )
-        );
-      }, 3000);
-    }
-  };
+    }, 3000);
+  }
 
   // Функция для отключения дат, на которые нет записей
   const shouldDisableDate = (date) => {
@@ -533,7 +532,7 @@ export default function JournalEditorDrawer() {
           width: drawerWidth,
           flexShrink: 0,
           '& .MuiDrawer-paper': {
-            width: drawerWidth + 30,
+            width: drawerWidth+30,
             boxSizing: 'border-box',
             borderRadius: '10px',
           },
