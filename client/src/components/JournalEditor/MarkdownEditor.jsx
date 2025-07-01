@@ -2,21 +2,24 @@ import "@blocknote/core/fonts/inter.css";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
-import { forwardRef, useEffect, useImperativeHandle } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import PropTypes from 'prop-types';
 
 const MarkdownEditor = forwardRef(({ initialMarkdown = '', onChange }, ref) => {
   const editor = useCreateBlockNote();
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     const load = async () => {
       const blocks = await editor.tryParseMarkdownToBlocks(initialMarkdown);
       editor.replaceBlocks(editor.document, blocks);
+      isInitialLoad.current = false;
     };
     load();
   }, [initialMarkdown, editor]);
 
   editor.onEditorContentChange(() => {
+    if (isInitialLoad.current) return;
     if (onChange) onChange();
   });
 

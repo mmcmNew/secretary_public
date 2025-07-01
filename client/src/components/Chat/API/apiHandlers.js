@@ -57,7 +57,7 @@ export async function fetchFilteredData(tableName, filters) {
         });
     } catch (err) {
         console.error('fetchFilteredData error:', err);
-        return [];
+        return { records: [], columns: [] };
     }
 }
 
@@ -77,6 +77,7 @@ export async function fetchTableData(tableName, date) {
         return data;
     } catch (error) {
         console.error('There was a problem with the fetch operation:', error);
+        return { records: [], columns: [] };
     }
 }
 
@@ -111,12 +112,10 @@ export async function updateRecordFromBlocks(table_name, records) {
 // Генерация изображения по тексту записи
 export async function generateImageForRecord({ table_name, record_id, text }) {
     try {
-        const data = await apiRequest('/api/generate-image', {
+        await apiRequest('/api/generate-image', {
             method: 'POST',
             body: { table_name, record_id, text }
         });
-        if (!Array.isArray(data.blocks)) throw new Error('Некорректный ответ от сервера');
-        return data.blocks;
     } catch (e) {
         console.error('Ошибка генерации изображения:', e);
         throw e;

@@ -8,7 +8,6 @@ import os
 
 from . import main
 from .handlers import fetch_table_records
-from app.block_notes_utiltes import extract_record_data_from_block, build_blocks_from_records
 from app import socketio
 from flask import Response, current_app, abort, render_template, make_response
 from flask import request, jsonify, send_from_directory, send_file, session
@@ -651,11 +650,11 @@ def get_table_data():
     timezone_offset = request.args.get('timezone_offset', None)
 
     try:
-        records, _ = fetch_table_records(table_name, date, timezone_offset)
+        records, columns = fetch_table_records(table_name, date, timezone_offset)
         if not records:
-            return jsonify([]), 200
+            return jsonify({'records': [], 'columns': columns}), 200
         result = [dict(r) for r in records]
-        return jsonify(result), 200
+        return jsonify({'records': result, 'columns': columns}), 200
     except Exception as e:
         current_app.logger.error(f'Ошибка при получении записей: {e}')
         return jsonify({'error': str(e)}), 500
@@ -698,10 +697,10 @@ def get_records_route():
             return (jsonify({'error': 'Фильтры не заданы. Запрос отклонён для предотвращения получения всех записей.'}),
                     400)
 
-        records, _ = fetch_filtered_records(table_name, filters)
+        records, columns = fetch_filtered_records(table_name, filters)
 
         result = [dict(r) for r in records]
-        return jsonify(result), 200
+        return jsonify({'records': result, 'columns': columns}), 200
 
     except ValueError as e:
         current_app.logger.error(f'Validation error: {e}')
