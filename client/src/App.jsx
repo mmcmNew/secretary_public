@@ -16,18 +16,21 @@ import { AuthProvider } from './contexts/AuthContext.jsx';
 import SignInPage from './SignInPage.jsx';
 import AccountPage from './AccountPage.jsx';
 import RegisterPage from './RegisterPage.jsx';
+import RequireAuth from './RequireAuth.jsx';
 // import ReactGridLayout from "./components/GridLayout";
 
 // Memoize routes to prevent unnecessary re-renders
 const AppRoutes = memo(() => (
   <Routes>
-    <Route path="/" element={<HomePage />} />
-    <Route path="/second" element={<SecondPage />} />
-    <Route path="/test" element={<TestPage />} />
-    <Route path="/mobile" element={<MainContainerMobile />} />
+    <Route element={<RequireAuth />}> 
+      <Route path="/" element={<HomePage />} />
+      <Route path="/second" element={<SecondPage />} />
+      <Route path="/test" element={<TestPage />} />
+      <Route path="/mobile" element={<MainContainerMobile />} />
+      <Route path="/account" element={<AccountPage />} />
+    </Route>
     <Route path="/login" element={<SignInPage />} />
     <Route path="/register" element={<RegisterPage />} />
-    <Route path="/account" element={<AccountPage />} />
   </Routes>
 ));
 

@@ -2,17 +2,22 @@ import os
 import sys
 
 from flask import Flask, send_from_directory
+from flask_login import LoginManager
 from .config import WorkConfig, TestingConfig
 # from flask_ngrok2 import run_with_ngrok
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
+from flask_wtf import CSRFProtect
+from flask_wtf.csrf import generate_csrf
 # from app.socketio_instance import socketio
 from flask_socketio import SocketIO
 
 db = SQLAlchemy()
 migrate = Migrate(render_as_batch=True)
 socketio = SocketIO(logger=False, engineio_logger=False, cors_allowed_origins="*", async_mode='eventlet', debug=False)
+login_manager = LoginManager()
+csrf = CSRFProtect()
 
 
 def create_app(config_type='work'):
@@ -28,6 +33,8 @@ def create_app(config_type='work'):
         static_folder=dist_folder,
         static_url_path=''  # Статика будет доступна по /
     )
+
+    csrf.init_app(app)
 
     app.config['DIST_FOLDER'] = dist_folder
     app.config['CONFIG_TYPE'] = config_type
@@ -46,6 +53,7 @@ def create_app(config_type='work'):
     db.init_app(app)
     migrate.init_app(app, db)
     socketio.init_app(app)
+    login_manager.init_app(app)
     with app.app_context():
 
         from .main import main as main_blueprint
@@ -66,6 +74,12 @@ def create_app(config_type='work'):
         from app.main.models import User
         if config_type == 'test':
             User.add_initial_users()
+        login_manager.login_view = 'main.api_login'
+
+        @login_manager.user_loader
+        def load_user(user_id):
+            return User.query.get(int(user_id))
+          
         from app.tasks.models import TaskTypes
         TaskTypes.add_initial_task_types()
         from app.tasks.models import Status
