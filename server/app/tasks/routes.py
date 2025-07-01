@@ -1,6 +1,7 @@
 # to_do_app/routes.py
 from . import to_do_app
 from flask import request, jsonify, current_app
+from flask_login import login_required
 from .handlers import (get_lists_and_groups_data, add_object, add_task, edit_list,
                        add_subtask, edit_task, change_task_status, get_tasks, del_task,
                        link_group_list, delete_from_childes, link_task, get_anti_schedule,
@@ -12,6 +13,7 @@ from app.socketio_utils import notify_data_update
 
 @to_do_app.route('/tasks/get_lists', methods=['GET'])
 # @check_version()
+@login_required
 def get_lists_and_groups():
     client_timezone = int(request.args.get('time_zone', 0))
     data = get_lists_and_groups_data(client_timezone)
@@ -22,6 +24,7 @@ def get_lists_and_groups():
 
 
 @to_do_app.route('/tasks/add_list', methods=['POST'])
+@login_required
 def add_object_route():
     data = request.get_json()
     result, status_code = add_object(data)
@@ -32,6 +35,7 @@ def add_object_route():
 
 
 @to_do_app.route('/tasks/add_task', methods=['POST'])
+@login_required
 def add_task_route():
     data = request.get_json()
     result, status_code = add_task(data)
@@ -42,6 +46,7 @@ def add_task_route():
 
 
 @to_do_app.route('/tasks/edit_list', methods=['PUT'])
+@login_required
 def edit_list_route():
     data = request.get_json()
     result, status_code = edit_list(data)
@@ -52,6 +57,7 @@ def edit_list_route():
 
 
 @to_do_app.route('/tasks/add_subtask', methods=['POST'])
+@login_required
 def add_subtask_route():
     data = request.get_json()
     result, status_code = add_subtask(data)
@@ -62,6 +68,7 @@ def add_subtask_route():
 
 
 @to_do_app.route('/tasks/edit_task', methods=['PUT'])
+@login_required
 def edit_task_route():
     data = request.get_json()
     result, status_code = edit_task(data)
@@ -72,6 +79,7 @@ def edit_task_route():
 
 
 @to_do_app.route('/tasks/change_status', methods=['PUT'])
+@login_required
 def change_task_status_route():
     data = request.get_json()
     result, status_code = change_task_status(data)
@@ -82,6 +90,7 @@ def change_task_status_route():
 
 
 @to_do_app.route('/tasks/get_tasks', methods=['GET'])
+@login_required
 def get_tasks_route():
     list_id = request.args.get('list_id')
     client_timezone = int(request.args.get('time_zone', 0))
@@ -93,6 +102,7 @@ def get_tasks_route():
 
 
 @to_do_app.route('/tasks/get_anti_schedule', methods=['GET'])
+@login_required
 @check_version('tasksVersion')
 def get_anti_schedule_route():
     current_app.logger.info('get_anti_schedule')
@@ -103,6 +113,7 @@ def get_anti_schedule_route():
 
 
 @to_do_app.route('/tasks/add_anti_task', methods=['POST'])
+@login_required
 def add_anti_task_route():
     data = request.get_json()
     result, status_code = add_anti_task(data)
@@ -113,6 +124,7 @@ def add_anti_task_route():
 
 
 @to_do_app.route('/tasks/edit_anti_task', methods=['PUT'])
+@login_required
 def edit_anti_task_route():
     data = request.get_json()
     result, status_code = edit_anti_task(data)
@@ -123,6 +135,7 @@ def edit_anti_task_route():
 
 
 @to_do_app.route('/tasks/del_anti_task', methods=['DELETE'])
+@login_required
 def del_anti_task_route():
     data = request.get_json()
     result, status_code = del_anti_task(data)
@@ -133,6 +146,7 @@ def del_anti_task_route():
 
 
 @to_do_app.route('/tasks/del_task', methods=['DELETE'])
+@login_required
 def del_task_route():
     data = request.get_json()
     result, status_code = del_task(data)
@@ -143,6 +157,7 @@ def del_task_route():
 
 
 @to_do_app.route('/tasks/link_group_list', methods=['PUT'])
+@login_required
 def link_group_list_route():
     data = request.get_json()
     result, status_code = link_group_list(data)
@@ -153,6 +168,7 @@ def link_group_list_route():
 
 
 @to_do_app.route('/tasks/delete_from_childes', methods=['DELETE'])
+@login_required
 def delete_from_childes_route():
     data = request.get_json()
     result, status_code = delete_from_childes(data)
@@ -163,6 +179,7 @@ def delete_from_childes_route():
 
 
 @to_do_app.route('/tasks/link_task', methods=['PUT'])
+@login_required
 def link_task_route():
     data = request.get_json()
     result, status_code = link_task(data)
@@ -173,6 +190,7 @@ def link_task_route():
 
 
 @to_do_app.route('/tasks/fields_config', methods=['GET'])
+@login_required
 def get_fields_config():
     # Заглушка полей задач
     fields = {

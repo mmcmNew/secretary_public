@@ -12,6 +12,7 @@ from app.block_notes_utiltes import extract_record_data_from_block, build_blocks
 from app import socketio
 from flask import Response, current_app, abort, render_template, make_response
 from flask import request, jsonify, send_from_directory, send_file, session
+from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import check_password_hash
 from sqlalchemy import or_
 from .models import *
@@ -150,7 +151,7 @@ def api_login():
         return jsonify({'error': 'Missing credentials'}), 400
     user = User.query.filter_by(user_name=username).first()
     if user and user.check_password(password):
-        session['user_id'] = user.user_id
+        login_user(user)
         return jsonify({'user': user.to_dict()}), 200
     return jsonify({'error': 'Invalid credentials'}), 401
 
@@ -177,25 +178,20 @@ def api_register():
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
-    session['user_id'] = user.user_id
+    login_user(user)
     return jsonify({'user': user.to_dict()}), 201
 
 
 @main.route('/api/logout', methods=['POST'])
 def api_logout():
-    session.pop('user_id', None)
+    logout_user()
     return jsonify({'result': 'OK'})
 
 
 @main.route('/api/user', methods=['GET'])
+@login_required
 def api_current_user():
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'error': 'Unauthorized'}), 401
-    user = User.query.filter_by(user_id=user_id).first()
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    return jsonify(user.to_dict()), 200
+    return jsonify(current_user.to_dict()), 200
 
 
 @main.route('/temp/<path:filename>', methods=['GET'])
@@ -314,6 +310,7 @@ def message_emit(status_code, message, namespace='/chat'):
 
 
 @main.route('/chat/new_message', methods=['POST'])
+@login_required
 def new_message():
     data = request.form
     files = request.files
@@ -429,6 +426,7 @@ def post_edited_record(data, timezone=''):
 
 
 @main.route('/post_new_record', methods=['POST'])
+@login_required
 def post_new_record():
     data = request.form
     files = request.files
@@ -449,6 +447,7 @@ def post_new_record():
 
 
 @main.route('/post_edited_record_api', methods=['POST'])
+@login_required
 def post_edited_record_api():
     data = request.form
     files = request.files
@@ -467,6 +466,7 @@ def post_edited_record_api():
 
 
 @main.route('/get_tables', methods=['GET'])
+@login_required
 def get_tables_route():
     tables = get_tables()
     # print(f'get_tables: {tables}')
@@ -510,6 +510,7 @@ def get_table_survey(table_name, conn):
 
 # маршрут для получения списка дней на которые есть записи в журнале по имени таблицы
 @main.route('/get_days', methods=['GET'])
+@login_required
 def get_days_route():
     db_path = current_app.config.get('MAIN_DB_PATH', '')
     table_name = request.args.get('table_name')
@@ -595,6 +596,7 @@ def get_days_route():
 
 
 @main.route('/journals', methods=['GET'])
+@login_required
 def get_file():
     # print('get_file')
     # Получение параметров из запроса
@@ -619,6 +621,7 @@ def get_file():
 
 
 @main.route('/get_table_data', methods=['GET'])
+@login_required
 def get_table_data():
     columns_names = get_columns_names()
     table_name = request.args.get('table_name')
@@ -637,6 +640,7 @@ def get_table_data():
 
 
 @main.route('/update_record_from_blocks', methods=['POST'])
+@login_required
 def update_record_from_blocks():
     from werkzeug.exceptions import BadRequest
 
@@ -677,6 +681,7 @@ def update_record_from_blocks():
 
 
 @main.route('/get_records', methods=['POST'])
+@login_required
 def get_records_route():
     columns_names = get_columns_names()
     try:
@@ -707,5 +712,6 @@ def get_records_route():
 
 
 @main.route('/get_tables_filters/<table_name>', methods=['GET'])
+@login_required
 def api_get_filter_values(table_name):
     return get_all_filters(table_name)

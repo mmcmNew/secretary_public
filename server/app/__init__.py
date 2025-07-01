@@ -2,6 +2,7 @@ import os
 import sys
 
 from flask import Flask, send_from_directory
+from flask_login import LoginManager
 from .config import WorkConfig, TestingConfig
 # from flask_ngrok2 import run_with_ngrok
 from flask_sqlalchemy import SQLAlchemy
@@ -15,6 +16,7 @@ from flask_socketio import SocketIO
 db = SQLAlchemy()
 migrate = Migrate(render_as_batch=True)
 socketio = SocketIO(logger=False, engineio_logger=False, cors_allowed_origins="*", async_mode='eventlet', debug=False)
+login_manager = LoginManager()
 csrf = CSRFProtect()
 
 
@@ -50,12 +52,7 @@ def create_app(config_type='work'):
     db.init_app(app)
     migrate.init_app(app, db)
     socketio.init_app(app)
-
-    @app.after_request
-    def set_csrf_cookie(response):
-        response.set_cookie('csrf_token', generate_csrf())
-        return response
-
+    login_manager.init_app(app)
     with app.app_context():
 
         from .main import main as main_blueprint
@@ -75,6 +72,11 @@ def create_app(config_type='work'):
 
         from app.main.models import User
         User.add_initial_users()
+        login_manager.login_view = 'main.api_login'
+
+        @login_manager.user_loader
+        def load_user(user_id):
+            return User.query.get(int(user_id))
         from app.tasks.models import TaskTypes
         TaskTypes.add_initial_task_types()
         from app.tasks.models import Status
