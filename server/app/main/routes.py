@@ -661,6 +661,25 @@ def get_table_data():
         return jsonify({'error': str(e)}), 500
 
 
+@main.route('/get_table_blocks', methods=['GET'])
+@login_required
+def get_table_blocks():
+    table_name = request.args.get('table_name')
+    date = request.args.get('date')
+    timezone_offset = request.args.get('timezone_offset', None)
+
+    try:
+        records, columns = fetch_table_records(table_name, date, timezone_offset)
+        if not records:
+            return jsonify([]), 200
+        columns_names = get_columns_names()
+        blocks = build_blocks_from_records([dict(r) for r in records], columns, columns_names)
+        return jsonify(blocks), 200
+    except Exception as e:
+        current_app.logger.error(f'Ошибка при получении блоков: {e}')
+        return jsonify({'error': str(e)}), 500
+
+
 @main.route('/update_record_from_blocks', methods=['POST'])
 @login_required
 def update_record_from_blocks():

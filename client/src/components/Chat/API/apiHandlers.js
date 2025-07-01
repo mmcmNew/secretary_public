@@ -80,6 +80,15 @@ export async function fetchTableData(tableName, date) {
     }
 }
 
+export async function fetchTableBlocks(tableName, date) {
+    try {
+        const timezoneOffset = new Date().getTimezoneOffset() * 60000;
+        return await apiRequest(`/get_table_blocks?table_name=${tableName}&date=${date}&timezone_offset=${timezoneOffset}`);
+    } catch (error) {
+        console.error('There was a problem with the fetch operation:', error);
+    }
+}
+
 export async function fetchDatesList(tableName, month, year, timezone) {
     // Добавление ведущего нуля к месяцу, если он меньше 10
     const formattedMonth = month < 10 ? `0${month}` : `${month}`;

@@ -31,8 +31,7 @@ async function fetchTablesList() {
 async function fetchTableData(tableName, date) {
     try {
       const timezoneOffset = new Date().getTimezoneOffset()* 60000;
-      console.log(`Fetching data with tableName: ${tableName}, date: ${date}, timezoneOffset: ${timezoneOffset}`);
-      const response = await fetch(`/get_table_data?table_name=${tableName}&date=${date}&timezone_offset=${timezoneOffset}`);
+      const response = await fetch(`/get_table_blocks?table_name=${tableName}&date=${date}&timezone_offset=${timezoneOffset}`);
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
