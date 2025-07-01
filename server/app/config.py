@@ -56,6 +56,8 @@ class BaseConfig:
 class TestingConfig(BaseConfig):
     DEBUG = True
     DATABASE_URI = os.environ.get('DATABASE_URL', 'demo_base.db')
+    WTF_CSRF_ENABLED = False
+    SECRET_KEY = BaseConfig.SECRET_KEY or "test"
 
 class WorkConfig(BaseConfig):
     DATABASE_URI = os.environ.get('DATABASE_URL', 'database.db')
