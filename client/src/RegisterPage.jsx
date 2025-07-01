@@ -9,20 +9,21 @@ import Container from '@mui/material/Container';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from './contexts/AuthContext.jsx';
 
-export default function SignInPage() {
+export default function RegisterPage() {
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext);
+  const { register } = useContext(AuthContext);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const ok = await login(username, password);
+    const ok = await register(username, email, password);
     if (ok) {
       navigate('/account');
     } else {
-      setError('Invalid credentials');
+      setError('Registration failed');
     }
   };
 
@@ -40,7 +41,7 @@ export default function SignInPage() {
           <LockOutlinedIcon />
         </Avatar>
         <Typography component="h1" variant="h5">
-          Sign in
+          Register
         </Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
           <TextField
@@ -51,6 +52,14 @@ export default function SignInPage() {
             autoFocus
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
           <TextField
             margin="normal"
@@ -67,11 +76,10 @@ export default function SignInPage() {
             </Typography>
           )}
           <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
-            Sign In
+            Register
           </Button>
         </Box>
       </Box>
     </Container>
   );
 }
-

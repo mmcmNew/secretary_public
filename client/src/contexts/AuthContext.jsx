@@ -4,6 +4,7 @@ import axios from 'axios';
 export const AuthContext = createContext({
   user: null,
   login: async () => false,
+  register: async () => false,
   logout: async () => {},
   fetchCurrentUser: async () => {},
 });
@@ -32,6 +33,16 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const register = useCallback(async (username, email, password) => {
+    try {
+      const { data } = await axios.post('/api/register', { username, email, password });
+      setUser(data.user);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await axios.post('/api/logout');
@@ -41,7 +52,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, fetchCurrentUser }}>
+    <AuthContext.Provider value={{ user, login, register, logout, fetchCurrentUser }}>
       {children}
     </AuthContext.Provider>
   );
