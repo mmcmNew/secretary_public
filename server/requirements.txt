@@ -15,4 +15,5 @@ eventlet
 gevent
 flask_cors
 flask_socketio
+flask_login
 edge_tts
