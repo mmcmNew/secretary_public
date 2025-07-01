@@ -10,7 +10,8 @@ from .handlers import fetch_table_records
 from app.block_notes_utiltes import extract_record_data_from_block, build_blocks_from_records
 from app import socketio
 from flask import Response, current_app, abort, render_template, make_response
-from flask import request, jsonify, send_from_directory, send_file
+from flask import request, jsonify, send_from_directory, send_file, session
+from werkzeug.security import check_password_hash
 from .models import *
 
 from app.secretary import answer_from_secretary
@@ -117,6 +118,37 @@ def static_files(filename):
 
     # Возвращаем файл из базовой директории
     return send_from_directory(base_dir, filename)
+
+
+@main.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json() or {}
+    username = data.get('username')
+    password = data.get('password')
+    if not username or not password:
+        return jsonify({'error': 'Missing credentials'}), 400
+    user = User.query.filter_by(user_name=username).first()
+    if user and user.check_password(password):
+        session['user_id'] = user.user_id
+        return jsonify({'user': user.to_dict()}), 200
+    return jsonify({'error': 'Invalid credentials'}), 401
+
+
+@main.route('/api/logout', methods=['POST'])
+def api_logout():
+    session.pop('user_id', None)
+    return jsonify({'result': 'OK'})
+
+
+@main.route('/api/user', methods=['GET'])
+def api_current_user():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user = User.query.filter_by(user_id=user_id).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return jsonify(user.to_dict()), 200
 
 
 @main.route('/temp/<path:filename>', methods=['GET'])
