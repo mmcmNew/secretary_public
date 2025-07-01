@@ -69,6 +69,22 @@ def test_register_duplicate(client):
     assert 'error' in data
 
 
+def test_register_duplicate_email(client):
+    register(client)
+    resp = register(client, username="user2")
+    data = resp.get_json()
+    assert resp.status_code == 400
+    assert data['error'] == 'Email already registered'
+
+
+def test_register_duplicate_username(client):
+    register(client)
+    resp = register(client, email="other@example.com")
+    data = resp.get_json()
+    assert resp.status_code == 400
+    assert data['error'] == 'Username already taken'
+
+
 def test_login_logout(client):
     register(client)
     resp = login(client)
@@ -79,4 +95,17 @@ def test_login_logout(client):
     resp = logout(client)
     assert resp.status_code == 200
     assert resp.get_json()['result'] == 'OK'
+
+
+def test_login_user_not_found(client):
+    resp = login(client)
+    assert resp.status_code == 404
+    assert resp.get_json()['error'] == 'User not found'
+
+
+def test_login_wrong_password(client):
+    register(client)
+    resp = login(client, password="WrongPass1")
+    assert resp.status_code == 401
+    assert resp.get_json()['error'] == 'Incorrect password'
 

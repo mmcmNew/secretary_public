@@ -147,13 +147,19 @@ def api_login():
     data = request.get_json() or {}
     username = data.get('username')
     password = data.get('password')
+
     if not username or not password:
-        return jsonify({'error': 'Missing credentials'}), 400
+        return jsonify({'error': 'Username and password are required'}), 400
+
     user = User.query.filter_by(user_name=username).first()
-    if user and user.check_password(password):
-        login_user(user)
-        return jsonify({'user': user.to_dict()}), 200
-    return jsonify({'error': 'Invalid credentials'}), 401
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if not user.check_password(password):
+        return jsonify({'error': 'Incorrect password'}), 401
+
+    login_user(user)
+    return jsonify({'user': user.to_dict()}), 200
 
 
 @main.route('/api/register', methods=['POST'])
@@ -162,8 +168,9 @@ def api_register():
     username = data.get('username')
     email = data.get('email')
     password = data.get('password')
+
     if not username or not email or not password:
-        return jsonify({'error': 'Missing data'}), 400
+        return jsonify({'error': 'Username, email and password are required'}), 400
 
     if not validate_email(email):
         return jsonify({'error': 'Invalid email format'}), 400
@@ -171,9 +178,15 @@ def api_register():
     is_valid, message = validate_password(password)
     if not is_valid:
         return jsonify({'error': message}), 400
-    existing = User.query.filter(or_(User.user_name == username, User.email == email)).first()
-    if existing:
-        return jsonify({'error': 'User already exists'}), 400
+
+    existing_username = User.query.filter_by(user_name=username).first()
+    if existing_username:
+        return jsonify({'error': 'Username already taken'}), 400
+
+    existing_email = User.query.filter_by(email=email).first()
+    if existing_email:
+        return jsonify({'error': 'Email already registered'}), 400
+
     user = User(user_name=username, email=email)
     user.set_password(password)
     db.session.add(user)
