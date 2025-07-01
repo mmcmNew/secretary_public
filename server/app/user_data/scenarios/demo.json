@@ -1,0 +1,89 @@
+{
+	"name": "Общий тест",
+	"steps": [
+	  {
+		"name": "Подготовка",
+		"actions": [
+		  {
+			"type": "text",
+			"text": "Начнем с проверки таймера"
+		  },
+		  {
+			"type": "timer",
+			"name": "Вот и завершился первый тестовый таймер",
+			"time": ["00", "00", "03"]
+		  },
+		  {
+			"type": "text",
+			"text": "Теперь мы готовы к тестам остальных элементов"
+		  }
+		]
+	  },
+	  {
+		"name": "Проверка аудио",
+		"actions": [
+		  {
+			"type": "audio",
+			"name": "Послушаем немного французского",
+			"url": "whisper-french.mp3"
+		  },
+		  {
+			"type": "text",
+			"text": "Аудио плеер работает. Идем дальше"
+		  },
+		  {
+			"type": "metronome",
+			"name": "Метроном 5 тиков",
+			"bpm": "100",
+			"count": "5"
+		  }
+		]
+	  },
+	  {
+		"name": "Проверка опроса",
+		"actions": [
+			{
+				"type": "survey",
+				"table_name": "project_journal",
+				"text": "Давайте заполним результаты?",
+				"fields": [
+				  {
+					"field_id": "project_name",
+					"field_name": "Название проекта",
+					"check": "true"
+				  },
+				  {
+					"field_id": "step",
+					"field_name": "Этап",
+					"check": "true"
+				  },
+				  {
+					"field_id": "comment",
+					"field_name": "Комментарий",
+					"check": "true"
+				  }
+				]
+			}
+		]
+	  },
+	  {
+		"name": "Всё и сразу",
+		"actions": [
+		  {
+			"type": "timer",
+			"name": "Всё и сразу началось",
+			"time": ["00", "00", "5"]
+		  },
+		  {
+			"type": "audio",
+			"name": "Сценарий завершен",
+			"url": "proydennyiy-uroven-v-kompyuternoy-igre.wav"
+		  },
+		  {
+			"type": "text",
+			"text": "Поздравляю с завершением сценария"
+		  }		  
+		]
+	  }
+	]
+}
