@@ -24,7 +24,7 @@ function ToDoLayoutUniversal() {
     lists,
   } = useLists();
   const listsLoading = lists.loading;
-  const { setError } = useContext(ErrorContext);
+  const { setError, setSuccess } = useContext(ErrorContext);
 
   // Состояния для ввода
   const [newTask, setNewTask] = useState('');
@@ -43,30 +43,50 @@ function ToDoLayoutUniversal() {
 
   const handleAdditionalButtonClick = useCallback(async (task) => {
     const priority = task.priority_id === 3 ? 1 : 3;
-    console.log('task', task)
-    if (typeof updateTask === 'function')
-      console.log('updateTask', task.id, priority)
-      await updateTask({ taskId: task.id, priority_id: priority, listId: selectedListId });
-  }, [updateTask]);
+    try {
+      if (typeof updateTask === 'function') {
+        await updateTask({ taskId: task.id, priority_id: priority, listId: selectedListId });
+        setSuccess('Приоритет обновлен');
+      }
+    } catch (err) {
+      setError(err);
+    }
+  }, [updateTask, selectedListId, setError, setSuccess]);
 
-  const handleKeyDown = useCallback((event) => {
+  const handleKeyDown = useCallback(async (event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
       if (newTask.trim() === '') return;
-      addTask({ title: newTask });
-      setNewTask('');
+      try {
+        await addTask({ title: newTask });
+        setSuccess('Задача добавлена');
+        setNewTask('');
+      } catch (err) {
+        setError(err);
+      }
     }
-  }, [newTask, addTask]);
+  }, [newTask, addTask, setError, setSuccess]);
 
-  const handleAddTask = useCallback(() => {
-    addTask({ title: newTask });
-    setNewTask('');
-  }, [newTask, addTask]);
+  const handleAddTask = useCallback(async () => {
+    if (newTask.trim() === '') return;
+    try {
+      await addTask({ title: newTask });
+      setSuccess('Задача добавлена');
+      setNewTask('');
+    } catch (err) {
+      setError(err);
+    }
+  }, [newTask, addTask, setError, setSuccess]);
 
   const content = isMobile ? (
     <Box sx={{ height: '100%', width: '100%' }}>
       <ToDoListsPanel mobile />
-      <ToDoTasksPanel mobile additionalButtonClick={handleAdditionalButtonClick} />
+      <ToDoTasksPanel
+        mobile
+        additionalButtonClick={handleAdditionalButtonClick}
+        onSuccess={setSuccess}
+        onError={setError}
+      />
       {showEditor && <ToDoTaskEditorPanel mobile />}
     </Box>
   ) : (
@@ -84,7 +104,11 @@ function ToDoLayoutUniversal() {
           md={showEditor ? 5 : 9}
           sx={{ height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}
         >
-          <ToDoTasksPanel additionalButtonClick={handleAdditionalButtonClick} />
+          <ToDoTasksPanel
+            additionalButtonClick={handleAdditionalButtonClick}
+            onSuccess={setSuccess}
+            onError={setError}
+          />
         </Grid>
 
         {/* 3. Редактор задачи (отображается по условию, md=4) */}

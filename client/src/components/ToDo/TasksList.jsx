@@ -35,6 +35,8 @@ export default function TasksList({
     selectedTaskId = null,
     updateTask = null,
     changeTaskStatus = null,
+    onSuccess = null,
+    onError = null,
 }) {
     const [open, setOpen] = useState({});
     const [completedOpen, setCompletedOpen] = useState(true);
@@ -122,7 +124,6 @@ export default function TasksList({
     }
 
     async function handleChangeChildesOrder(elementId, direction) {
-        console.log(`handleChangeChildesOrder: `, selectedList.id, elementId, direction);
 
         if (!selectedList) return;
 
@@ -147,18 +148,30 @@ export default function TasksList({
 
         setAnchorEl(null);
         // Сохраняем изменения в childes_order
-        if (typeof updateList === "function")
-            updateList(selectedList.id, { childes_order: selectedList.childes_order });
+        if (typeof updateList === "function") {
+            try {
+                await updateList({ listId: selectedList.id, childes_order: selectedList.childes_order });
+                if (onSuccess) onSuccess('Порядок задач изменен');
+            } catch (err) {
+                if (onError) onError(err);
+            }
+        }
     }
 
-    function handleDeleteFromChildes(elementId) {
-        if (typeof deleteFromChildes === "function") deleteFromChildes(`task_${elementId}`, selectedList.id);
+    async function handleDeleteFromChildes(elementId) {
+        if (typeof deleteFromChildes === "function") {
+            try {
+                await deleteFromChildes(`task_${elementId}`, selectedList.id);
+                if (onSuccess) onSuccess('Задача удалена из списка');
+            } catch (err) {
+                if (onError) onError(err);
+            }
+        }
         setAnchorEl(null);
     }
 
     async function handleToListAction(targetId, actionTypeName = null) {
         if (!actionTypeName) actionTypeName = actionType;
-        // console.log(`handleToListAction: `, actionTypeName, targetItemId, targetId);
         if (typeof linkTaskList === "function") {
             const params = {
                 task_id: targetItemId,
@@ -168,7 +181,12 @@ export default function TasksList({
             if (actionTypeName === "move" && selectedList?.id) {
                 params.source_list_id = selectedList.id;
             }
-            await linkTaskList(params);
+            try {
+                await linkTaskList(params);
+                if (onSuccess) onSuccess('Задача перемещена');
+            } catch (err) {
+                if (onError) onError(err);
+            }
         }
         // Закрываем все меню после выполнения действия
         handleCloseMenu();
@@ -198,7 +216,6 @@ export default function TasksList({
 
 
     function handleDragStart(event, task){
-        console.log("handleOnDragStart: ", event, task);
         event.dataTransfer.setData("task", JSON.stringify(task));
     }
 
@@ -211,12 +228,17 @@ export default function TasksList({
         const end = today.clone().add(1, 'hour');
         // Обновить задачу через updateTask, если доступно
         if (typeof updateTask === 'function') {
-            updateTask({
-                taskId: task.id,
-                start: today.toISOString(),
-                end: end.toISOString(),
-                deadline: end.toISOString(),
-            });
+            try {
+                await updateTask({
+                    taskId: task.id,
+                    start: today.toISOString(),
+                    end: end.toISOString(),
+                    deadline: end.toISOString(),
+                });
+                if (onSuccess) onSuccess('Добавлено в "Мой день"');
+            } catch (err) {
+                if (onError) onError(err);
+            }
         }
         handleCloseMenu();
     }
@@ -429,4 +451,6 @@ TasksList.propTypes = {
     changeTaskStatus: PropTypes.func,
     deleteFromChildes: PropTypes.func,
     additionalButton: PropTypes.object,
+    onSuccess: PropTypes.func,
+    onError: PropTypes.func,
 };
