@@ -9,3 +9,7 @@
 /logs/
 /migrations/
 /app/static/
+/venv/
+/app/__pycache__/
+*__pycache__
+*.db

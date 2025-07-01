@@ -18,6 +18,7 @@ __pycache__/
 .venv312/
 .git/
 .migrations/
+.venv/
 *.spec
 
 
