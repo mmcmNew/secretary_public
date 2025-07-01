@@ -16,3 +16,4 @@ gevent
 flask_cors
 flask_socketio
 edge_tts
+Flask-WTF
