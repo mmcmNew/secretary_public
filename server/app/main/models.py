@@ -25,6 +25,10 @@ class User(db.Model):
 
     @staticmethod
     def add_initial_users():
+        """Create default users only for the test configuration."""
+        if current_app.config.get("CONFIG_TYPE") != "test":
+            return
+
         # Проверяем, есть ли пользователи уже в базе данных
         if not User.query.all():  # если база пуста
             admin = User(user_name="admin", email="admin@example.com", avatar_src="me.png")
@@ -34,9 +38,6 @@ class User(db.Model):
             db.session.add(secretary)
             db.session.commit()
             current_app.logger.info("Initial users added.")
-        else:
-            pass
-            # current_app.logger.info("Users already exist.")
 
     def to_dict(self):
         return {
