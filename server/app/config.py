@@ -39,6 +39,7 @@ class BaseConfig:
 
     @staticmethod
     def init_app(app):
+        os.makedirs(os.path.join(BaseConfig.app_dir_name, 'user_data', 'db'), exist_ok=True)
         os.makedirs(os.path.dirname(BaseConfig.DEBUG_LOGGING_LOCATION), exist_ok=True)
         os.makedirs(os.path.dirname(BaseConfig.ERROR_LOGGING_LOCATION), exist_ok=True)
 
