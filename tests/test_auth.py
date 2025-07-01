@@ -35,7 +35,7 @@ def client(app):
     return app.test_client()
 
 
-def register(client, username="user1", email="user1@example.com", password="pass"):
+def register(client, username="user1", email="user1@example.com", password="Password1"):
     return client.post('/api/register', json={
         'username': username,
         'email': email,
@@ -43,7 +43,7 @@ def register(client, username="user1", email="user1@example.com", password="pass
     })
 
 
-def login(client, username="user1", password="pass"):
+def login(client, username="user1", password="Password1"):
     return client.post('/api/login', json={
         'username': username,
         'password': password
