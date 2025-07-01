@@ -646,67 +646,45 @@ def get_file():
 @main.route('/get_table_data', methods=['GET'])
 @login_required
 def get_table_data():
-    columns_names = get_columns_names()
     table_name = request.args.get('table_name')
     date = request.args.get('date')
     timezone_offset = request.args.get('timezone_offset', None)
 
     try:
-        records, columns = fetch_table_records(table_name, date, timezone_offset)
+        records, _ = fetch_table_records(table_name, date, timezone_offset)
         if not records:
             return jsonify([]), 200
-        result = build_blocks_from_records(records, columns, columns_names)
+        result = [dict(r) for r in records]
         return jsonify(result), 200
     except Exception as e:
-        current_app.logger.error(f'Ошибка при получении блоков: {e}')
+        current_app.logger.error(f'Ошибка при получении записей: {e}')
         return jsonify({'error': str(e)}), 500
 
 
 @main.route('/update_record_from_blocks', methods=['POST'])
 @login_required
 def update_record_from_blocks():
-    from werkzeug.exceptions import BadRequest
-
     data = request.get_json()
     table_name = data.get('table_name')
-    blocks = data.get('blocks')
-    db_path = current_app.config.get('MAIN_DB_PATH', '')
+    records = data.get('records', [])
+
+    if not table_name or not isinstance(records, list):
+        return jsonify({'error': 'Invalid payload'}), 400
 
     try:
-        with sqlite3.connect(db_path) as connection:
-            cursor = connection.cursor()
-
-            for block in blocks:
-                result = extract_record_data_from_block(block)
-                if result is None:
-                    continue
-
-                record_id, column_name, record_text = result
-
-                try:
-                    cursor.execute(
-                        f"UPDATE {table_name} SET {column_name} = ? WHERE id = ?",
-                        (record_text, record_id)
-                    )
-                    if cursor.rowcount == 0:
-                        current_app.logger.warning(f"Запись не найдена: id={record_id}, column={column_name}")
-                except Exception as inner_err:
-                    current_app.logger.error(
-                        f"Ошибка при обновлении: id={record_id}, column={column_name} — {inner_err}"
-                    )
-
-            connection.commit()
+        for record in records:
+            res = update_record(table_name, record)
+            if res.get('error'):
+                current_app.logger.error(f"Ошибка обновления записи {record.get('id')}: {res['error']}")
+        return jsonify({'success': True}), 200
     except Exception as e:
         current_app.logger.error(f'Ошибка при обновлении записи: {e}')
         return jsonify({'error': str(e)}), 500
-
-    return jsonify({'success': True}), 200
 
 
 @main.route('/get_records', methods=['POST'])
 @login_required
 def get_records_route():
-    columns_names = get_columns_names()
     try:
         data = request.get_json() or {}
         current_app.logger.debug(f'get_records_route: {data}')
@@ -720,11 +698,10 @@ def get_records_route():
             return (jsonify({'error': 'Фильтры не заданы. Запрос отклонён для предотвращения получения всех записей.'}),
                     400)
 
-        records, columns = fetch_filtered_records(table_name, filters)
+        records, _ = fetch_filtered_records(table_name, filters)
 
-        blocks = build_blocks_from_records(records, columns, columns_names)
-        # current_app.logger.debug(f'get_records_route: {blocks}')
-        return jsonify(blocks), 200
+        result = [dict(r) for r in records]
+        return jsonify(result), 200
 
     except ValueError as e:
         current_app.logger.error(f'Validation error: {e}')

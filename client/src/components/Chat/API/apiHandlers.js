@@ -96,12 +96,12 @@ export async function fetchDatesList(tableName, month, year, timezone) {
     }
 }
 
-export async function updateRecordFromBlocks(table_name, blocks) {
+export async function updateRecordFromBlocks(table_name, records) {
     const url = '/update_record_from_blocks';
     try {
         return await apiRequest(url, {
             method: 'POST',
-            body: { table_name, blocks }
+            body: { table_name, records }
         });
     } catch (error) {
         console.error('There was a problem with the fetch operation:', error);
