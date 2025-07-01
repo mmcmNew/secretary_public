@@ -8,13 +8,17 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 # Модель для таблицы users
 class User(UserMixin, db.Model):
-    __bind_key__ = 'main'
+    __bind_key__ = 'app_session_meta'
     __tablename__ = 'users'  # Название таблицы в нижнем регистре
     user_id = Column(Integer, primary_key=True)
     user_name = Column(Text, unique=True)
     email = Column(String(255), unique=True)
     password_hash = Column(String(255))
     avatar_src = Column(Text)
+
+    @property
+    def id(self):
+        return self.user_id
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -54,12 +58,16 @@ class ChatHistory(db.Model):
     __bind_key__ = 'main'
     __tablename__ = 'chat_history'  # Название таблицы в нижнем регистре
     message_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.user_id'))  # Название таблицы в нижнем регистре
+    user_id = Column(Integer)
     datetime = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     text = Column(Text)
     files = Column(Text)
     position = Column(Text)
-    user = db.relationship('User', backref='messages', lazy=True)
+    user = db.relationship(
+        'User',
+        primaryjoin='foreign(ChatHistory.user_id) == User.user_id',
+        viewonly=True,
+    )
 
     def to_dict(self):
         return {
