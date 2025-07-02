@@ -25,7 +25,8 @@ const MarkdownEditor = forwardRef(({ initialMarkdown = '', onChange }, ref) => {
 
   useImperativeHandle(ref, () => ({
     async getMarkdown() {
-      return await editor.blocksToMarkdownLossy(editor.document);
+      const md = await editor.blocksToMarkdownLossy(editor.document);
+      return md.trim();
     },
     setMarkdown: async (md) => {
       const blocks = await editor.tryParseMarkdownToBlocks(md);
