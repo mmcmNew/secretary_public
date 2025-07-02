@@ -159,7 +159,7 @@ function RecordEditor({
         background: 'white',
         transition: 'border-color 0.5s ease',
       }}>
-        <Box sx={{ flex: editor.aiResponse ? 1 : '100%' }}>
+        <Box sx={{ flex: editor.aiResponse ? 1 : '100%', p: 1 }}>
           {fields.map((field) => (
             field === 'files' && record[field] ? (
               <Box key={field} sx={{ mb: 1 }}>
@@ -168,8 +168,7 @@ function RecordEditor({
               </Box>
             ) : field === 'id' ? (
               <Box key={field} sx={{ mb: 1 }}>
-                <Typography variant="h6">id Записи</Typography>
-                <TextField value={record[field]} InputProps={{ readOnly: true }} fullWidth />
+                <Typography variant="h6">id Записи: {record[field]}</Typography>
               </Box>
             ) : (
               <Box key={field} sx={{ mb: 1 }}>
