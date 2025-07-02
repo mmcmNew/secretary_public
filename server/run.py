@@ -8,7 +8,7 @@ app = create_app('test')
 
 if __name__ == '__main__':
     host = '0.0.0.0'
-    port = 5000
+    port = 5100
 
     with app.app_context():
         print(app.config.get('MAIN_DB_PATH', ''))
