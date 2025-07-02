@@ -33,6 +33,22 @@ import pathToUrl from '../../utils/pathToUrl';
 import FiltersPanel from './FiltersPanel';
 import { Virtuoso } from 'react-virtuoso';
 
+const FileViewer = ({ url }) => {
+  const [content, setContent] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch(url)
+      .then(r => r.text())
+      .then(text => { if (isMounted) setContent(text); })
+      .catch(() => { if (isMounted) setContent(''); });
+    return () => { isMounted = false; };
+  }, [url]);
+
+  if (content === null) return <CircularProgress size={20} />;
+  return <MDNotionEditor readOnly initialMarkdown={content} />;
+};
+
 dayjs.extend(utc);
 
 const drawerWidth = 300;
@@ -106,6 +122,9 @@ export default function JournalEditorDrawer() {
           }
           if (/\.(mp3|wav|ogg)$/i.test(url)) {
             return <audio key={i} src={url} controls />;
+          }
+          if (/\.(md|txt)$/i.test(url)) {
+            return <FileViewer key={i} url={url} />;
           }
           return <Button key={i} href={url} target="_blank" startIcon={<AttachFileIcon />}>Файл {i+1}</Button>;
         })}

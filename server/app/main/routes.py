@@ -642,6 +642,22 @@ def get_file():
         abort(404, description="File not found")
 
 
+@main.route('/journals/file', methods=['GET'])
+@login_required
+def get_journal_file():
+    """Serve files from the journals folder."""
+    category = request.args.get('category')
+    date_folder = request.args.get('date_folder')
+    filename = request.args.get('filename')
+
+    base_dir = os.path.join(os.getcwd(), 'app', 'user_data', 'journals',
+                            category or '', date_folder or '')
+    file_path = os.path.join(base_dir, filename)
+    if not os.path.isfile(file_path):
+        abort(404, description="File not found")
+    return send_from_directory(base_dir, filename)
+
+
 @main.route('/get_table_data', methods=['GET'])
 @login_required
 def get_table_data():

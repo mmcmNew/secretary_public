@@ -11,7 +11,8 @@ const MarkdownEditor = forwardRef(({ initialMarkdown = '', onChange }, ref) => {
 
   useEffect(() => {
     const load = async () => {
-      const blocks = await editor.tryParseMarkdownToBlocks(initialMarkdown);
+      const markdown = (initialMarkdown || '').trim();
+      const blocks = await editor.tryParseMarkdownToBlocks(markdown);
       editor.replaceBlocks(editor.document, blocks);
       isInitialLoad.current = false;
     };
