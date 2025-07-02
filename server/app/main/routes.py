@@ -616,42 +616,44 @@ def get_days_route():
     return jsonify({'days': days, 'unique_dates': unique_dates, 'survey': survey}), 200
 
 
-@main.route('/journals', methods=['GET'])
-@login_required
-def get_file():
-    # print('get_file')
-    # Получение параметров из запроса
-    category = request.args.get('category')
-    date_folder = request.args.get('date_folder')
-    filename = request.args.get('filename')
-    # print(f'get_file: {category}, {date_folder}, {filename}')
+# @main.route('/journals', methods=['GET'])
+# @login_required
+# def get_file():
+#     current_app.logger.debug(f'get_file{request.args}')
+#     # Получение параметров из запроса
+#     category = request.args.get('category')
+#     date_folder = request.args.get('date_folder')
+#     filename = request.args.get('filename')
+#     # print(f'get_file: {category}, {date_folder}, {filename}')
 
-    BASE_DIRECTORY = os.path.join(current_app.root_path, 'app', 'user_data', 'journals')
+#     BASE_DIRECTORY = os.path.join(current_app.root_path, 'app', 'user_data', 'journals')
 
-    # Построение пути к файлу
-    file_path = os.path.join(BASE_DIRECTORY, category, date_folder, filename)
-    # print(f'get_file: file_path: {file_path}')
+#     # Построение пути к файлу
+#     file_path = os.path.join(BASE_DIRECTORY, category, date_folder, filename)
+#     # print(f'get_file: file_path: {file_path}')
 
-    # Проверка существования файла
-    if os.path.exists(file_path):
-        # Отправка файла клиенту
-        return send_from_directory(directory=os.path.join(BASE_DIRECTORY, category, date_folder), path=filename)
-    else:
-        # Возвращение ошибки 404, если файл не найден
-        abort(404, description="File not found")
+#     # Проверка существования файла
+#     if os.path.exists(file_path):
+#         # Отправка файла клиенту
+#         return send_from_directory(directory=os.path.join(BASE_DIRECTORY, category, date_folder), path=filename)
+#     else:
+#         # Возвращение ошибки 404, если файл не найден
+#         abort(404, description="File not found")
 
 
 @main.route('/journals/file', methods=['GET'])
 @login_required
 def get_journal_file():
+    # current_app.logger.debug(f'get_journal_file{request.args}')
     """Serve files from the journals folder."""
     category = request.args.get('category')
     date_folder = request.args.get('date_folder')
     filename = request.args.get('filename')
 
-    base_dir = os.path.join(current_app.root_path, 'app', 'user_data', 'journals',
+    base_dir = os.path.join(current_app.root_path, 'user_data', 'journals',
                             category or '', date_folder or '')
     file_path = os.path.join(base_dir, filename)
+    # current_app.logger.debug(f'get_journal_file: {file_path}')
     if not os.path.isfile(file_path):
         abort(404, description="File not found")
     return send_from_directory(base_dir, filename)

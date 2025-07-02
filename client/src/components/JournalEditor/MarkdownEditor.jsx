@@ -4,20 +4,25 @@ import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import PropTypes from 'prop-types';
+import { options } from "@fullcalendar/core/preact.js";
 
 const MarkdownEditor = forwardRef(({ initialMarkdown = '', onChange }, ref) => {
-  const editor = useCreateBlockNote();
+  const editor = useCreateBlockNote(
+    {trailingBlock: false}
+  );
   const isInitialLoad = useRef(true);
 
   useEffect(() => {
+    if (!editor) return;
     const load = async () => {
-      const markdown = (initialMarkdown || '').trim();
+      const markdown = typeof initialMarkdown === 'string' ? initialMarkdown.trim() : '';
       const blocks = await editor.tryParseMarkdownToBlocks(markdown);
       editor.replaceBlocks(editor.document, blocks);
       isInitialLoad.current = false;
     };
     load();
   }, [initialMarkdown, editor]);
+  
 
   editor.onEditorContentChange(() => {
     if (isInitialLoad.current) return;
@@ -31,8 +36,7 @@ const MarkdownEditor = forwardRef(({ initialMarkdown = '', onChange }, ref) => {
     },
     setMarkdown: async (md) => {
       const blocks = await editor.tryParseMarkdownToBlocks(md);
-      editor.removeBlocks(editor.document);
-      editor.insertBlocks(blocks, editor.document[0]?.id);
+      editor.replaceBlocks(editor.document, blocks);
     }
   }));
 

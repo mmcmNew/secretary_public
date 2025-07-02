@@ -7,7 +7,6 @@ import MemoryComponent from "../Memory/Memory";
 import TimersToolbar from "../Timer/TimersToolbar";
 import ScenarioComponent from "../Scenario";
 import SecretaryGIF from "../SecretaryGIF";
-import JournalEditor from "../JournalEditor/JournalEditor";
 import Chat from "../Chat";
 // import ToDoLayoutMobile from "../ToDo/ToDoLayoutMobile";
 import JournalEditorDrawer from "../JournalEditor/JournalEditorDrawer";
@@ -172,18 +171,6 @@ export const containerTypes = {
         isLocked: false,
         isMinimized: false,
         content: <SecretaryGIF />,
-    },
-    JournalEditor: {
-        type: "JournalEditor",
-        name: "JournalEditor",
-        position: { x: 320, y: 200 },
-        size: { width: 1400, height: 830 },
-        isLockAspectRatio: false,
-        isResizable: true,
-        isDisableDragging: false,
-        isLocked: false,
-        isMinimized: false,
-        content: <JournalEditor />,
     },
     JournalEditorDrawer: {
         type: "JournalEditorDrawer",

@@ -255,6 +255,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
+      '/journals': {
+        target: 'https://localhost:5100',
+        changeOrigin: true,
+        secure: false
+      },
+
     },
   }
 })

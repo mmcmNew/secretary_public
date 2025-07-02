@@ -127,7 +127,7 @@ export default function JournalEditorDrawer() {
       const refs = editorRefs.current[i] || {};
       const fields = order.length ? order : Object.keys(rec);
       fields.forEach((field) => {
-        if (['id', 'date', 'time'].includes(field)) return;
+        // if (['id', 'date', 'time'].includes(field)) return;
         if (!refs[field]) refs[field] = React.createRef();
       });
       return refs;
@@ -391,7 +391,7 @@ export default function JournalEditorDrawer() {
             i === index ? { ...editor, sendToSocialsStatus: "idle" } : editor
           )
         );
-      }, 3000);
+      }, 8000);
     } catch (e) {
       setEditors(prev => {
         const updated = [...prev];
@@ -407,7 +407,7 @@ export default function JournalEditorDrawer() {
             i === index ? { ...editor, sendToSocialsStatus: "idle" } : editor
           )
         );
-      }, 3000);
+      }, 8000);
     }
 
   }
@@ -648,7 +648,7 @@ export default function JournalEditorDrawer() {
                       const fieldRefs = editor.ref;
                       const fieldsOrder = tableSurvey?.fields?.map(f => f.field_id) || [];
                       const fields = (fieldsOrder.length ? fieldsOrder : Object.keys(record))
-                        .filter(f => !['id','date','time'].includes(f));
+                        // .filter(f => !['id','date','time'].includes(f));
                       const getFieldName = (field) => {
                         const found = tableSurvey?.fields?.find(fld => fld.field_id === field);
                         return found ? found.field_name : field;
@@ -770,13 +770,14 @@ export default function JournalEditorDrawer() {
                           }}>
                             <Box sx={{ flex: editor.aiResponse ? 1 : '100%' }}>
                               {fields.map((field) => (
-                                field === 'files' ? (
+                                field === 'files' && record[field] ? (
                                   <Box key={field} sx={{ mb: 1 }}>
+                                    <Typography variant="h6">Вложения</Typography>
                                     {renderFiles(record[field])}
                                   </Box>
                                 ) : (
                                   <Box key={field} sx={{ mb: 1 }}>
-                                    <Typography variant="subtitle2">{getFieldName(field)}</Typography>
+                                    <Typography variant="h6">{getFieldName(field)}</Typography>
                                     <MarkdownEditor
                                       ref={fieldRefs[field]}
                                       initialMarkdown={record[field] || ''}
