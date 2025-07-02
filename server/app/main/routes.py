@@ -683,8 +683,9 @@ def update_record_from_blocks():
     data = request.get_json()
     table_name = data.get('table_name')
     records = data.get('records', [])
-
+    # current_app.logger.debug(f'update_record_from_blocks: {table_name}, {records}')
     if not table_name or not isinstance(records, list):
+        current_app.logger.error(f'update_record_from_blocks: Invalid payload')
         return jsonify({'error': 'Invalid payload'}), 400
 
     try:

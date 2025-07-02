@@ -404,13 +404,13 @@ def update_record(table_name, record_dict):
 
             record_id = record_dict.get('id')
             if record_id is None:
-                return {'text': 'Не указан ID для обновления'}
+                return {'text': 'Не указан ID для обновления', 'error': 'Не указан ID для обновления'}
 
             # Проверка существования записи
             cursor.execute(f"SELECT * FROM {table_name} WHERE id = ?", (record_id,))
             existing_record = cursor.fetchone()
             if not existing_record:
-                return {'text': 'Нет записей для обновления'}
+                return {'text': 'Нет записей для обновления', 'error': 'Нет записей для обновления'}
 
             # Объединение файлов, если нужно
             if 'files' in record_dict:

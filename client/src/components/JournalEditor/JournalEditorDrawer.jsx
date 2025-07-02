@@ -127,7 +127,7 @@ export default function JournalEditorDrawer() {
       const refs = editorRefs.current[i] || {};
       const fields = order.length ? order : Object.keys(rec);
       fields.forEach((field) => {
-        // if (['id', 'date', 'time'].includes(field)) return;
+        if (['id', 'date', 'time'].includes(field)) return;
         if (!refs[field]) refs[field] = React.createRef();
       });
       return refs;
@@ -648,7 +648,7 @@ export default function JournalEditorDrawer() {
                       const fieldRefs = editor.ref;
                       const fieldsOrder = tableSurvey?.fields?.map(f => f.field_id) || [];
                       const fields = (fieldsOrder.length ? fieldsOrder : Object.keys(record))
-                        // .filter(f => !['id','date','time'].includes(f));
+                        .filter(f => !['id','date','time'].includes(f));
                       const getFieldName = (field) => {
                         const found = tableSurvey?.fields?.find(fld => fld.field_id === field);
                         return found ? found.field_name : field;
