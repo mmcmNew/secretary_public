@@ -129,7 +129,7 @@ export default function JournalEditorDrawer() {
       const refs = editorRefs.current[i] || {};
       const fields = order.length ? order : Object.keys(rec);
       fields.forEach((field) => {
-        // if (['id', 'date', 'time'].includes(field)) return;
+        if (['id', 'date', 'time'].includes(field)) return;
         if (!refs[field]) refs[field] = React.createRef();
       });
       return refs;
