@@ -29,25 +29,11 @@ import NewRecordDialog from './NewRecordDialog';
 import { aiPostGenerate, sendMessageToAI, post_record_to_socials, fetchAllFilters, fetchFilteredData, fetchTableData,
   fetchDatesList, fetchTablesList, updateRecordFromBlocks, generateImageForRecord } from '../Chat/API/apiHandlers';
 import MDNotionEditor from './MDNotionEditor';
+import FileRenderer from '../FileRenderer';
 import pathToUrl from '../../utils/pathToUrl';
 import FiltersPanel from './FiltersPanel';
 import { Virtuoso } from 'react-virtuoso';
 
-const FileViewer = ({ url }) => {
-  const [content, setContent] = useState(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    fetch(url)
-      .then(r => r.text())
-      .then(text => { if (isMounted) setContent(text); })
-      .catch(() => { if (isMounted) setContent(''); });
-    return () => { isMounted = false; };
-  }, [url]);
-
-  if (content === null) return <CircularProgress size={20} />;
-  return <MDNotionEditor readOnly initialMarkdown={content} />;
-};
 
 dayjs.extend(utc);
 
@@ -114,19 +100,14 @@ export default function JournalEditorDrawer() {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {list.map((f, i) => {
           const url = pathToUrl(f.trim());
-          if (/\.(png|jpe?g|gif)$/i.test(url)) {
-            return <img key={i} src={url} alt="file" style={{ maxWidth: '100%' }} />;
+          if (/\.(png|jpe?g|gif|webp|md|txt)$/i.test(url)) {
+            return <FileRenderer key={i} url={url} />;
           }
-          if (/\.(mp4|mkv)$/i.test(url)) {
-            return <video key={i} src={url} controls style={{ maxWidth: '100%' }} />;
-          }
-          if (/\.(mp3|wav|ogg)$/i.test(url)) {
-            return <audio key={i} src={url} controls />;
-          }
-          if (/\.(md|txt)$/i.test(url)) {
-            return <FileViewer key={i} url={url} />;
-          }
-          return <Button key={i} href={url} target="_blank" startIcon={<AttachFileIcon />}>Файл {i+1}</Button>;
+          return (
+            <Button key={i} href={url} target="_blank" startIcon={<AttachFileIcon />}>
+              Файл {i + 1}
+            </Button>
+          );
         })}
       </Box>
     );
