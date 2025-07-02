@@ -14,25 +14,22 @@ import CheckIcon from '@mui/icons-material/Check';
 import ImageSearchIcon from '@mui/icons-material/ImageSearch';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import SendIcon from '@mui/icons-material/Send';
 import SaveIcon from '@mui/icons-material/Save';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateCalendar } from "@mui/x-date-pickers";
-import { useMemo, useState,useEffect } from "react";
-import MarkdownEditor from "./MarkdownEditor";
+import { useState, useEffect, useReducer, useCallback } from "react";
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import NewRecordDialog from './NewRecordDialog';
 import { aiPostGenerate, sendMessageToAI, post_record_to_socials, fetchAllFilters, fetchFilteredData, fetchTableData,
   fetchDatesList, fetchTablesList, updateRecordFromBlocks, generateImageForRecord } from '../Chat/API/apiHandlers';
 import MDNotionEditor from './MDNotionEditor';
-import FileRenderer from '../FileRenderer';
-import pathToUrl from '../../utils/pathToUrl';
 import FiltersPanel from './FiltersPanel';
 import { Virtuoso } from 'react-virtuoso';
+import RecordEditor from './RecordEditor';
 
 
 dayjs.extend(utc);
@@ -91,34 +88,39 @@ export default function JournalEditorDrawer() {
   const [loadingFilteredRecords, setLoadingFilteredRecords] = useState(false);
   const [dropdownValues, setDropdownValues] = useState({});
 
-  const [editors, setEditors] = useState([]);
-  
-  const renderFiles = (files) => {
-    if (!files) return null;
-    const list = files.split(';').filter(Boolean);
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {list.map((f, i) => {
-          const url = pathToUrl(f.trim());
-          if (/\.(png|jpe?g|gif|webp|md|txt)$/i.test(url)) {
-            return <FileRenderer key={i} url={url} />;
-          }
-          return (
-            <Button key={i} href={url} target="_blank" startIcon={<AttachFileIcon />}>
-              Файл {i + 1}
-            </Button>
-          );
-        })}
-      </Box>
-    );
+  const editorsReducer = (state, action) => {
+    switch(action.type) {
+      case 'SET_EDITORS':
+        return action.payload;
+      case 'SET_STATUS':
+        return state.map((ed, i) => i === action.index ? { ...ed, [action.key]: action.value } : ed);
+      case 'SET_CHECKED':
+        return state.map((ed, i) => i === action.index ? { ...ed, checked: action.checked } : ed);
+      case 'SET_ALL_CHECKED':
+        return state.map(ed => ({ ...ed, checked: action.checked }));
+      case 'SET_AI_RESPONSE':
+        return state.map((ed, i) => i === action.index ? { ...ed, aiResponse: action.value } : ed);
+      case 'SET_HAS_UNSAVED':
+        return state.map((ed, i) => i === action.index ? { ...ed, hasUnsavedChanges: true } : ed);
+      case 'CLEAR_UNSAVED':
+        return state.map((ed, i) => i === action.index ? { ...ed, hasUnsavedChanges: false } : ed);
+      default:
+        return state;
+    }
   };
-
+  const [editors, dispatchEditors] = useReducer(editorsReducer, []);
+  
   // Стабильные refs для редакторов
   const editorRefs = React.useRef([]);
 
-  useMemo(async () => {
-    const data = await fetchTablesList();
-    setTablesList(data);
+  useEffect(() => {
+    let ignore = false;
+    const fetchTables = async () => {
+      const data = await fetchTablesList();
+      if (!ignore) setTablesList(data);
+    };
+    fetchTables();
+    return () => { ignore = true; };
   }, []);
 
   useEffect(() => {
@@ -143,7 +145,7 @@ export default function JournalEditorDrawer() {
       checked: false,
       hasUnsavedChanges: false,
     }));
-    setEditors(newEditors);
+    dispatchEditors({ type: 'SET_EDITORS', payload: newEditors });
   }, [records, tableSurvey]);
 
   const handleFilterChange = (field, value) => {
@@ -162,7 +164,7 @@ export default function JournalEditorDrawer() {
   const applyFilters = async () => {
     if (!tableName) return;
         // очищаем редакторы и записи
-    setEditors([]);
+    dispatchEditors({ type: 'SET_EDITORS', payload: [] });
     setRecords([]);
 
     // подгружаем отфильтрованные записи
@@ -189,7 +191,7 @@ export default function JournalEditorDrawer() {
   }
 
   async function handleDateChange(newValue) {
-    setEditors([])
+    dispatchEditors({ type: 'SET_EDITORS', payload: [] })
     const utcDate = dayjs(newValue).utc().startOf('day');
     setCalendarDate(utcDate);
     setFilters({});
@@ -209,7 +211,7 @@ export default function JournalEditorDrawer() {
 
   async function handlePaginationDateChange(event, page) {
     setCurrentPage(page);
-    setEditors([])
+    dispatchEditors({ type: 'SET_EDITORS', payload: [] })
     setFilters({});
 
     const newDate = allRecordDates[page - 1];
@@ -225,7 +227,7 @@ export default function JournalEditorDrawer() {
     setRecords(data.records || [])
   }
 
-  async function handleTableChange(newValue) {
+  const handleTableChange = useCallback(async (newValue) => {
     setTableName(newValue);
     setRecords([]);
     setFilters({});
@@ -242,23 +244,19 @@ export default function JournalEditorDrawer() {
     const allOptions = await fetchAllFilters(newValue);
     // allOptions = { project_name: [...], step: [...], … }
     setDropdownValues(allOptions);
-  }
+  }, [calendarDate]);
 
-  async function handleMonthChange(newMonth) {
+  const handleMonthChange = useCallback(async (newMonth) => {
     const month = newMonth.month() + 1;
     const year = newMonth.year();
     if (tableName) {
       const formattedDates = await fetchMarkedDates(tableName, month, year);
       setMarkedDates(formattedDates);
     }
-  }
+  }, [tableName]);
 
-  const handleSaveSingle = async (index) => {
-    setEditors(prev =>
-      prev.map((editor, i) =>
-        i === index ? { ...editor, saveStatus: "saving" } : editor
-      )
-    );
+  const handleSaveSingle = useCallback(async (index) => {
+    dispatchEditors({ type: 'SET_STATUS', index, key: 'saveStatus', value: 'saving' });
 
     const refs = editors[index].ref;
     const record = { id: editors[index].record.id };
@@ -273,51 +271,44 @@ export default function JournalEditorDrawer() {
     await updateRecordFromBlocks(tableName, [record]);
 
     // Сбрасываем флаг несохраненных изменений после успешного сохранения
-    setEditors(prev =>
-      prev.map((editor, i) =>
-        i === index ? { ...editor, hasUnsavedChanges: false, saveStatus: "success" } : editor
-      )
-    );
+    dispatchEditors({ type: 'SET_STATUS', index, key: 'saveStatus', value: 'success' });
+    dispatchEditors({ type: 'CLEAR_UNSAVED', index });
 
     setTimeout(() => {
-      setEditors(prev =>
-        prev.map((editor, i) =>
-          i === index ? { ...editor, saveStatus: "idle" } : editor
-        )
-      );
+      dispatchEditors({ type: 'SET_STATUS', index, key: 'saveStatus', value: 'idle' });
     }, 3000);
-  }
+  }, [tableSurvey, tableName, editors]);
 
   // Функция для отключения дат, на которые нет записей
-  const shouldDisableDate = (date) => {
+  const shouldDisableDate = useCallback((date) => {
     const formattedDate = dayjs(date).format('YYYY-MM-DD');
     return !markedDates?.includes(formattedDate);
-  };
+  }, [markedDates]);
 
-  const handleDrawerOpen = () => {
+  const handleDrawerOpen = useCallback(() => {
     setOpen(true);
-  };
+  }, []);
 
-  const handleDrawerClose = () => {
+  const handleDrawerClose = useCallback(() => {
     setOpen(false);
-  };
+  }, []);
 
-  const handleNewRecordDialogOpen = () => {
+  const handleNewRecordDialogOpen = useCallback(() => {
     setNewRecordDialogOpen(true);
-  };
+  }, []);
 
-  const handleDialogClose = () => {
-    setNewRecordDialogOpen(false);
-    addRecord();
-  };
-
-  async function addRecord() {
+  const addRecord = useCallback(async () => {
     setNewRecordDialogOpen(false);
     const todayUtcDate = dayjs().utc().startOf('day');
     setCalendarDate(todayUtcDate);
     await handleTableChange(tableName);
     await handleDateChange(todayUtcDate.toDate());
-  }
+  }, [tableName]);
+
+  const handleDialogClose = useCallback(() => {
+    setNewRecordDialogOpen(false);
+    addRecord();
+  }, [addRecord]);
 
   const handleAIPostGenerate = async () => {
     const records_ids = editors.map(editor => editor.record?.id).filter(Boolean);
@@ -364,49 +355,20 @@ export default function JournalEditorDrawer() {
     }
 
     try {
-      setEditors(prev => {
-        const updated = [...prev];
-        updated[index] = {
-          ...updated[index],
-          sendToSocialsStatus: "loading"
-        };
-        return updated;
-      });
+      dispatchEditors({ type: 'SET_STATUS', index, key: 'sendToSocialsStatus', value: 'loading' });
 
       const result = await post_record_to_socials({ records_ids: [recordId], table_name: tableName, type });
 
       console.log("Ответ от ИИ:", result);
 
-      setEditors(prev => {
-        const updated = [...prev];
-        updated[index] = {
-          ...updated[index],
-          sendToSocialsStatus: "success",
-        };
-        return updated;
-      });
+      dispatchEditors({ type: 'SET_STATUS', index, key: 'sendToSocialsStatus', value: 'success' });
       setTimeout(() => {
-        setEditors(prev =>
-          prev.map((editor, i) =>
-            i === index ? { ...editor, sendToSocialsStatus: "idle" } : editor
-          )
-        );
+        dispatchEditors({ type: 'SET_STATUS', index, key: 'sendToSocialsStatus', value: 'idle' });
       }, 8000);
     } catch (e) {
-      setEditors(prev => {
-        const updated = [...prev];
-        updated[index] = {
-          ...updated[index],
-          sendToSocialsStatus: "fail",
-        };
-        return updated;
-      });
+      dispatchEditors({ type: 'SET_STATUS', index, key: 'sendToSocialsStatus', value: 'fail' });
       setTimeout(() => {
-        setEditors(prev =>
-          prev.map((editor, i) =>
-            i === index ? { ...editor, sendToSocialsStatus: "idle" } : editor
-          )
-        );
+        dispatchEditors({ type: 'SET_STATUS', index, key: 'sendToSocialsStatus', value: 'idle' });
       }, 8000);
     }
 
@@ -433,50 +395,22 @@ export default function JournalEditorDrawer() {
     }
 
     try {
-      setEditors(prev => {
-        const updated = [...prev];
-        updated[index] = {
-          ...updated[index],
-          aiResponseStatus: "loading"
-        };
-        return updated;
-      });
+      dispatchEditors({ type: 'SET_STATUS', index, key: 'aiResponseStatus', value: 'loading' });
       const result = await sendMessageToAI({ record: mdRecord, table_name: tableName, type });
 
       console.log("AI ответ:", result);
 
-      setEditors(prev => {
-        const updated = [...prev];
-        updated[index] = {
-          ...updated[index],
-          aiResponse: result || "Нет ответа",
-          aiResponseStatus: "idle",
-        };
-        return updated;
-      });
+      dispatchEditors({ type: 'SET_AI_RESPONSE', index, value: result || 'Нет ответа' });
+      dispatchEditors({ type: 'SET_STATUS', index, key: 'aiResponseStatus', value: 'idle' });
     } catch (e) {
-      setEditors(prev => {
-        const updated = [...prev];
-        updated[index] = {
-          ...updated[index],
-          aiResponse: "Возникла ошибка при получении ответа от ИИ. Повтрорите запрос",
-          aiResponseStatus: "idle",
-        };
-        return updated;
-      });
+      dispatchEditors({ type: 'SET_AI_RESPONSE', index, value: "Возникла ошибка при получении ответа от ИИ. Повтрорите запрос" });
+      dispatchEditors({ type: 'SET_STATUS', index, key: 'aiResponseStatus', value: 'idle' });
     }
   };
 
   // Используем функцию из apiHandlers
   async function handleGenerateImage(index) {
-    setEditors(prev => {
-      const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        imageGenerateStatus: 'loading',
-      };
-      return updated;
-    });
+    dispatchEditors({ type: 'SET_STATUS', index, key: 'imageGenerateStatus', value: 'loading' });
     const fieldRefs = editorRefs.current[index] || {};
     const recordId = editors[index]?.record?.id;
     if (!recordId) return;
@@ -492,24 +426,10 @@ export default function JournalEditorDrawer() {
         record_id: recordId,
         text
       });
-      setEditors(prev => {
-        const updated = [...prev];
-        updated[index] = {
-          ...updated[index],
-          imageGenerateStatus: 'idle',
-        };
-        return updated;
-      });
+      dispatchEditors({ type: 'SET_STATUS', index, key: 'imageGenerateStatus', value: 'idle' });
     } catch (e) {
       alert('Ошибка генерации изображения: ' + (e?.message || e));
-      setEditors(prev => {
-        const updated = [...prev];
-        updated[index] = {
-          ...updated[index],
-          imageGenerateStatus: 'idle',
-        };
-        return updated;
-      });
+      dispatchEditors({ type: 'SET_STATUS', index, key: 'imageGenerateStatus', value: 'idle' });
     }
   }
 
@@ -630,7 +550,7 @@ export default function JournalEditorDrawer() {
                       <Checkbox checked ={editors.every(editor => editor.checked)}
                         onChange={(e) => {
                           const isChecked = e.target.checked;
-                          setEditors(prev => prev.map(editor => ({ ...editor, checked: isChecked })));
+                          dispatchEditors({ type: 'SET_ALL_CHECKED', checked: isChecked });
                       }} />Выбрать все
                     </Box>
                   )}
@@ -641,174 +561,22 @@ export default function JournalEditorDrawer() {
                       padding: 0,
                       transition: 'border-color 0.3s ease'
                     }}
-                    totalCount={editors.length}
-                    itemContent={(index) => {
-                      const editor = editors[index];
-                      const record = editor.record || {};
-                      const fieldRefs = editor.ref;
-                      const fieldsOrder = tableSurvey?.fields?.map(f => f.field_id) || [];
-                      const fields = (fieldsOrder.length ? fieldsOrder : Object.keys(record))
-                        // .filter(f => !['id','date','time'].includes(f));
-                      const getFieldName = (field) => {
-                        const found = tableSurvey?.fields?.find(fld => fld.field_id === field);
-                        return found ? found.field_name : field;
-                      };
-                      return (
-                        <Box key={index} sx={{ display: 'flex', flexDirection: 'column', gap: 0, padding: 0, alignItems: 'stretch', marginBottom: 0, background: 'transparent' }}>
-                          {/* Кнопки управления */}
-                          <Box sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 1,
-                            backgroundColor: 'background.paper',
-                            padding: 0,
-                            borderBottom: `2px solid  '#ccc'`,
-                            boxShadow: '0 2px 8px -5px rgba(0,0,0,0.3)',
-                            marginBottom: '-2px',
-                            transition: 'border-color 0.5s ease',
-                          }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Checkbox
-                                checked={editor.checked}
-                                onChange={(e) => {
-                                  const isChecked = e.target.checked;
-                                  setEditors(prev => {
-                                    const updated = [...prev];
-                                    updated[index] = { ...updated[index], checked: isChecked };
-                                    return updated;
-                                  });
-                                }}
-                              />
-                            </Box>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                              <IconButton
-                                variant="contained"
-                                disabled={editor.saveStatus !== "idle"}
-                                onClick={() => handleSaveSingle(index)}
-                                sx={{
-                                  '&:hover': {
-                                    backgroundColor: editor.hasUnsavedChanges ? '#c8e6c9' : undefined
-                                  },
-                                  '& .MuiSvgIcon-root': {
-                                    color: editor.hasUnsavedChanges ? '#4caf50' : undefined,
-                                    animation: editor.hasUnsavedChanges ? 'pulseIcon 1.2s infinite' : undefined,
-                                  },
-                                  '@keyframes pulseIcon': {
-                                    '0%': { transform: 'scale(1)', filter: 'drop-shadow(0 0 0 #4caf50)' },
-                                    '70%': { transform: 'scale(1.15)', filter: 'drop-shadow(0 0 8px #4caf50)' },
-                                    '100%': { transform: 'scale(1)', filter: 'drop-shadow(0 0 0 #4caf50)' },
-                                  },
-                                }}
-                              >
-                                {editor.saveStatus === "saving" ? (
-                                  <CircularProgress size={24} />
-                                ) : editor.saveStatus === "success" ? (
-                                  <CheckIcon />
-                                ) : (
-                                  <SaveIcon />
-                                )}
-                              </IconButton>
-
-                              <IconButton
-                                variant="contained"
-                                onClick={() => handleAIEnhance(index)}
-                                disabled={editor.aiResponseStatus === "loading"}
-                              >
-                                {editor.aiResponseStatus === "loading" ? (
-                                  <CircularProgress size={24} />
-                                ) : editor.aiResponseStatus === "success" ? (
-                                  <CheckIcon />
-                                ) : (
-                                  <AutoFixHighIcon />
-                                )}
-                              </IconButton>
-
-                              <IconButton
-                                variant="contained"
-                                disabled={editor.imageGenerateStatus === "loading"}
-                                onClick={() => handleGenerateImage(index)}
-                              >
-                                {editor.imageGenerateStatus === "loading" ? (
-                                  <CircularProgress size={24} />
-                                ) : (
-                                  <ImageSearchIcon />
-                                )}
-                              </IconButton>
-
-                              <IconButton variant="contained">
-                                <AttachFileIcon />
-                              </IconButton>
-
-                              <IconButton
-                                variant="contained"
-                                onClick={() => handlePostRecordToSocials(index)}
-                                disabled={editor.sendToSocialsStatus === "loading"}
-                              >
-                                {editor.sendToSocialsStatus === "loading" ? (
-                                  <CircularProgress size={24} />
-                                ) : editor.sendToSocialsStatus === "success" ? (
-                                  <CheckIcon />
-                                ) : editor.sendToSocialsStatus === "fail" ? (
-                                  <ReportProblemIcon />
-                                ) : (
-                                  <SendIcon />
-                                )}
-                              </IconButton>
-                            </Box>
-                          </Box>
-
-                          {/* Редактор и AI Ответ */}
-                          <Box sx={{
-                            display: 'flex',
-                            gap: 2,
-                            borderBottom: `2px solid ${editor.hasUnsavedChanges ? '#f44336' : '#ccc'}`,
-                            background: 'white',
-                            transition: 'border-color 0.5s ease',
-                          }}>
-                            <Box sx={{ flex: editor.aiResponse ? 1 : '100%' }}>
-                              {fields.map((field) => (
-                                field === 'files' && record[field] ? (
-                                  <Box key={field} sx={{ mb: 1 }}>
-                                    <Typography variant="h6">Вложения</Typography>
-                                    {renderFiles(record[field])}
-                                  </Box>
-                                ) : (
-                                  <Box key={field} sx={{ mb: 1 }}>
-                                    <Typography variant="h6">{getFieldName(field)}</Typography>
-                                    <MarkdownEditor
-                                      ref={fieldRefs[field]}
-                                      initialMarkdown={record[field] || ''}
-                                      onChange={() => setEditors(prev => prev.map((ed,i) => i===index ? { ...ed, hasUnsavedChanges: true } : ed))}
-                                    />
-                                  </Box>
-                                )
-                              ))}
-                            </Box>
-
-                            {editor.aiResponse && (
-                              <Box sx={{ width: '50%', height: '100%', position: 'relative' }}>
-                                <IconButton
-                                  onClick={() => {
-                                    setEditors(prev => {
-                                      const updated = [...prev];
-                                      updated[index] = { ...updated[index], aiResponse: null };
-                                      return updated;
-                                    });
-                                  }}
-                                  sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
-                                >
-                                  <CloseIcon />
-                                </IconButton>
-                                <MDNotionEditor readOnly initialMarkdown={editor.aiResponse} />
-                              </Box>
-                            )}
-                          </Box>
-                        </Box>
-                      );
-                    }}
+                    data={editors}
+                    itemKey={(index, item) => item.record?.id || index}
+                    itemContent={(index, editor) => (
+                      <RecordEditor
+                        key={editor.record?.id || index}
+                        editor={editor}
+                        index={index}
+                        tableSurvey={tableSurvey}
+                        onCheck={(idx, checked) => dispatchEditors({ type: 'SET_CHECKED', index: idx, checked })}
+                        onSave={handleSaveSingle}
+                        onAIEnhance={handleAIEnhance}
+                        onGenerateImage={handleGenerateImage}
+                        onPostToSocials={handlePostRecordToSocials}
+                        dispatchEditors={dispatchEditors}
+                      />
+                    )}
                   />
                 </Box>
               </Box>
@@ -837,3 +605,5 @@ export default function JournalEditorDrawer() {
     </Box>
   );
 }
+
+JournalEditorDrawer.propTypes = {};
