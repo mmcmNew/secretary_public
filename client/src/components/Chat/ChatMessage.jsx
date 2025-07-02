@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { Card, TextField, CardHeader, CardMedia, CardContent, CardActions, CircularProgress, Alert } from '@mui/material';
+import { Card, TextField, CardHeader, CardContent, CardActions, CircularProgress, Alert } from '@mui/material';
+import Box from '@mui/material/Box';
 import { Avatar, IconButton, Typography, Icon, Collapse, Button } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { red } from '@mui/material/colors';
 import { styled } from '@mui/material/styles';
+import FileRenderer from '../FileRenderer';
 import useWebSocket from './hooks/useWebSocket';
 
 const ExpandMore = styled((props) => {
@@ -88,12 +90,9 @@ function ChatMessage({ message, message_time }) {
         subheader={message_time}
       />
       {files && (
-        <CardMedia
-          component="img"
-          height="194"
-          image={files}
-          alt="image"
-        />
+        <Box sx={{ mb: 1 }}>
+          <FileRenderer url={files} />
+        </Box>
       )}
       <CardContent>
         <Typography variant="body2" color="text.secondary">
