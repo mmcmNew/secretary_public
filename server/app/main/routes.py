@@ -115,18 +115,18 @@ def static_files(filename):
     # Получаем полный путь маршрута
     route = request.path
     # print(f'Requested route: {route}')
-    base_dir = os.getcwd()
+    base_dir = current_app.root_path
     # Устанавливаем базовую директорию на основе пути запроса
     if route.startswith('/avatars'):
-        base_dir = os.path.join(base_dir, 'app', 'user_data', 'static', 'avatars')
+        base_dir = os.path.join(base_dir, 'user_data', 'static', 'avatars')
     elif route.startswith('/static'):
-        base_dir = os.path.join(base_dir, 'app', 'user_data', 'static')
+        base_dir = os.path.join(base_dir, 'user_data', 'static')
     elif route.startswith('/sounds'):
-        base_dir = os.path.join(base_dir, 'app', 'user_data', 'static', 'sounds')
+        base_dir = os.path.join(base_dir, 'user_data', 'static', 'sounds')
     elif route.startswith('/memory'):
-        base_dir = os.path.join(base_dir, 'app', 'user_data', 'memory')
+        base_dir = os.path.join(base_dir, 'user_data', 'memory')
     elif route.startswith('/audio'):
-        base_dir = os.path.join(base_dir, 'app', 'user_data', 'static', 'audio')
+        base_dir = os.path.join(base_dir, 'user_data', 'static', 'audio')
 
     # print(f'static_files: Base directory: {base_dir}')
 
@@ -218,7 +218,7 @@ def api_current_user():
 
 @main.route('/temp/<path:filename>', methods=['GET'])
 def get_temp_files(filename):
-    base_dir = os.path.join(os.getcwd(), 'app', 'temp')
+    base_dir = os.path.join(current_app.root_path, 'app', 'temp')
     file_path = os.path.join(base_dir, filename)
     if not os.path.exists(file_path):
         if filename.startswith('edge_audio_'):
@@ -257,7 +257,7 @@ def get_scenario(name):
         scenario = create_daily_scenario()
         # print(f'get_scenario: my_day: {scenario}')
         return {"scenario": scenario}, 200
-    scenario_path = os.path.join(os.getcwd(), 'app', 'user_data', 'scenarios', f'{name}.json')
+    scenario_path = os.path.join(current_app.root_path, 'app', 'user_data', 'scenarios', f'{name}.json')
     # print(f'get_scenario: scenario_path: {scenario_path}')
     try:
         with open(scenario_path, 'r', encoding='utf-8') as file:
@@ -390,7 +390,6 @@ def handle_new_message(data):
     # current_app.logger.debug(f'Secretary answer: {secretary_answer}')
     if secretary_answer:
         message, status_code = save_message_to_base('2', secretary_answer.get('text'))
-        message['params'] = secretary_answer.get('params', None)
         message_emit(status_code, message)
     else:
         message, status_code = save_message_to_base('2', 'Уточните запрос')
@@ -627,7 +626,7 @@ def get_file():
     filename = request.args.get('filename')
     # print(f'get_file: {category}, {date_folder}, {filename}')
 
-    BASE_DIRECTORY = os.path.join(os.getcwd(), 'app', 'user_data', 'journals')
+    BASE_DIRECTORY = os.path.join(current_app.root_path, 'app', 'user_data', 'journals')
 
     # Построение пути к файлу
     file_path = os.path.join(BASE_DIRECTORY, category, date_folder, filename)
@@ -650,7 +649,7 @@ def get_journal_file():
     date_folder = request.args.get('date_folder')
     filename = request.args.get('filename')
 
-    base_dir = os.path.join(os.getcwd(), 'app', 'user_data', 'journals',
+    base_dir = os.path.join(current_app.root_path, 'app', 'user_data', 'journals',
                             category or '', date_folder or '')
     file_path = os.path.join(base_dir, filename)
     if not os.path.isfile(file_path):
