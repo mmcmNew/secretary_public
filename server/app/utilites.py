@@ -5,6 +5,7 @@ import sqlite3
 from datetime import datetime, timezone, timedelta
 
 from flask import current_app
+from flask_login import current_user
 from werkzeug.utils import secure_filename
 
 
@@ -94,6 +95,22 @@ def create_missing_journals(db_path):
             table_name = module_name
             table_info = module_data.get('info', [])
             create_table_if_not_exists(table_name, db_path, table_info)
+
+
+def create_user_directories(base_dir):
+    """Create per-user folders with empty database files."""
+    os.makedirs(base_dir, exist_ok=True)
+    os.makedirs(os.path.join(base_dir, 'db'), exist_ok=True)
+    os.makedirs(os.path.join(base_dir, 'journals'), exist_ok=True)
+    os.makedirs(os.path.join(base_dir, 'memory'), exist_ok=True)
+    os.makedirs(os.path.join(base_dir, 'static', 'avatars'), exist_ok=True)
+    os.makedirs(os.path.join(base_dir, 'static', 'audio'), exist_ok=True)
+    os.makedirs(os.path.join(base_dir, 'static', 'sounds'), exist_ok=True)
+
+    for name in ['main.db', 'to_do.db', 'appmeta.db']:
+        db_file = os.path.join(base_dir, 'db', name)
+        if not os.path.exists(db_file):
+            open(db_file, 'a').close()
 
 
 def parse_time(text):
@@ -250,7 +267,8 @@ def save_to_base_modules(target_module, command_type, message_info=None, files_l
     # current_app.logger.debug(f'save_to_base_modules: command_type: {command_type}, target_module: {target_module}')
     # Сохраняем файлы
     if files_list:
-        save_files_result, files_names = upload_files_to_server(files_list, target_module)
+        user_dir = current_user.data_dir if current_user.is_authenticated else None
+        save_files_result, files_names = upload_files_to_server(files_list, target_module, user_dir=user_dir)
         if files_names:
             # Формируем строку с новыми файлами, добавляя к существующим (если есть)
             new_files = ';'.join(files_names)
@@ -440,7 +458,7 @@ def update_record(table_name, record_dict):
 
 
 
-def upload_files_to_server(files_list, dir_name):
+def upload_files_to_server(files_list, dir_name, user_dir=None):
     files_names = []
     try:
         print(f'upload_files_to_server: files_list: {files_list}, dir_name: {dir_name}')
@@ -448,7 +466,8 @@ def upload_files_to_server(files_list, dir_name):
             return 'Не получены файлы для загрузки'
         if files_list:
             current_month = datetime.now().strftime('%Y-%m')
-            save_path = str(os.path.join(os.path.dirname(__file__), 'user_data', 'journals', dir_name, current_month))
+            base = user_dir or os.path.join(os.path.dirname(__file__), 'user_data')
+            save_path = str(os.path.join(base, 'journals', dir_name, current_month))
             os.makedirs(save_path, exist_ok=True)
             current_date = datetime.now().strftime("%Y-%m-%d")
             i = 0

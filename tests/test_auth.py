@@ -59,6 +59,9 @@ def test_register_success(client):
     assert resp.status_code == 201
     data = resp.get_json()
     assert data['user']['user_name'] == 'user1'
+    # verify user folder created
+    data_dir = data['user']['data_dir']
+    assert os.path.isdir(data_dir)
 
 
 def test_register_duplicate(client):

@@ -15,6 +15,7 @@ class User(UserMixin, db.Model):
     email = Column(String(255), unique=True)
     password_hash = Column(String(255))
     avatar_src = Column(Text)
+    data_dir = Column(Text)
 
     @property
     def id(self):
@@ -49,7 +50,8 @@ class User(UserMixin, db.Model):
             'id': self.user_id,
             'user_name': self.user_name,
             'email': self.email,
-            'avatar_src': self.avatar_src
+            'avatar_src': self.avatar_src,
+            'data_dir': self.data_dir
         }
 
 

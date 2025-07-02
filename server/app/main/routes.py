@@ -17,7 +17,9 @@ from sqlalchemy import or_
 from .models import *
 
 from app.secretary import answer_from_secretary
-from app.utilites import update_record, save_to_base, get_tables, save_to_base_modules, get_columns_names
+from app.utilites import (update_record, save_to_base, get_tables,
+                          save_to_base_modules, get_columns_names,
+                          create_user_directories, create_missing_journals)
 from app.text_to_edge_tts import generate_tts, del_all_audio_files
 from ..tasks.handlers import create_daily_scenario
 from app.get_records_utils import get_all_filters, fetch_filtered_records
@@ -116,17 +118,20 @@ def static_files(filename):
     route = request.path
     # print(f'Requested route: {route}')
     base_dir = current_app.root_path
+    user_base = os.path.join(base_dir, 'user_data')
+    if current_user.is_authenticated and current_user.data_dir:
+        user_base = current_user.data_dir
     # Устанавливаем базовую директорию на основе пути запроса
     if route.startswith('/avatars'):
-        base_dir = os.path.join(base_dir, 'user_data', 'static', 'avatars')
+        base_dir = os.path.join(user_base, 'static', 'avatars')
     elif route.startswith('/static'):
-        base_dir = os.path.join(base_dir, 'user_data', 'static')
+        base_dir = os.path.join(user_base, 'static')
     elif route.startswith('/sounds'):
-        base_dir = os.path.join(base_dir, 'user_data', 'static', 'sounds')
+        base_dir = os.path.join(user_base, 'static', 'sounds')
     elif route.startswith('/memory'):
-        base_dir = os.path.join(base_dir, 'user_data', 'memory')
+        base_dir = os.path.join(user_base, 'memory')
     elif route.startswith('/audio'):
-        base_dir = os.path.join(base_dir, 'user_data', 'static', 'audio')
+        base_dir = os.path.join(user_base, 'static', 'audio')
 
     # print(f'static_files: Base directory: {base_dir}')
 
@@ -199,6 +204,14 @@ def api_register():
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
+
+    # create personal directory after user_id is generated
+    user_dir = os.path.join(current_app.root_path, 'user_data', 'users', str(user.user_id))
+    create_user_directories(user_dir)
+    create_missing_journals(os.path.join(user_dir, 'db', 'main.db'))
+    user.data_dir = user_dir
+    db.session.commit()
+
     login_user(user)
     current_app.logger.info(f'REGISTER: user created: {username}, {email}')
     return jsonify({'user': user.to_dict()}), 201
@@ -650,8 +663,10 @@ def get_journal_file():
     date_folder = request.args.get('date_folder')
     filename = request.args.get('filename')
 
-    base_dir = os.path.join(current_app.root_path, 'user_data', 'journals',
-                            category or '', date_folder or '')
+    user_base = os.path.join(current_app.root_path, 'user_data')
+    if current_user.is_authenticated and current_user.data_dir:
+        user_base = current_user.data_dir
+    base_dir = os.path.join(user_base, 'journals', category or '', date_folder or '')
     file_path = os.path.join(base_dir, filename)
     # current_app.logger.debug(f'get_journal_file: {file_path}')
     if not os.path.isfile(file_path):
