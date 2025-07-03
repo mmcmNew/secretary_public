@@ -161,7 +161,9 @@ export default function CalendarLayout({
     try {
       await updateTask({ taskId: eventInfo.event.id, ...eventDict });
       if (setUpdates && typeof setUpdates === "function")
-        setUpdates((prevUpdates) => [...prevUpdates, "todo"]);
+        setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
+      if (fetchCalendarEvents && typeof fetchCalendarEvents === "function")
+        await fetchCalendarEvents();
       if (onSuccess) onSuccess('Событие обновлено');
     } catch (err) {
       console.error('Error updating event:', err);
