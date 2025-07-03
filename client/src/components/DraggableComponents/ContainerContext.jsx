@@ -137,7 +137,10 @@ const ContainerProvider = ({ children }) => {
         console.log("ContainerProvider: старт загрузки dashboard");
         const fetchDashboard = async () => {
             try {
-                const response = await fetch(`/dashboard/last`);
+                const token = localStorage.getItem('access_token');
+                const response = await fetch(`/dashboard/last`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
                 if (!response.ok) {
                     throw new Error("Network response was not ok");
                 }
@@ -171,10 +174,12 @@ const ContainerProvider = ({ children }) => {
         const sendingContainers = containers.filter((container) => container.type !== "timersToolbar");
         // console.log('[ContainerContext] Containers to send:', sendingContainers);
         try {
+            const token = localStorage.getItem('access_token');
             const response = await fetch("/dashboard", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 },
                 body: JSON.stringify({
                     dashboard_data: dashboardData,
@@ -276,10 +281,12 @@ const ContainerProvider = ({ children }) => {
 
     function sendTimersToServer(updatedTimers) {
         // отправляем таймеры на сервер
+        const token = localStorage.getItem('access_token');
         fetch("/post_timers", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
             },
             body: JSON.stringify({ dashboardId: dashboardData.id, timers: updatedTimers }),
         })

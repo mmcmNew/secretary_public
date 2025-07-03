@@ -1,7 +1,10 @@
 import React, { createContext, useCallback, useState, useEffect } from 'react';
 import axios from 'axios';
 
-axios.defaults.withCredentials = true;
+const storedToken = localStorage.getItem('access_token');
+if (storedToken) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+}
 
 function getCookie(name) {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
@@ -21,12 +24,16 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchCurrentUser = useCallback(async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setIsLoading(false);
+      setUser(null);
+      return null;
+    }
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     console.log('AuthContext: Checking user authentication...');
     try {
-      const { data } = await axios.get('/api/user', { 
-        withCredentials: true,
-        timeout: 5000 // 5 секунд таймаут
-      });
+      const { data } = await axios.get('/api/user', { timeout: 5000 });
       console.log('AuthContext: User authenticated:', data);
       setUser(data);
       setIsLoading(false);
@@ -47,10 +54,11 @@ export function AuthProvider({ children }) {
         { username, password },
         {
           headers: { 'X-CSRFToken': getCookie('csrf_token') },
-          withCredentials: true,
         },
       );
       console.log('LOGIN: response', data);
+      localStorage.setItem('access_token', data.access_token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
       setUser(data.user);
       return null;
     } catch (err) {
@@ -68,10 +76,11 @@ export function AuthProvider({ children }) {
         { username, email, password },
         {
           headers: { 'X-CSRFToken': getCookie('csrf_token') },
-          withCredentials: true,
         },
       );
       console.log('REGISTER: response', data);
+      localStorage.setItem('access_token', data.access_token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
       setUser(data.user);
       return null;
     } catch (err) {
@@ -83,8 +92,10 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
-      await axios.post('/api/logout', {}, { withCredentials: true });
+      await axios.post('/api/logout');
     } finally {
+      localStorage.removeItem('access_token');
+      delete axios.defaults.headers.common['Authorization'];
       setUser(null);
     }
   }, []);
