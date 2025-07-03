@@ -1,6 +1,7 @@
-import { createContext, useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { createContext, useState, useCallback, useMemo, useRef, useEffect, useContext } from "react";
 import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
+import { AuthContext } from '../../../contexts/AuthContext';
 
 const ListsContext = createContext();
 
@@ -86,9 +87,13 @@ export const ListsProvider = ({ children, onError, setLoading }) => {
     }
   }, [wsVersion, fetchLists, setVersion]);
 
+  const { user, isLoading } = useContext(AuthContext);
+
   useEffect(() => {
-    fetchLists();
-  }, []);
+    if (!isLoading && user) {
+      fetchLists();
+    }
+  }, [user, isLoading, fetchLists]);
 
   const contextValue = useMemo(() => ({
     lists,

@@ -1,12 +1,13 @@
-import { createContext, useState, useEffect, useReducer } from "react";
+import { createContext, useState, useEffect, useReducer, useContext } from "react";
 import PropTypes from "prop-types";
 import { containerTypes } from "./containerConfig";
+import { AuthContext } from '../../contexts/AuthContext';
 
 const ContainerContext = createContext();
 
 const ContainerProvider = ({ children }) => {
-    const dashboard_id = 0;
-    const [dashboardData, setDashboardData] = useState({ id: 0, name: "dashboard 1" });
+    const [dashboardId, setDashboardId] = useState(null);
+    const [dashboardData, setDashboardData] = useState({ id: null, name: "" });
     const [containers, setContainers] = useState([]);
     const [timers, setTimers] = useState([]);
     const [activeId, setActiveId] = useState(null);
@@ -129,36 +130,79 @@ const ContainerProvider = ({ children }) => {
         });
     };
 
-    // загрузка контейнеров с сервера
+    const { user, isLoading } = useContext(AuthContext);
+
+    // загрузка списка dashboard'ов и выбор последнего
     useEffect(() => {
-        console.log("ContainerProvider: старт загрузки dashboard");
-        const fetchDashboard = async () => {
-            try {
-                const response = await fetch(`/dashboard/${dashboard_id}`);
-                if (!response.ok) {
-                    throw new Error("Network response was not ok");
+        if (!isLoading && user) {
+            const fetchDashboards = async () => {
+                try {
+                    const response = await fetch('/dashboards');
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch dashboards");
+                    }
+                    const dashboards = await response.json();
+                    
+                    if (dashboards.length > 0) {
+                        // Берем последний dashboard или создаем новый
+                        const lastDashboard = dashboards[dashboards.length - 1];
+                        setDashboardId(lastDashboard.id);
+                    } else {
+                        // Создаем первый dashboard
+                        setDashboardId(0);
+                        setDashboardData({ id: 0, name: "dashboard 1" });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch dashboards:", error);
+                    // Fallback к dashboard 0
+                    setDashboardId(0);
+                    setDashboardData({ id: 0, name: "dashboard 1" });
                 }
-                const data = await response.json();
-                // console.log("ContainerProvider: dashboard загружен", data, Date.now() - (window.mainStart || 0), "мс с начала main.jsx");
-                setDashboardData({ id: data.id, name: data.name });
+            };
 
+            fetchDashboards();
+        }
+    }, [user, isLoading]);
 
-                const loadedTimers = data.timers || null;
-                setTimers(loadedTimers);
-                const loadedContainers = data.containers.map((containerData) =>
-                    createComponentFromType(containerData.type, containerData.id, containerData),
-                );
+    // загрузка конкретного dashboard
+    useEffect(() => {
+        if (dashboardId !== null) {
+            console.log("ContainerProvider: старт загрузки dashboard", dashboardId);
+            const fetchDashboard = async () => {
+                try {
+                    const response = await fetch(`/dashboard/${dashboardId}`);
+                    if (!response.ok) {
+                        // Если dashboard не найден, создаем интерфейс по умолчанию
+                        console.log("Dashboard не найден, создаем интерфейс по умолчанию");
+                        setDashboardData({ id: dashboardId, name: "dashboard 1" });
+                        setContainers([]);
+                        setTimers([]);
+                        setThemeMode("light");
+                        return;
+                    }
+                    const data = await response.json();
+                    setDashboardData({ id: data.id, name: data.name });
 
-                setContainers(loadedContainers);
-                // console.log("ContainerProvider: контейнеры установлены", loadedContainers, Date.now() - (window.mainStart || 0), "мс с начала main.jsx");
-                setThemeMode(data.themeMode);
-            } catch (error) {
-                console.error("Failed to fetch dashboard from server:", error);
-            }
-        };
+                    const loadedTimers = data.timers || [];
+                    setTimers(loadedTimers);
+                    const loadedContainers = (data.containers || []).map((containerData) =>
+                        createComponentFromType(containerData.type, containerData.id, containerData),
+                    );
 
-        fetchDashboard();
-    }, [dashboard_id]);
+                    setContainers(loadedContainers);
+                    setThemeMode(data.themeMode || "light");
+                } catch (error) {
+                    console.log("Ошибка загрузки dashboard, используем интерфейс по умолчанию:", error.message);
+                    setDashboardData({ id: dashboardId, name: "dashboard 1" });
+                    setContainers([]);
+                    setTimers([]);
+                    setThemeMode("light");
+                }
+            };
+
+            fetchDashboard();
+        }
+    }, [dashboardId]);
 
     const sendContainersToServer = async () => {
         // console.log('[ContainerContext] sendContainersToServer called');
@@ -271,13 +315,13 @@ const ContainerProvider = ({ children }) => {
 
     function sendTimersToServer(updatedTimers) {
         // отправляем таймеры на сервер
-        // console.log(updatedTimers);
+        if (dashboardId === null) return;
         fetch("/post_timers", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ dashboardId: 0, timers: updatedTimers }),
+            body: JSON.stringify({ dashboardId: dashboardId, timers: updatedTimers }),
         })
             .then((response) => response.json())
             .then((data) => console.log("Timers saved:", data.message))
@@ -296,6 +340,7 @@ const ContainerProvider = ({ children }) => {
         <ContainerContext.Provider
             value={{
                 windowOrder,
+                dashboardId,
                 dashboardData,
                 containers,
                 activeId,

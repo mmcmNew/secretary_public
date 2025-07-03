@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useState } from 'react';
+import React, { createContext, useCallback, useState, useEffect } from 'react';
 import axios from 'axios';
 
 axios.defaults.withCredentials = true;
@@ -18,6 +18,7 @@ export const AuthContext = createContext({
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchCurrentUser = useCallback(async () => {
     try {
@@ -25,8 +26,14 @@ export function AuthProvider({ children }) {
       setUser(data);
       return data;
     } catch (err) {
+      // Игнорируем ошибки авторизации (401, 404, 500)
+      if (err.response?.status === 404 || err.response?.status === 401 || err.response?.status === 500) {
+        // Пользователь не авторизован
+      }
       setUser(null);
       return null;
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -80,8 +87,13 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Проверяем авторизацию при загрузке
+  useEffect(() => {
+    fetchCurrentUser();
+  }, [fetchCurrentUser]);
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, fetchCurrentUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, fetchCurrentUser }}>
       {children}
     </AuthContext.Provider>
   );

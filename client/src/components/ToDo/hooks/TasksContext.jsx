@@ -1,7 +1,8 @@
-import { createContext, useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { createContext, useState, useCallback, useMemo, useRef, useEffect, useContext } from "react";
 import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 import useLists from './useLists';
+import { AuthContext } from '../../../contexts/AuthContext';
 
 const TasksContext = createContext();
 
@@ -116,9 +117,13 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     }
   }, []);
 
+  const { user, isLoading } = useContext(AuthContext);
+
   useEffect(() => {
-    fetchTaskFields();
-  }, [fetchTaskFields]);
+    if (!isLoading && user) {
+      fetchTaskFields();
+    }
+  }, [fetchTaskFields, user, isLoading]);
 
   const { tasksVersion: wsVersion } = useUpdateWebSocket();
 

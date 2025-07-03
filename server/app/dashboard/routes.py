@@ -42,6 +42,12 @@ def update_dashboard():
     return jsonify({"message": "Dashboard updated successfully"})
 
 
+@dashboard.route('/dashboards', methods=['GET'])
+@login_required
+def get_dashboards():
+    dashboards = Dashboard.query.filter_by(user_id=current_user.id).all()
+    return jsonify([{'id': d.id, 'name': d.name} for d in dashboards])
+
 @dashboard.route('/dashboard/<int:dashboard_id>', methods=['GET'])
 @login_required
 def get_dashboard(dashboard_id):
