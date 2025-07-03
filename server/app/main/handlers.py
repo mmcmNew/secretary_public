@@ -13,16 +13,21 @@ def fetch_table_records(table_name, date_str, timezone_offset_ms):
     date_obj = datetime.strptime(date_str[:10], '%Y-%m-%d')
 
     if timezone_offset_ms:
-        timezone_offset = timedelta(milliseconds=int(timezone_offset_ms))
+        # Преобразуем миллисекунды в минуты
+        timezone_offset_minutes = int(timezone_offset_ms) // 60000
+        timezone_offset = timedelta(minutes=timezone_offset_minutes)
     else:
-        timezone_offset = datetime.now().astimezone().utcoffset() * -1
+        timezone_offset = timedelta(0)
 
     local_start = datetime.combine(date_obj, datetime.min.time())
     local_end = datetime.combine(date_obj, datetime.max.time())
-    utc_start = local_start + timezone_offset
-    utc_end = local_end + timezone_offset
+    utc_start = local_start - timezone_offset
+    utc_end = local_end - timezone_offset
 
     if modules.get(table_name, {}).get('type') == 'journal':
+        current_app.logger.debug(f'fetch_table_records: table={table_name}, date={date_str}, tz_offset_ms={timezone_offset_ms}')
+        current_app.logger.debug(f'fetch_table_records: utc_start={utc_start}, utc_end={utc_end}, user_id={current_user.id}')
+        
         entries = (
             JournalEntry.query
             .filter(JournalEntry.journal_type == table_name,
@@ -31,6 +36,8 @@ def fetch_table_records(table_name, date_str, timezone_offset_ms):
                     JournalEntry.created_at <= utc_end)
             .all()
         )
+        
+        current_app.logger.debug(f'fetch_table_records: found {len(entries)} entries')
         records = []
         for e in entries:
             data = e.data or {}
