@@ -581,7 +581,6 @@ def get_days_route():
 
         start_date_utc = start_date - timedelta(minutes=client_timezone_offset)
         end_date_utc = end_date - timedelta(minutes=client_timezone_offset)
-
         modules = get_modules()
         days = []
         unique_dates_set = set()
