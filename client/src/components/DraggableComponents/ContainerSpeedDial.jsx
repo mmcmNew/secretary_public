@@ -14,9 +14,9 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import useContainer from "./useContainer";
 
 const actions = [
-    { icon: <TimerIcon />, name: "Timers", type: "timersToolbar" },
+    // { icon: <TimerIcon />, name: "Timers", type: "timersToolbar" },
     { icon: <MetronomeIcon />, name: "Metronome", type: "metronome" },
-    { icon: <ChatIcon />, name: "Chat", type: "chatCollapsed" },
+    // { icon: <ChatIcon />, name: "Chat", type: "chatCollapsed" },
     { icon: <ChecklistIcon />, name: "tasks", type: "tasks" },
     { icon: <EditCalendarIcon />, name: "calendar", type: "calendar" },
     { icon: <SdStorageIcon />, name: "Memory", type: "memory" },
@@ -24,7 +24,7 @@ const actions = [
     { icon: <TableViewIcon />, name: "SecretaryGIF", type: "SecretaryGIF" },
     { icon: <EditNoteIcon />, name: "JournalEditor", type: "JournalEditorDrawer" },
     { icon: <AccessTimeIcon />, name: "AntiSchedule", type: "AntiSchedule" },
-    { icon: <ChecklistIcon />, name: "ToDo", type: "tasksTree" },
+    // { icon: <ChecklistIcon />, name: "ToDo", type: "tasksTree" },
 ];
 function ContainerSpeedDial() {
     const { addContainer } = useContainer();
