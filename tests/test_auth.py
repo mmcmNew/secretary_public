@@ -42,21 +42,30 @@ def client(app):
 
 
 def register(client, username="user1", email="user1@example.com", password="Password1"):
-    return client.post('/api/register', json={
+    resp = client.post('/api/register', json={
         'username': username,
         'email': email,
         'password': password
     })
+    if resp.status_code == 201:
+        token = resp.get_json()['access_token']
+        client.environ_base['HTTP_AUTHORIZATION'] = f'Bearer {token}'
+    return resp
 
 
 def login(client, username="user1", password="Password1"):
-    return client.post('/api/login', json={
+    resp = client.post('/api/login', json={
         'username': username,
         'password': password
     })
+    if resp.status_code == 200:
+        token = resp.get_json()['access_token']
+        client.environ_base['HTTP_AUTHORIZATION'] = f'Bearer {token}'
+    return resp
 
 
 def logout(client):
+    client.environ_base.pop('HTTP_AUTHORIZATION', None)
     return client.post('/api/logout')
 
 

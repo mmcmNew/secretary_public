@@ -1,5 +1,4 @@
 from app import db
-from flask_login import UserMixin
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Text
 from flask import current_app
@@ -7,7 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 
 # Модель для таблицы users
-class User(UserMixin, db.Model):
+class User(db.Model):
     __bind_key__ = 'users'
     __tablename__ = 'users'  # Название таблицы в нижнем регистре
     user_id = Column(Integer, primary_key=True)

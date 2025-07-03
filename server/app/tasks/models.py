@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from dateutil.rrule import rrule, rruleset, WEEKLY, DAILY, MONTHLY, YEARLY, MO, TU, WE, TH, FR
 from flask import current_app
-from flask_login import current_user
+from flask_jwt_extended import current_user
 from sqlalchemy.orm import joinedload
 import hashlib
 import json
