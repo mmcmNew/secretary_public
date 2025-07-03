@@ -47,6 +47,9 @@ export default function ListsList({
   const [dropMenuAnchorEl, setDropMenuAnchorEl] = useState(null);
   const [droppedTask, setDroppedTask] = useState(null);
   const [dropTargetListId, setDropTargetListId] = useState(null);
+  const [listDropMenuAnchorEl, setListDropMenuAnchorEl] = useState(null);
+  const [droppedListItem, setDroppedListItem] = useState(null);
+  const [listDropTargetId, setListDropTargetId] = useState(null);
   const inputRef = useRef(null);
   const { fetchTasks } = useTasks();
   const { fetchLists: fetchListsHook, updateList } = useLists();
@@ -246,6 +249,14 @@ export default function ListsList({
     setAnchorEl(null);
   }
 
+  function findParentId(id) {
+    const grp = listsList.find(g => Array.isArray(g.childes_order) && g.childes_order.includes(id));
+    if (grp) return grp.id;
+    const proj = projects?.find(p => Array.isArray(p.childes_order) && p.childes_order.includes(id));
+    if (proj) return proj.id;
+    return null;
+  }
+
   function handleTaskDrop(event, listId) {
     event.preventDefault();
     const taskData = event.dataTransfer.getData('task');
@@ -264,10 +275,9 @@ export default function ListsList({
     const listData = event.dataTransfer.getData('list');
     if (!listData) return;
     const dropped = JSON.parse(listData);
-    if (typeof linkListGroup === 'function') {
-      await linkListGroup({source_id: dropped.id, target_id: targetId});
-      if (typeof updateAll === 'function') await updateAll();
-    }
+    setDroppedListItem(dropped);
+    setListDropTargetId(targetId);
+    setListDropMenuAnchorEl(event.currentTarget);
   }
 
   async function handleDropAction(action) {
@@ -286,6 +296,27 @@ export default function ListsList({
     setDropMenuAnchorEl(null);
     setDroppedTask(null);
     setDropTargetListId(null);
+  }
+
+  async function handleListDropAction(action) {
+    if (!droppedListItem) return;
+    if (typeof linkListGroup === 'function') {
+      await linkListGroup({ source_id: droppedListItem.id, target_id: listDropTargetId });
+    }
+    if (action === 'move' && typeof deleteFromChildes === 'function') {
+      const parent = findParentId(droppedListItem.id);
+      if (parent) {
+        await deleteFromChildes({ source_id: droppedListItem.id, group_id: parent });
+      }
+    }
+    if (typeof updateAll === 'function') await updateAll();
+    handleCloseListDropMenu();
+  }
+
+  function handleCloseListDropMenu() {
+    setListDropMenuAnchorEl(null);
+    setDroppedListItem(null);
+    setListDropTargetId(null);
   }
 
   function handleDragEnd(event) {
@@ -418,6 +449,15 @@ export default function ListsList({
       >
         <MenuItem onClick={() => handleDropAction('link')}>Связать</MenuItem>
         <MenuItem onClick={() => handleDropAction('move')}>Переместить</MenuItem>
+      </Menu>
+
+      <Menu
+        anchorEl={listDropMenuAnchorEl}
+        open={Boolean(listDropMenuAnchorEl)}
+        onClose={handleCloseListDropMenu}
+      >
+        <MenuItem onClick={() => handleListDropAction('link')}>Связать</MenuItem>
+        <MenuItem onClick={() => handleListDropAction('move')}>Переместить</MenuItem>
       </Menu>
     </>
   );

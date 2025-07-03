@@ -8,7 +8,8 @@ import {
   LinearProgress,
 } from '@mui/material';
 import {
-  FormatListBulleted
+  FormatListBulleted,
+  DragIndicator
 } from '@mui/icons-material';
 import CheckIcon from '@mui/icons-material/Check';
 import PropTypes from 'prop-types';
@@ -58,14 +59,21 @@ export default function ListItem({
       key={`div_${item.id}`}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => onTaskDrop && onTaskDrop(e, item.id)}
-      draggable={isDraggable}
-      onDragStart={(e) => onDragStart && onDragStart(e, item)}
     >
       <ListItemButton
         selected={isSelected}
         onClick={onSelect}
         onContextMenu={onContextMenu}
       >
+        {isDraggable && (
+          <ListItemIcon
+            sx={{ minWidth: 24, cursor: 'grab' }}
+            draggable
+            onDragStart={(e) => onDragStart && onDragStart(e, item)}
+          >
+            <DragIndicator />
+          </ListItemIcon>
+        )}
         <ListItemIcon sx={{ minWidth: 35 }}>
           <FormatListBulleted />
         </ListItemIcon>
