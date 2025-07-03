@@ -15,6 +15,7 @@ class User(UserMixin, db.Model):
     email = Column(String(255), unique=True)
     password_hash = Column(String(255))
     avatar_src = Column(Text)
+    last_dashboard_id = Column(Integer)
 
     @property
     def id(self):
@@ -36,9 +37,9 @@ class User(UserMixin, db.Model):
 
         # Проверяем, есть ли пользователи уже в базе данных
         if not User.query.all():  # если база пуста
-            admin = User(user_name="admin", email="admin@example.com", avatar_src="me.png")
+            admin = User(user_name="admin", email="admin@example.com", avatar_src="me.png", last_dashboard_id=0)
             admin.set_password("password")
-            secretary = User(user_name="Secretary", avatar_src="secretary.png")
+            secretary = User(user_name="Secretary", avatar_src="secretary.png", last_dashboard_id=0)
             db.session.add(admin)
             db.session.add(secretary)
             db.session.commit()
@@ -49,7 +50,8 @@ class User(UserMixin, db.Model):
             'id': self.user_id,
             'user_name': self.user_name,
             'email': self.email,
-            'avatar_src': self.avatar_src
+            'avatar_src': self.avatar_src,
+            'last_dashboard_id': self.last_dashboard_id,
         }
 
 

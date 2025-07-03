@@ -1,11 +1,12 @@
-import { createContext, useState, useEffect, useReducer } from "react";
+import { createContext, useState, useEffect, useReducer, useContext } from "react";
 import PropTypes from "prop-types";
 import { containerTypes } from "./containerConfig";
+import { AuthContext } from "../../contexts/AuthContext.jsx";
 
 const ContainerContext = createContext();
 
 const ContainerProvider = ({ children }) => {
-    const dashboard_id = 0;
+    const { user } = useContext(AuthContext);
     const [dashboardData, setDashboardData] = useState({ id: 0, name: "dashboard 1" });
     const [containers, setContainers] = useState([]);
     const [timers, setTimers] = useState([]);
@@ -131,10 +132,11 @@ const ContainerProvider = ({ children }) => {
 
     // загрузка контейнеров с сервера
     useEffect(() => {
+        if (!user) return;
         console.log("ContainerProvider: старт загрузки dashboard");
         const fetchDashboard = async () => {
             try {
-                const response = await fetch(`/dashboard/${dashboard_id}`);
+                const response = await fetch(`/dashboard/last`);
                 if (!response.ok) {
                     throw new Error("Network response was not ok");
                 }
@@ -158,7 +160,7 @@ const ContainerProvider = ({ children }) => {
         };
 
         fetchDashboard();
-    }, [dashboard_id]);
+    }, [user]);
 
     const sendContainersToServer = async () => {
         // console.log('[ContainerContext] sendContainersToServer called');
@@ -277,7 +279,7 @@ const ContainerProvider = ({ children }) => {
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ dashboardId: 0, timers: updatedTimers }),
+            body: JSON.stringify({ dashboardId: dashboardData.id, timers: updatedTimers }),
         })
             .then((response) => response.json())
             .then((data) => console.log("Timers saved:", data.message))
