@@ -1,2 +1,4 @@
 *logs
 *journals/
+!server/app/journals/
+!server/app/journals/**

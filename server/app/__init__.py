@@ -73,6 +73,8 @@ def create_app(config_type='work'):
         app.register_blueprint(tasks_blueprint)
         from .dashboard import dashboard as dashboard_blueprint
         app.register_blueprint(dashboard_blueprint)
+        from .journals import journals as journals_blueprint
+        app.register_blueprint(journals_blueprint, url_prefix='/api/journals')
         from .twitch import twitchAPI as twitch_blueprint
         app.register_blueprint(twitch_blueprint)
         from .ai_routes import ai_routes as ai_blueprint
@@ -100,9 +102,6 @@ def create_app(config_type='work'):
         from app.tasks.models import Interval
         Interval.add_initial_intervals()
 
-        db_path = app.config.get('MAIN_DB_PATH', '')
-        from app.utilites import create_missing_journals
-        create_missing_journals(db_path)
 
         # Отдаем index.html и статику
         @app.route('/', defaults={'path': ''})

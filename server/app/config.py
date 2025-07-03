@@ -19,14 +19,19 @@ class BaseConfig:
     ERROR_LOGGING_LOCATION = os.path.join('logs', f'error_{current_date}.log')
 
     app_dir_name = os.path.dirname(__file__)
-    MAIN_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'main.db')
-    to_do_db_path = os.path.join(app_dir_name, 'user_data', 'db', 'to_do.db')
-    appmeta_db_path = os.path.join(app_dir_name, 'user_data', 'db', 'appmeta.db')
+    USERS_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'users.db')
+    PRODUCTIVITY_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'productivity.db')
+    CONTENT_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'content.db')
+    WORKSPACE_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'workspace.db')
+    COMMUNICATION_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'communication.db')
+    MAIN_DB_PATH = CONTENT_DB_PATH  # Backwards compatibility
 
-    SQLALCHEMY_DATABASE_URI = f"sqlite:///{to_do_db_path}"
+    SQLALCHEMY_DATABASE_URI = f"sqlite:///{PRODUCTIVITY_DB_PATH}"
     SQLALCHEMY_BINDS = {
-        'main': f"sqlite:///{MAIN_DB_PATH}",
-        'app_session_meta': f"sqlite:///{appmeta_db_path}",
+        'users': f"sqlite:///{USERS_DB_PATH}",
+        'content': f"sqlite:///{CONTENT_DB_PATH}",
+        'workspace': f"sqlite:///{WORKSPACE_DB_PATH}",
+        'communication': f"sqlite:///{COMMUNICATION_DB_PATH}",
     }
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {

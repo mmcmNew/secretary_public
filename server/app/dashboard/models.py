@@ -6,7 +6,7 @@ import json
 
 # Модель для таблицы users
 class Dashboard(db.Model):
-    __bind_key__ = 'app_session_meta'
+    __bind_key__ = 'workspace'
     __tablename__ = 'dashboard'  # Название таблицы в нижнем регистре
     id = Column(Integer, primary_key=True)
     name = Column(Text)
