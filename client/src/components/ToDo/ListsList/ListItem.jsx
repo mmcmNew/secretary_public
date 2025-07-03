@@ -8,12 +8,11 @@ import {
   LinearProgress,
 } from '@mui/material';
 import {
-  FormatListBulleted,
-  DragIndicator
+  FormatListBulleted
 } from '@mui/icons-material';
 import CheckIcon from '@mui/icons-material/Check';
 import PropTypes from 'prop-types';
-import { useDroppable } from '@dnd-kit/core';
+
 
 export default function ListItem({
   item,
@@ -35,14 +34,7 @@ export default function ListItem({
   onDragStart
 }) {
 
-  const { setNodeRef, isOver } = useDroppable({
-    id: item.id,
-  });
 
-  // Optional: Add visual feedback when an item is dragged over
-  const droppableStyle = {
-    backgroundColor: isOver ? '#e0e0e0' : 'transparent',
-  };
 
   let progress = 0;
   if (showProgress) {
@@ -53,27 +45,12 @@ export default function ListItem({
   }
 
   const listItemContent = (
-    <div
-      ref={setNodeRef}
-      style={droppableStyle}
-      key={`div_${item.id}`}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => onTaskDrop && onTaskDrop(e, item.id)}
-    >
+    <div key={`div_${item.id}`}>
       <ListItemButton
         selected={isSelected}
         onClick={onSelect}
         onContextMenu={onContextMenu}
       >
-        {isDraggable && (
-          <ListItemIcon
-            sx={{ minWidth: 24, cursor: 'grab' }}
-            draggable
-            onDragStart={(e) => onDragStart && onDragStart(e, item)}
-          >
-            <DragIndicator />
-          </ListItemIcon>
-        )}
         <ListItemIcon sx={{ minWidth: 35 }}>
           <FormatListBulleted />
         </ListItemIcon>
@@ -109,11 +86,7 @@ export default function ListItem({
     </div>
   );
 
-  return isDraggable ? (
-    <div key={item.id}>
-      {listItemContent}
-    </div>
-  ) : listItemContent;
+  return listItemContent;
 }
 
 ListItem.propTypes = {

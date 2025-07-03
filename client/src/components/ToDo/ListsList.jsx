@@ -9,7 +9,7 @@ import {
 import PropTypes from 'prop-types';
 import ListsSection from './ListsList/ListsSection';
 import ContextMenu from './ListsList/ContextMenu';
-import { DndContext } from '@dnd-kit/core';
+
 import useTasks from './hooks/useTasks';
 import useLists from './hooks/useLists';
 import useCalendar from './hooks/useCalendar';
@@ -319,16 +319,12 @@ export default function ListsList({
     setListDropTargetId(null);
   }
 
-  function handleDragEnd(event) {
-    console.log('Drag ended', event);
-    // TODO: Implement drag and drop logic here
-  }
+
 
 
   return (
     <>
       <Button variant="outlined" onClick={handleUpdateAll} sx={{ mb: 1 }}>Обновить</Button>
-      <DndContext onDragEnd={handleDragEnd}>
         <Box sx={{
           height: 'calc(100% - 50px)', // Вычитаем высоту кнопки
           overflowY: 'auto'
@@ -399,7 +395,6 @@ export default function ListsList({
           onListDrop={handleListDrop}
         />
         </Box>
-      </DndContext>
       <ContextMenu
         anchorEl={anchorEl}
         item={listsList?.find(item => item.id === targetItemId) || projects?.find(item => item.id === targetItemId)}

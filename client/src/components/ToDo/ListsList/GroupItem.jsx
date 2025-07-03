@@ -13,8 +13,7 @@ import {
   AccountTree as AccountTreeIcon,
   ExpandLess,
   ExpandMore,
-  FormatListBulleted,
-  DragIndicator
+  FormatListBulleted
 } from '@mui/icons-material';
 import FilterNoneIcon from '@mui/icons-material/FilterNone';
 import CheckIcon from '@mui/icons-material/Check';
@@ -48,25 +47,11 @@ export default function GroupItem({
   }
 
   const groupItemContent = (
-    <div
-      key={item.id}
-      style={{ left: "auto !important", top: "auto !important" }}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => onListDrop && onListDrop(e, item.id)}
-    >
+    <div key={item.id}>
       <ListItemButton
         onClick={onToggle}
         onContextMenu={onContextMenu}
       >
-        {isDraggable && (
-          <ListItemIcon
-            sx={{ minWidth: 24, cursor: 'grab' }}
-            draggable
-            onDragStart={(e) => onDragStart && onDragStart(e, item)}
-          >
-            <DragIndicator />
-          </ListItemIcon>
-        )}
         <ListItemIcon sx={{ minWidth: 35 }}>
           {item.type === 'project' ? <AccountTreeIcon /> : <FilterNoneIcon />}
         </ListItemIcon>
@@ -98,7 +83,7 @@ export default function GroupItem({
       <Collapse in={isOpen} timeout="auto" unmountOnExit>
         <List component="nav" sx={{ ml: 1.5 }}>
           {item.childes_order.map((childId) => {
-            const child = childrenLists.find((child) => child.id === childId);
+            const child = childrenLists?.find((child) => child?.id === childId);
             if (child) {
               return child.type === 'group'
                 ? renderGroupItem(child)

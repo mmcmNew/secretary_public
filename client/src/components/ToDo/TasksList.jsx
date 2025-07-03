@@ -385,7 +385,11 @@ export default function TasksList({
                         const rootProjects = projects.filter(item => !item.deleted);
                         const elements = [];
                         let menuIndex = 0;
+                        const visited = new Set();
                         const traverse = (item, depth = 0) => {
+                            if (visited.has(item.id) || depth > 10) return; // Предотвращаем циклы и слишком глубокую вложенность
+                            visited.add(item.id);
+                            
                             if (item.type === 'project' || item.type === 'group') {
                                 elements.push(
                                     <MenuItem key={menuIndex++} disabled sx={{ pl: depth * 2 }} data-id={item.id}>
@@ -394,7 +398,9 @@ export default function TasksList({
                                 );
                                 (item.childes_order || []).forEach(childId => {
                                     const child = itemsMap.get(childId);
-                                    if (child) traverse(child, depth + 1);
+                                    if (child && !visited.has(childId)) {
+                                        traverse(child, depth + 1);
+                                    }
                                 });
                             } else if (item.type === 'list') {
                                 const currentIndex = menuIndex++;
