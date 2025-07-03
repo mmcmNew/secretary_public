@@ -21,7 +21,7 @@ import SettingsDialog from "./SettingsDialog";
 export default function Calendar() {
     const { updateTask, addTask, fetchTasks, taskFields, addSubTask, changeTaskStatus, deleteTask } = useTasks();
     const { lists, updateList, deleteFromChildes, linkListGroup } = useLists();
-    const { calendarEvents } = useCalendar();
+    const { calendarEvents, fetchCalendarEvents } = useCalendar();
     const { setUpdates } = useContainer();
     const calendarRef = useRef(null);
     const draggableEl = useRef(null);
@@ -333,7 +333,9 @@ export default function Calendar() {
 
         // console.log('eventDict', eventDict);
         await updateTask(eventInfo.event.id, eventDict);
-        setUpdates((prevUpdates) => [...prevUpdates, "todo"]);
+        setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
+        if (fetchTasks) await fetchTasks(selectedListId);
+        if (fetchCalendarEvents) await fetchCalendarEvents();
     }
 
     const handleSettingsDialogOpen = () => setSettingsDialogOpen(true);
