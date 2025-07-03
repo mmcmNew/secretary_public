@@ -111,7 +111,7 @@ export default function ListsList({
   function handleDeleteFromChildes(elementId, groupId) {
     setAnchorEl(null);
     if (typeof deleteFromChildes === 'function') {
-      deleteFromChildes(elementId, groupId);
+      deleteFromChildes({source_id: elementId, group_id: groupId});
     }
   }
 
@@ -146,8 +146,8 @@ export default function ListsList({
 
       // Обновляем элементы на сервере
       if (typeof updateList === 'function') {
-        await updateList(elementId, {order: newOrder});
-        await updateList(replacedElement.id, {order: oldOrder});
+        await updateList({listId: elementId, order: newOrder});
+        await updateList({listId: replacedElement.id, order: oldOrder});
       }
       if (typeof updateAll === 'function') {
         await updateAll();
@@ -181,7 +181,7 @@ export default function ListsList({
     }
 
     // Сохраняем изменения в childes_order
-    updateList(targetGroup.id, {childes_order: targetGroup.childes_order});
+    updateList({listId: targetGroup.id, childes_order: targetGroup.childes_order});
   }
 
   async function handleAction(targetId) {
@@ -193,15 +193,15 @@ export default function ListsList({
     handleCloseMenu();
     if (actionType === 'move') {
       if (typeof linkListGroup === 'function') {
-        await linkListGroup(targetItemId, targetId);
+        await linkListGroup({source_id: targetItemId, target_id: targetId});
       }
       if (typeof deleteFromChildes === 'function') {
-        await deleteFromChildes(targetItemId, targetGroupId)
+        await deleteFromChildes({source_id: targetItemId, group_id: targetGroupId})
       }
       console.log(`Перемещаем элемент с id ${targetItemId} в ${targetId} и удаляем из ${targetGroupId}`);
     } else if (actionType === 'link') {
       if (typeof linkListGroup === 'function'){
-        linkListGroup(targetItemId, targetId);
+        linkListGroup({source_id: targetItemId, target_id: targetId});
       }
       console.log(`Связываем элемент с id ${targetItemId} с ${targetId}`);
     }
@@ -228,21 +228,21 @@ export default function ListsList({
   function handleKeyDown(event) {
     if (event.key === 'Enter') {
       event.preventDefault();
-      updateList(editingItemId, { title: editingTitle });
+      updateList({listId: editingItemId, title: editingTitle});
       setEditingItemId(null);
       inputRef.current = null;
     }
   }
 
   function handleBlur() {
-    updateList(editingItemId, { title: editingTitle });
+    updateList({listId: editingItemId, title: editingTitle});
     setEditingItemId(null);
     // сбросить ref
     inputRef.current = null;
   }
 
   function handleAddToGeneralList(itemId) {
-    updateList(itemId, { inGeneralList: 1 });
+    updateList({listId: itemId, inGeneralList: 1});
     setAnchorEl(null);
   }
 
@@ -265,7 +265,7 @@ export default function ListsList({
     if (!listData) return;
     const dropped = JSON.parse(listData);
     if (typeof linkListGroup === 'function') {
-      await linkListGroup(dropped.id, targetId);
+      await linkListGroup({source_id: dropped.id, target_id: targetId});
       if (typeof updateAll === 'function') await updateAll();
     }
   }

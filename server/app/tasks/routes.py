@@ -49,6 +49,9 @@ def add_task_route():
 @login_required
 def edit_list_route():
     data = request.get_json()
+    if not isinstance(data, dict):
+        current_app.logger.error(f'edit_list_route: Invalid data type: {type(data)}, data: {data}')
+        return jsonify({'success': False, 'message': 'Invalid JSON data'}), 400
     result, status_code = edit_list(data)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')

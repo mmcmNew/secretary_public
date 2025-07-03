@@ -159,9 +159,14 @@ def get_tasks(list_id, client_timezone=0):
 
 
 def add_object(data):
-    object_title = data.get('title', '')
     object_type = data.get('type', '')
     object_order = data.get('order', -1)
+    
+    # Устанавливаем дефолтные названия если title пустой
+    object_title = data.get('title', '').strip()
+    if not object_title:
+        default_names = {'list': 'Новый список', 'group': 'Новая группа', 'project': 'Новый проект'}
+        object_title = default_names.get(object_type, 'Новый объект')
 
     user_id = current_user.id
     match object_type:
@@ -231,6 +236,9 @@ def add_task(data):
 
 def edit_list(data):
     current_app.logger.info(f'edit_list: data: {data}')
+    if not isinstance(data, dict):
+        current_app.logger.error(f'edit_list: Expected dict, got {type(data)}: {data}')
+        return {'success': False, 'message': 'Invalid data format'}, 400
     list_id = data.get('listId', None)
     if not list_id:
         return {'success': False, 'message': 'Недостаточно данных для редактирования списка'}, 404
