@@ -4,6 +4,7 @@ import os
 import asyncio
 import random
 import time
+import threading
 
 import edge_tts
 from flask import current_app
@@ -32,11 +33,28 @@ def generate_tts(text, record_id=None):
         else:
             speed_str = f"{speed}%"
         t0 = time.time()
-        asyncio.run(
-            edge_tts.Communicate(
-                tts_text, "-".join(tts_voice.split("-")[:-1]), rate=speed_str
-            ).save(edge_output_filename)
-        )
+        
+        # Запускаем TTS в отдельном потоке чтобы избежать конфликтов с Flask
+        def run_tts():
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(
+                    edge_tts.Communicate(
+                        tts_text, "-".join(tts_voice.split("-")[:-1]), rate=speed_str
+                    ).save(edge_output_filename)
+                )
+            finally:
+                loop.close()
+        
+        thread = threading.Thread(target=run_tts)
+        thread.start()
+        thread.join(timeout=30)  # 30 секунд таймаут
+        
+        if thread.is_alive():
+            current_app.logger.error('TTS generation timeout')
+            return 'TTS generation timeout'
+            
         t1 = time.time()
         edge_time = t1 - t0
         current_app.logger.info(f'edge_tts: Time: {edge_time}')
