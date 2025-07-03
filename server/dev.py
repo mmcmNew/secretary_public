@@ -17,11 +17,14 @@ if __name__ == '__main__':
     cert_path = os.path.join(base_dir, 'localhost.pem')
     key_path = os.path.join(base_dir, 'localhost-key.pem')
 
-    print(f"Server running at: https://localhost:{port} or https://<your-IP>:{port}")
+    print(f"Development server running at: https://localhost:{port}")
+    print("Hot reload enabled - server will restart on file changes")
+    
     socketio.run(app,
                 host=host,
                 port=port,
                 debug=True,
                 use_reloader=True,
+                reloader_options={'extra_files': None},
                 certfile=cert_path,
                 keyfile=key_path)
