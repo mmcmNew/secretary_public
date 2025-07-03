@@ -2,17 +2,19 @@
 from flask import current_app, jsonify
 
 from .models import *
+from flask_login import current_user
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 # from dateutil.relativedelta import relativedelta
 
 
 def get_lists_and_groups_data(client_timezone=0):
-    groups_list = Group.query.all()
-    lists_list = List.query.filter().all()
-    projects_list = Project.query.all()
+    user_id = current_user.id
+    groups_list = Group.query.filter_by(user_id=user_id).all()
+    lists_list = List.query.filter_by(user_id=user_id).all()
+    projects_list = Project.query.filter_by(user_id=user_id).all()
 
-    tasks = Task.query.options(db.joinedload(Task.lists)).all()
+    tasks = Task.query.options(db.joinedload(Task.lists)).filter_by(user_id=user_id).all()
     tasks_map = {task.id: task for task in tasks}
 
     client_timezone = int(client_timezone)
@@ -99,6 +101,7 @@ def get_lists_and_groups_data(client_timezone=0):
 def get_tasks(list_id, client_timezone=0):
     # start_time = datetime.now(timezone.utc)
     tasks_data = []
+    user_id = current_user.id
     client_timezone = int(client_timezone)
     seen_tasks = set()  # Множество для отслеживания уникальных идентификаторов задач
     load_options = [db.joinedload(Task.lists),
@@ -111,23 +114,23 @@ def get_tasks(list_id, client_timezone=0):
 
     match list_id:
         case 'my_day':
-            tasks_query = Task.get_myday_tasks(client_timezone)
+            tasks_query = [t for t in Task.get_myday_tasks(client_timezone) if t.user_id == user_id]
         case 'tasks':
-            tasks_query = Task.query.options(*load_options).filter(~Task.lists.any()).all()
+            tasks_query = Task.query.options(*load_options).filter(~Task.lists.any(), Task.user_id == user_id).all()
         case 'important':
-            tasks_query = Task.query.options(*load_options).filter(Task.priority_id == 3).all()
+            tasks_query = Task.query.options(*load_options).filter(Task.priority_id == 3, Task.user_id == user_id).all()
         case 'background':
-            tasks_query = Task.query.options(*load_options).filter(Task.is_background).all()
+            tasks_query = Task.query.options(*load_options).filter(Task.is_background, Task.user_id == user_id).all()
         case 'all':
-            tasks_query = Task.query.options(*load_options).all()
+            tasks_query = Task.query.options(*load_options).filter_by(user_id=user_id).all()
         case 'events':
-            tasks_query = Task.query.options(*load_options).all()
+            tasks_query = Task.query.options(*load_options).filter_by(user_id=user_id).all()
         case _:
             tasks_query = (
                 Task.query
                 .join(task_list_relations, Task.id == task_list_relations.c.TaskID)
                 .join(List, List.id == task_list_relations.c.ListID)
-                .filter(List.id == list_id)
+                .filter(List.id == list_id, Task.user_id == user_id)
                 .options(*load_options)
                 .all()
             )
@@ -160,13 +163,14 @@ def add_object(data):
     object_type = data.get('type', '')
     object_order = data.get('order', -1)
 
+    user_id = current_user.id
     match object_type:
         case 'list':
-            new_object = List(title=object_title, order=object_order)
+            new_object = List(title=object_title, order=object_order, user_id=user_id)
         case 'group':
-            new_object = Group(title=object_title, order=object_order)
+            new_object = Group(title=object_title, order=object_order, user_id=user_id)
         case 'project':
-            new_object = Project(title=object_title, order=object_order)
+            new_object = Project(title=object_title, order=object_order, user_id=user_id)
         case _:
             return {'success': False, 'message': 'Неизвестный тип объекта'}, 404
 
@@ -201,8 +205,8 @@ def add_task(data):
 
     if list_id:
         new_task = Task(title=task_title, deadline=deadline, start=start, priority_id=priority_id,
-                        is_background=is_background)
-        task_list = List.query.get(list_id)
+                        is_background=is_background, user_id=current_user.id)
+        task_list = List.query.filter_by(id=list_id, user_id=current_user.id).first()
 
         db.session.add(new_task)
 
@@ -260,13 +264,13 @@ def add_subtask(data):
     parent_task_id = data.get('parentTaskId', None)
 
     if parent_task_id:
-        parent_task = Task.query.get(parent_task_id)
+        parent_task = Task.query.filter_by(id=parent_task_id, user_id=current_user.id).first()
         if not parent_task:
             return {'success': False, 'message': 'Родительская задача не найдена'}, 404
 
-        new_task = Task(title=task_title)
+        new_task = Task(title=task_title, user_id=current_user.id)
         if list_id:
-            task_list = List.query.get(list_id)
+            task_list = List.query.filter_by(id=list_id, user_id=current_user.id).first()
             if task_list:
                 new_task.lists.append(task_list)
 
@@ -366,7 +370,7 @@ def collect_all_subtasks(root_task):
 
 
 def get_anti_schedule():
-    anti_schedule = AntiTask.get_anti_schedule()
+    anti_schedule = AntiTask.get_anti_schedule(current_user.id)
     return {'anti_schedule': anti_schedule}, 200
 
 
@@ -381,7 +385,7 @@ def add_anti_task(data):
     if start and end and title:
         start = datetime.fromisoformat(start)
         end = datetime.fromisoformat(end)
-        anti_task = AntiTask(title=title, start=start, end=end)
+        anti_task = AntiTask(title=title, start=start, end=end, user_id=current_user.id)
         for key, value in updated_fields.items():
             if hasattr(anti_task, key):
                 setattr(anti_task, key, value)
