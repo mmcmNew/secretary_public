@@ -9,60 +9,40 @@ import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognitio
 import FilesListComponent from '../Chat/FilesList';
 
 
-async function sendNewRecord(table_name, record_info, sendingFiles) {
-    const timeZone = new Date().getTimezoneOffset();
-    let sendResult = null;
-    const url = '/post_new_record';
-    const formData = new FormData();
-    formData.append('table_name', table_name);
-    formData.append('time_zone', timeZone);
-    formData.append('record_info', JSON.stringify(record_info));
-    sendingFiles.forEach((file, index) => {
-        formData.append(`files[${index}]`, file);
-    });
+async function sendNewRecord(table_name, record_info) {
+    const url = `/api/journals/${table_name}`;
     try {
         const response = await fetch(url, {
             method: 'POST',
-            body: formData,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(record_info),
         });
         if (!response.ok) {
             throw new Error('Ошибка при отправке новой записи на сервер');
         }
-        const data = await response.json();
-        sendResult = data;
-        console.log('Запись добавлена успешно');
+        return await response.json();
     } catch (error) {
         console.error('Ошибка при создании записи:', error);
+        return null;
     }
-    return sendResult;
 }
 
-async function updateRecord(table_name, record_info, sendingFiles) {
-    const timeZone = new Date().getTimezoneOffset();
-    let sendResult = null;
-    const url = '/post_edited_record_api';
-    const formData = new FormData();
-    formData.append('table_name', table_name);
-    formData.append('time_zone', timeZone);
-    formData.append('record_info', JSON.stringify(record_info));
-    sendingFiles.forEach((file, index) => {
-        formData.append(`files[${index}]`, file);
-    });
+async function updateRecord(table_name, record_info) {
+    const url = `/api/journals/${table_name}/${record_info.id}`;
     try {
         const response = await fetch(url, {
-            method: 'POST',
-            body: formData,
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(record_info),
         });
         if (!response.ok) {
-        throw new Error('Ошибка при отправке обновленной записи на сервер');
+            throw new Error('Ошибка при отправке обновленной записи на сервер');
         }
-        const data = await response.json();
-        sendResult = data;
-        console.log('Запись обновлена успешно');
+        return await response.json();
     } catch (error) {
         console.error('Ошибка при обновлении записи:', error);
+        return null;
     }
-    return sendResult;
 }
 
 
@@ -163,9 +143,9 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
         let result = null;
         try {
             if (updatedParams.id) {
-                result = await updateRecord(survey.table_name, updatedParams, files);
+                result = await updateRecord(survey.table_name, updatedParams);
             } else {
-                result = await sendNewRecord(survey.table_name, updatedParams, files);
+                result = await sendNewRecord(survey.table_name, updatedParams);
             }
             if (!result) {
                 throw new Error('Ошибка при отправке');
