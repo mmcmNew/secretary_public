@@ -23,7 +23,14 @@ from sqlalchemy import or_
 from .models import *
 
 from app.secretary import answer_from_secretary
-from app.utilites import update_record, save_to_base, get_tables, save_to_base_modules, get_columns_names
+from app.utilites import (
+    update_record,
+    save_to_base,
+    get_tables,
+    save_to_base_modules,
+    get_columns_names,
+    get_modules,
+)
 from app.text_to_edge_tts import generate_tts, del_all_audio_files
 from ..tasks.handlers import create_daily_scenario
 from app.get_records_utils import get_all_filters, fetch_filtered_records
@@ -517,20 +524,12 @@ def get_tables_route():
     return jsonify({'tables': tables}), 200
 
 
-def get_table_survey(table_name, conn):
+def get_table_survey(table_name, conn=None):
     columns_names = get_columns_names()
-    cursor = conn.cursor()
+    modules = get_modules()
 
-    # Получаем список столбцов из таблицы
-    cursor.execute(f"PRAGMA table_info({table_name})")
-    table_info = cursor.fetchall()
-
-    # Проверка на существование таблицы
-    if not table_info:
-        return jsonify({'error': f"Table '{table_name}' does not exist."}), 400
-
-    # Формируем список полей из таблицы
-    columns = [col[1] for col in table_info]  # col[1] это имя столбца в таблице
+    module_cfg = modules.get(table_name, {})
+    columns = module_cfg.get('info', [])
 
     # Формируем структуру для JSON-ответа
     action = {
@@ -628,7 +627,7 @@ def get_days_route():
 
             # current_app.logger.debug(f'get_days: {unique_dates_set}')
             unique_dates = sorted(list(unique_dates_set))
-            survey = get_table_survey(table_name, connection)
+            survey = get_table_survey(table_name)
             # current_app.logger.debug(f'get_days: survey: {survey}')
 
     except Exception as e:
