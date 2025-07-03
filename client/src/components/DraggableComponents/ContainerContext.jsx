@@ -1,13 +1,13 @@
 import { createContext, useState, useEffect, useReducer, useContext } from "react";
 import PropTypes from "prop-types";
 import { containerTypes } from "./containerConfig";
-import { AuthContext } from '../../contexts/AuthContext';
+import { AuthContext } from "../../contexts/AuthContext.jsx";
 
 const ContainerContext = createContext();
 
 const ContainerProvider = ({ children }) => {
-    const [dashboardId, setDashboardId] = useState(null);
-    const [dashboardData, setDashboardData] = useState({ id: null, name: "" });
+    const { user } = useContext(AuthContext);
+    const [dashboardData, setDashboardData] = useState({ id: 0, name: "dashboard 1" });
     const [containers, setContainers] = useState([]);
     const [timers, setTimers] = useState([]);
     const [activeId, setActiveId] = useState(null);
@@ -134,54 +134,17 @@ const ContainerProvider = ({ children }) => {
 
     // загрузка списка dashboard'ов и выбор последнего
     useEffect(() => {
-        if (!isLoading && user) {
-            const fetchDashboards = async () => {
-                try {
-                    const response = await fetch('/dashboards');
-                    if (!response.ok) {
-                        throw new Error("Failed to fetch dashboards");
-                    }
-                    const dashboards = await response.json();
-                    
-                    if (dashboards.length > 0) {
-                        // Берем последний dashboard или создаем новый
-                        const lastDashboard = dashboards[dashboards.length - 1];
-                        setDashboardId(lastDashboard.id);
-                    } else {
-                        // Создаем первый dashboard
-                        setDashboardId(0);
-                        setDashboardData({ id: 0, name: "dashboard 1" });
-                    }
-                } catch (error) {
-                    console.error("Failed to fetch dashboards:", error);
-                    // Fallback к dashboard 0
-                    setDashboardId(0);
-                    setDashboardData({ id: 0, name: "dashboard 1" });
+        if (!user) return;
+        console.log("ContainerProvider: старт загрузки dashboard");
+        const fetchDashboard = async () => {
+            try {
+                const response = await fetch(`/dashboard/last`);
+                if (!response.ok) {
+                    throw new Error("Network response was not ok");
                 }
-            };
-
-            fetchDashboards();
-        }
-    }, [user, isLoading]);
-
-    // загрузка конкретного dashboard
-    useEffect(() => {
-        if (dashboardId !== null) {
-            console.log("ContainerProvider: старт загрузки dashboard", dashboardId);
-            const fetchDashboard = async () => {
-                try {
-                    const response = await fetch(`/dashboard/${dashboardId}`);
-                    if (!response.ok) {
-                        // Если dashboard не найден, создаем интерфейс по умолчанию
-                        console.log("Dashboard не найден, создаем интерфейс по умолчанию");
-                        setDashboardData({ id: dashboardId, name: "dashboard 1" });
-                        setContainers([]);
-                        setTimers([]);
-                        setThemeMode("light");
-                        return;
-                    }
-                    const data = await response.json();
-                    setDashboardData({ id: data.id, name: data.name });
+                const data = await response.json();
+                // console.log("ContainerProvider: dashboard загружен", data, Date.now() - (window.mainStart || 0), "мс с начала main.jsx");
+                setDashboardData({ id: data.id, name: data.name });
 
                     const loadedTimers = data.timers || [];
                     setTimers(loadedTimers);
@@ -200,9 +163,8 @@ const ContainerProvider = ({ children }) => {
                 }
             };
 
-            fetchDashboard();
-        }
-    }, [dashboardId]);
+        fetchDashboard();
+    }, [user]);
 
     const sendContainersToServer = async () => {
         // console.log('[ContainerContext] sendContainersToServer called');
@@ -321,7 +283,7 @@ const ContainerProvider = ({ children }) => {
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ dashboardId: dashboardId, timers: updatedTimers }),
+            body: JSON.stringify({ dashboardId: dashboardData.id, timers: updatedTimers }),
         })
             .then((response) => response.json())
             .then((data) => console.log("Timers saved:", data.message))
