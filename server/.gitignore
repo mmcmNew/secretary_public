@@ -17,3 +17,4 @@
 *journals/
 !app/journals/
 !app/journals/**
+**/__pycache__/
