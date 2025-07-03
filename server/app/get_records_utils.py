@@ -1,28 +1,39 @@
 import sqlite3
 from flask import current_app, jsonify
+from flask_login import current_user
 from app.utilites import get_modules
+from app.journals.models import JournalEntry
+from app import db
 
 
 def get_records_by_ids(table_name, records_ids):
-    db_path = current_app.config.get('MAIN_DB_PATH', '')
-
     if not records_ids or not table_name:
         return []
 
+    modules = get_modules()
+    if modules.get(table_name, {}).get('type') == 'journal':
+        try:
+            entries = (JournalEntry.query
+                       .filter(JournalEntry.journal_type == table_name,
+                               JournalEntry.id.in_(records_ids),
+                               JournalEntry.user_id == current_user.id)
+                       .all())
+            return [{**(e.data or {}), 'id': e.id} for e in entries]
+        except Exception as e:
+            current_app.logger.error(f"Ошибка при получении записей по ID: {e}")
+            return []
+
+    # fallback to legacy tables
+    db_path = current_app.config.get('MAIN_DB_PATH', '')
     try:
         with sqlite3.connect(db_path) as connection:
-            connection.row_factory = sqlite3.Row  # Это позволит возвращать строки как словари
+            connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
-
             placeholders = ','.join('?' for _ in records_ids)
-            sql = f"""
-                SELECT * FROM {table_name}
-                WHERE id IN ({placeholders})
-            """
+            sql = f"SELECT * FROM {table_name} WHERE id IN ({placeholders})"
             cursor.execute(sql, records_ids)
             rows = cursor.fetchall()
-
-            return [dict(row) for row in rows]  # Возвращаем список словарей
+            return [dict(row) for row in rows]
     except Exception as e:
         current_app.logger.error(f"Ошибка при получении записей по ID: {e}")
         return []
@@ -34,61 +45,59 @@ def fetch_filtered_records(table_name, filters):
         raise ValueError("Invalid table name")
 
     module_config = modules[table_name].get('filter_config', {})
-    date_fields = module_config.get('date', []) + ['date']
+    date_fields = module_config.get('date', [])
     range_fields = module_config.get('range', [])
     dropdowns = module_config.get('dropdown', [])
     text_fields = module_config.get('text', [])
 
-    db_path = current_app.config.get('MAIN_DB_PATH')
-
-    with sqlite3.connect(db_path) as conn:
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
-
-        sql = f"SELECT * FROM {table_name} WHERE 1=1"
-        params = []
+    entries = JournalEntry.query.filter_by(user_id=current_user.id, journal_type=table_name).all()
+    records = []
+    for entry in entries:
+        data = entry.data or {}
+        record = {**data, 'id': entry.id, 'created_at': entry.created_at.isoformat()}
+        include = True
 
         for field in date_fields:
             from_key = f"{field}_from"
             to_key = f"{field}_to"
-            if filters.get(from_key):
-                sql += f" AND {field} >= ?"
-                params.append(filters[from_key])
-            if filters.get(to_key):
-                sql += f" AND {field} <= ?"
-                params.append(filters[to_key])
+            val = record.get(field)
+            if filters.get(from_key) and (not val or val < filters[from_key]):
+                include = False
+            if filters.get(to_key) and (not val or val > filters[to_key]):
+                include = False
 
         for field in range_fields:
             min_key = f"{field}_min"
             max_key = f"{field}_max"
-            if filters.get(min_key) not in [None, '']:
-                sql += f" AND {field} >= ?"
-                params.append(filters[min_key])
-            if filters.get(max_key) not in [None, '']:
-                sql += f" AND {field} <= ?"
-                params.append(filters[max_key])
+            val = record.get(field)
+            try:
+                val_f = float(val)
+            except (TypeError, ValueError):
+                val_f = None
+            if val_f is not None:
+                if filters.get(min_key) not in [None, ''] and val_f < float(filters[min_key]):
+                    include = False
+                if filters.get(max_key) not in [None, ''] and val_f > float(filters[max_key]):
+                    include = False
 
         for field in dropdowns:
             vals = filters.get(field)
-            if isinstance(vals, (list, tuple)) and vals:
-                placeholders = ",".join("?" for _ in vals)
-                sql += f" AND {field} IN ({placeholders})"
-                params.extend(vals)
+            if vals:
+                if isinstance(vals, str):
+                    vals = [vals]
+                if record.get(field) not in vals:
+                    include = False
 
         for field in text_fields:
-            val = filters.get(field)
-            if val:
-                sql += f" AND {field} LIKE ?"
-                params.append(f"%{val}%")
+            val_filter = filters.get(field)
+            if val_filter and val_filter not in (record.get(field) or ''):
+                include = False
 
-        # current_app.logger.info(f'Filtered SQL: {sql} with {params}')
-        cur.execute(sql, params)
-        records = cur.fetchall()
-        columns = [desc[0] for desc in cur.description]
-        current_app.logger.info(f'fetch_filtered_records: Fetched {len(records)} records')
-        # current_app.logger.info(f'Columns: {columns}')
-        # current_app.logger.info(f'First record: {records[0] if records else None}')
-        return records, columns
+        if include:
+            records.append(record)
+
+    columns = sorted({key for rec in records for key in rec.keys()})
+    return records, columns
 
 
 def get_all_filters(table_name):
@@ -105,49 +114,41 @@ def get_all_filters(table_name):
     modules = get_modules()
     config = modules.get(table_name, {}).get('filter_config', {})
     dropdown_fields = config.get('dropdown', [])
-    db_path = current_app.config['MAIN_DB_PATH']
-
     result = {}
     try:
-        with sqlite3.connect(db_path) as conn:
-            cur = conn.cursor()
-            for col in dropdown_fields:
-                # собираем и «разворачиваем» строки через запятую
-                cur.execute(f"SELECT {col} FROM {table_name} WHERE {col} IS NOT NULL")
-                rows = cur.fetchall()
-                values = set()
-                for (raw,) in rows:
-                    if isinstance(raw, str):
-                        parts = [item.strip() for item in raw.split(',') if item.strip()]
-                        values.update(parts)
-                    else:
-                        values.add(str(raw))
-                result[col] = sorted(values)
-        # current_app.logger.info(f'get_all_filters: {result}')
+        entries = JournalEntry.query.filter_by(user_id=current_user.id, journal_type=table_name).all()
+        for col in dropdown_fields:
+            values = set()
+            for e in entries:
+                raw = (e.data or {}).get(col)
+                if raw is None:
+                    continue
+                if isinstance(raw, str):
+                    parts = [item.strip() for item in raw.split(',') if item.strip()]
+                    values.update(parts)
+                else:
+                    values.add(str(raw))
+            result[col] = sorted(values)
         return jsonify(result), 200
 
-    except sqlite3.Error as e:
+    except Exception as e:
         current_app.logger.error(f'Ошибка при получении фильтров: {e}')
         return jsonify({"error": str(e)}), 500
 
 
 def get_posts_with_records():
     try:
-        db_path = current_app.config.get('MAIN_DB_PATH', '')
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            SELECT title, records_ids FROM posts_journal
-            WHERE records_ids IS NOT NULL AND records_ids != '[]'
-        """)
-
-        return cursor.fetchall()
+        entries = JournalEntry.query.filter(
+            JournalEntry.journal_type == 'posts_journal',
+            JournalEntry.user_id == current_user.id
+        ).all()
+        result = []
+        for e in entries:
+            data = e.data or {}
+            if data.get('records_ids') not in [None, '[]', '']:
+                result.append({'title': data.get('title'), 'records_ids': data.get('records_ids')})
+        return result
 
     except Exception as e:
         current_app.logger.error(f'Ошибка при получении постов с записями: {e}')
         return []
-    finally:
-        if conn:
-            conn.close()
