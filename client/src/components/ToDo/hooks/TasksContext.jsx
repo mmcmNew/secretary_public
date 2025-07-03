@@ -8,7 +8,10 @@ const TasksContext = createContext();
 
 // API Helper
 const api = async (url, method = 'GET', body = null) => {
-  const options = { method, headers: { "Content-Type": "application/json" } };
+  const token = localStorage.getItem('access_token');
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const options = { method, headers };
   if (body) options.body = JSON.stringify(body);
   const response = await fetch(url, options);
   if (!response.ok) throw new Error(`Failed to fetch ${url}, status ${response.status}`);
