@@ -18,7 +18,25 @@ export default function ContextMenu({
 
   const isList = item?.type === 'list';
   const isGroup = item?.type === 'group';
-  const isProject = projects?.find(project => project.id === item?.id);
+  const isProject = item?.type === 'project';
+
+  const handleAction = (action) => {
+    action();
+    onClose();
+  };
+
+  const renderCommonItems = () => [
+    <MenuItem key="rename" onClick={() => handleAction(() => onEditClick(item.id))}>
+      Переименовать
+    </MenuItem>,
+    <Divider key="divider" />,
+    <MenuItem key="moveUp" onClick={() => handleAction(() => onChangeChildesOrder(item.id, 'up', groupId))}>
+      Переместить выше
+    </MenuItem>,
+    <MenuItem key="moveDown" onClick={() => handleAction(() => onChangeChildesOrder(item.id, 'down', groupId))}>
+      Переместить ниже
+    </MenuItem>
+  ];
 
   return (
     <Menu
@@ -26,142 +44,58 @@ export default function ContextMenu({
       open={Boolean(anchorEl)}
       onClose={onClose}
     >
-      {item && isList && (
-        [
-          <MenuItem key="rename" onClick={() => {
-            onEditClick(item.id);
-            onClose();
-          }}>Переименовать</MenuItem>,
-          <MenuItem
-            key="moveToGroup"
-            onClick={(event) => {
-              onOpenGroupMenu(event, 'move');
-              onClose();
-            }}
-          >
-            Переместить в группу
-          </MenuItem>,
-          <MenuItem
-            key="linkToGroup"
-            onClick={(event) => {
-              onOpenGroupMenu(event, 'link');
-              onClose();
-            }}
-          >
-            Связать с группой
-          </MenuItem>,
-          <MenuItem
-            key="moveToProject"
-            onClick={(event) => {
-              onOpenProjectMenu(event, 'move');
-              onClose();
-            }}
-          >
-            Переместить в проект
-          </MenuItem>,
-          <MenuItem
-            key="linkToProject"
-            onClick={(event) => {
-              onOpenProjectMenu(event, 'link');
-              onClose();
-            }}
-          >
-            Связать с проектом
-          </MenuItem>,
-          <Divider key="divider1" />,
-          <MenuItem key="moveUp"
-            onClick={() => {
-              onChangeChildesOrder(item.id, 'up', groupId);
-              onClose();
-            }}>
-            Переместить выше</MenuItem>,
-          <MenuItem key="moveDown"
-            onClick={() => {
-              onChangeChildesOrder(item.id, 'down', groupId);
-              onClose();
-            }}>
-            Переместить ниже</MenuItem>,
-          <MenuItem key="toggleInList"
-            onClick={() => {
-              onDeleteFromChildes(item.id, groupId);
-              onClose();
-            }}>
-            Удалить из этой группы
-          </MenuItem>
-        ]
-      )}
+      {item && isList && [
+        ...renderCommonItems(),
+        <MenuItem key="moveToGroup" onClick={(e) => handleAction(() => onOpenGroupMenu(e, 'move'))}>
+          Переместить в группу
+        </MenuItem>,
+        <MenuItem key="linkToGroup" onClick={(e) => handleAction(() => onOpenGroupMenu(e, 'link'))}>
+          Связать с группой
+        </MenuItem>,
+        <MenuItem key="moveToProject" onClick={(e) => handleAction(() => onOpenProjectMenu(e, 'move'))}>
+          Переместить в проект
+        </MenuItem>,
+        <MenuItem key="linkToProject" onClick={(e) => handleAction(() => onOpenProjectMenu(e, 'link'))}>
+          Связать с проектом
+        </MenuItem>,
+        <Divider key="divider2" />,
+        <MenuItem key="deleteFromGroup" onClick={() => handleAction(() => onDeleteFromChildes(item.id, groupId))}>
+          Удалить из этой группы
+        </MenuItem>
+      ]}
 
-      {item && isGroup && (
-        [
-          <MenuItem key="rename" onClick={() => {
-            onEditClick(item.id);
-            onClose();
-          }}>Переименовать</MenuItem>,
-          <MenuItem key="moveToProject"
-            onClick={(event) => {
-              onOpenProjectMenu(event, 'move');
-              onClose();
-            }}>
-            Переместить в проект
-          </MenuItem>,
-          <MenuItem key="linkToProject"
-            onClick={(event) => {
-              onOpenProjectMenu(event, 'link');
-              onClose();
-            }}>
-            Связать с проектом
-          </MenuItem>,
-          <Divider key="divider2" />,
-          <MenuItem key="moveUp"
-            onClick={() => {
-              onChangeChildesOrder(item.id, 'up', groupId);
-              onClose();
-            }}>
-            Переместить выше</MenuItem>,
-          <MenuItem key="moveDown"
-            onClick={() => {
-              onChangeChildesOrder(item.id, 'down', groupId);
-              onClose();
-            }}>
-            Переместить ниже</MenuItem>,
-          <MenuItem key="toggleInList" onClick={() => {
-            onDeleteFromChildes(item.id, groupId);
-            onClose();
-          }}>
-            Удалить из этой группы
-          </MenuItem>
-        ]
-      )}
+      {item && isGroup && [
+        ...renderCommonItems(),
+        <MenuItem key="moveToProject" onClick={(e) => handleAction(() => onOpenProjectMenu(e, 'move'))}>
+          Переместить в проект
+        </MenuItem>,
+        <MenuItem key="linkToProject" onClick={(e) => handleAction(() => onOpenProjectMenu(e, 'link'))}>
+          Связать с проектом
+        </MenuItem>,
+        <Divider key="divider3" />,
+        <MenuItem key="deleteFromGroup" onClick={() => handleAction(() => onDeleteFromChildes(item.id, groupId))}>
+          Удалить из этой группы
+        </MenuItem>
+      ]}
 
-      {item && !item.inGeneralList && !isProject && (
-        [
-          <MenuItem key="ingenetallist" onClick={() => {
-            onAddToGeneralList(item.id);
-            onClose();
-          }}>Добавить в основной список</MenuItem>,
-        ]
-      )}
+      {item && !item.inGeneralList && !isList && !isGroup && !isProject && [
+        <MenuItem key="addToGeneral" onClick={() => handleAction(() => onAddToGeneralList(item.id))}>
+          Добавить в основной список
+        </MenuItem>
+      ]}
 
-      {item && isProject && (
-        [
-          <MenuItem key="rename" onClick={() => {
-            onEditClick(item.id);
-            onClose();
-          }}>Переименовать</MenuItem>,
-          <MenuItem key="moveUp"
-            onClick={() => {
-              onChangeChildesOrder(item.id, 'up'); // Projects don't have a groupId for ordering within their own list
-              onClose();
-            }}>
-            Переместить выше</MenuItem>,
-          <MenuItem key="moveDown"
-            onClick={() => {
-              onChangeChildesOrder(item.id, 'down'); // Projects don't have a groupId for ordering within their own list
-              onClose();
-            }}>
-            Переместить ниже</MenuItem>
-        ]
-      )}
+      {item && isProject && [
+        <MenuItem key="rename" onClick={() => handleAction(() => onEditClick(item.id))}>
+          Переименовать
+        </MenuItem>,
+        <Divider key="divider" />,
+        <MenuItem key="moveUp" onClick={() => handleAction(() => onChangeChildesOrder(item.id, 'up'))}>
+          Переместить выше
+        </MenuItem>,
+        <MenuItem key="moveDown" onClick={() => handleAction(() => onChangeChildesOrder(item.id, 'down'))}>
+          Переместить ниже
+        </MenuItem>
+      ]}
 
     </Menu>
   );
