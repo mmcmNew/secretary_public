@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from dateutil.rrule import rrule, rruleset, WEEKLY, DAILY, MONTHLY, YEARLY, MO, TU, WE, TH, FR
 from flask import current_app
+from flask_login import current_user
 from sqlalchemy.orm import joinedload
 import hashlib
 import json
@@ -8,6 +9,7 @@ import random
 import uuid
 
 from app import db
+from app.main.models import User
 
 # Вспомогательные таблицы для связи между задачами и подзадачами
 task_subtasks_relations = db.Table('task_subtasks_relations',
@@ -178,6 +180,7 @@ class Status(db.Model):
 class Project(db.Model):
     __tablename__ = 'projects'
     id = db.Column('ProjectID', db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, nullable=False)
     title = db.Column('ProjectName', db.String(255))
     order = db.Column('Order', db.Integer, default=-1)
     childes_order = db.Column('Childes', db.JSON, default=[])
@@ -225,6 +228,7 @@ class Project(db.Model):
 class Group(db.Model):
     __tablename__ = 'groups'
     id = db.Column('GroupID', db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, nullable=False)
     title = db.Column('GroupName', db.String(255))
     order = db.Column('Order', db.Integer, default=-1)
     childes_order = db.Column('ChildesOrder', db.JSON, default=[])
@@ -267,6 +271,7 @@ class Group(db.Model):
 class List(db.Model):
     __tablename__ = 'lists'
     id = db.Column('ListID', db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, nullable=False)
     title = db.Column('ListName', db.String(255))
     order = db.Column('Order', db.Integer, default=-1)
     childes_order = db.Column('ChildesOrder', db.JSON, default=[])
@@ -348,6 +353,7 @@ class TaskTypes(db.Model):
 class Task(db.Model):
     __tablename__ = 'tasks'
     id = db.Column('TaskID', db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, nullable=False)
     title = db.Column('Title', db.String(255))
     start = db.Column('Start', db.DateTime)
     deadline = db.Column('Deadline', db.DateTime)
@@ -454,9 +460,14 @@ class Task(db.Model):
         return rule
 
     @staticmethod
-    def get_myday_tasks(client_timezone=0):
+    def get_myday_tasks(client_timezone=0, user_id=None):
         """Получает задачи на 'Мой день', включая повторяющиеся события."""
         client_timezone = int(client_timezone) * -1
+        if user_id is None:
+            try:
+                user_id = current_user.id
+            except Exception:
+                user_id = None
 
         today_local = datetime.now(timezone.utc) + timedelta(minutes=client_timezone)
         start_of_day = datetime.combine(today_local, datetime.min.time()) - timedelta(minutes=client_timezone)
@@ -475,17 +486,23 @@ class Task(db.Model):
         ]
 
         # Фильтруем задачи, которые начинаются сегодня (без учета повторений)
-        tasks = Task.query.options(*load_options).filter(
+        tasks_query = Task.query.options(*load_options).filter(
             Task.start >= start_of_day,
             Task.start < end_of_day,
-        ).all()
+        )
+        if user_id is not None:
+            tasks_query = tasks_query.filter_by(user_id=user_id)
+        tasks = tasks_query.all()
 
         # Получаем все задачи с интервалом (повторяющиеся)
-        recurring_tasks = Task.query.options(*load_options).filter(
+        recurring_query = Task.query.options(*load_options).filter(
             Task.interval_id.isnot(None),  # Установлен интервал
             Task.start.isnot(None),  # Установлена дата начала
             Task.status_id != 2  # Только невыполненные задачи
-        ).all()
+        )
+        if user_id is not None:
+            recurring_query = recurring_query.filter_by(user_id=user_id)
+        recurring_tasks = recurring_query.all()
 
         # Обрабатываем повторяющиеся задачи
         for task in recurring_tasks:
@@ -541,6 +558,7 @@ class Task(db.Model):
 class AntiTask(db.Model):
     __tablename__ = 'anti_schedule'
     id = db.Column('AntiTaskID', db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, nullable=False)
     task_id = db.Column('TaskID', db.Integer, db.ForeignKey('tasks.TaskID'))
     title = db.Column('Title', db.String(255))
     start = db.Column('Start', db.DateTime)
@@ -578,8 +596,16 @@ class AntiTask(db.Model):
         return task_dict
 
     @staticmethod
-    def get_anti_schedule():
-        anti_tasks = AntiTask.query.all()
+    def get_anti_schedule(user_id=None):
+        if user_id is None:
+            try:
+                user_id = current_user.id
+            except Exception:
+                user_id = None
+        query = AntiTask.query
+        if user_id is not None:
+            query = query.filter_by(user_id=user_id)
+        anti_tasks = query.all()
         schedule = [task.to_dict() for task in anti_tasks]
 
         return schedule

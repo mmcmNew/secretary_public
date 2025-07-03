@@ -1,4 +1,5 @@
 from app import db
+from app.main.models import User
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Text
 import json
@@ -9,6 +10,7 @@ class Dashboard(db.Model):
     __bind_key__ = 'workspace'
     __tablename__ = 'dashboard'  # Название таблицы в нижнем регистре
     id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)
     name = Column(Text)
     containers = db.Column(db.JSON)
     timers = db.Column(db.JSON)

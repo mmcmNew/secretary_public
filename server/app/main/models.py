@@ -84,4 +84,5 @@ class Quote(db.Model):
     __bind_key__ = 'communication'
     __tablename__ = 'quotes'  # Название таблицы в нижнем регистре
     quote_id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)
     quote = Column(String(255))  # Использование String вместо Text для коротких строковых полей
