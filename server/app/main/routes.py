@@ -13,8 +13,10 @@ from flask import Response, current_app, abort, render_template, make_response
 from flask import request, jsonify, send_from_directory, send_file
 from flask_jwt_extended import (
     create_access_token,
+    create_refresh_token,
     jwt_required,
-    current_user
+    current_user,
+    get_jwt_identity
 )
 from werkzeug.security import check_password_hash
 from sqlalchemy import or_
@@ -165,8 +167,13 @@ def api_login():
         return jsonify({'error': 'Incorrect password'}), 401
 
     access_token = create_access_token(identity=str(user.user_id))
+    refresh_token = create_refresh_token(identity=str(user.user_id))
     current_app.logger.info(f'LOGIN: success for user: {username}')
-    return jsonify({'user': user.to_dict(), 'access_token': access_token}), 200
+    return jsonify({
+        'user': user.to_dict(), 
+        'access_token': access_token,
+        'refresh_token': refresh_token
+    }), 200
 
 
 @main.route('/api/register', methods=['POST'])
@@ -204,8 +211,21 @@ def api_register():
     db.session.add(user)
     db.session.commit()
     access_token = create_access_token(identity=str(user.user_id))
+    refresh_token = create_refresh_token(identity=str(user.user_id))
     current_app.logger.info(f'REGISTER: user created: {username}, {email}')
-    return jsonify({'user': user.to_dict(), 'access_token': access_token}), 201
+    return jsonify({
+        'user': user.to_dict(), 
+        'access_token': access_token,
+        'refresh_token': refresh_token
+    }), 201
+
+
+@main.route('/api/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def api_refresh():
+    current_user_id = get_jwt_identity()
+    new_access_token = create_access_token(identity=current_user_id)
+    return jsonify({'access_token': new_access_token}), 200
 
 
 @main.route('/api/logout', methods=['POST'])
