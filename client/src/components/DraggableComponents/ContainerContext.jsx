@@ -6,7 +6,6 @@ import { AuthContext } from "../../contexts/AuthContext.jsx";
 const ContainerContext = createContext();
 
 const ContainerProvider = ({ children }) => {
-    const { user } = useContext(AuthContext);
     const [dashboardData, setDashboardData] = useState({ id: 0, name: "dashboard 1" });
     const [containers, setContainers] = useState([]);
     const [timers, setTimers] = useState([]);
@@ -277,7 +276,6 @@ const ContainerProvider = ({ children }) => {
 
     function sendTimersToServer(updatedTimers) {
         // отправляем таймеры на сервер
-        if (dashboardId === null) return;
         fetch("/post_timers", {
             method: "POST",
             headers: {
@@ -302,7 +300,6 @@ const ContainerProvider = ({ children }) => {
         <ContainerContext.Provider
             value={{
                 windowOrder,
-                dashboardId,
                 dashboardData,
                 containers,
                 activeId,

@@ -21,19 +21,21 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchCurrentUser = useCallback(async () => {
+    console.log('AuthContext: Checking user authentication...');
     try {
-      const { data } = await axios.get('/api/user', { withCredentials: true });
+      const { data } = await axios.get('/api/user', { 
+        withCredentials: true,
+        timeout: 5000 // 5 секунд таймаут
+      });
+      console.log('AuthContext: User authenticated:', data);
       setUser(data);
+      setIsLoading(false);
       return data;
     } catch (err) {
-      // Игнорируем ошибки авторизации (401, 404, 500)
-      if (err.response?.status === 404 || err.response?.status === 401 || err.response?.status === 500) {
-        // Пользователь не авторизован
-      }
+      console.log('AuthContext: Auth check failed:', err.response?.status, err.message);
       setUser(null);
-      return null;
-    } finally {
       setIsLoading(false);
+      return null;
     }
   }, []);
 
