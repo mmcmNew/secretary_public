@@ -23,6 +23,25 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const refreshToken = useCallback(async () => {
+    const refresh = localStorage.getItem('refresh_token');
+    if (!refresh) return false;
+    
+    try {
+      const { data } = await axios.post('/api/refresh', {}, {
+        headers: { 'Authorization': `Bearer ${refresh}` }
+      });
+      localStorage.setItem('access_token', data.access_token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
+      return true;
+    } catch (err) {
+      console.log('Token refresh failed:', err.message);
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      return false;
+    }
+  }, []);
+
   const fetchCurrentUser = useCallback(async () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -39,12 +58,19 @@ export function AuthProvider({ children }) {
       setIsLoading(false);
       return data;
     } catch (err) {
+      if (err.response?.status === 401) {
+        console.log('Token expired, trying to refresh...');
+        const refreshed = await refreshToken();
+        if (refreshed) {
+          return fetchCurrentUser();
+        }
+      }
       console.log('AuthContext: Auth check failed:', err.response?.status, err.message);
       setUser(null);
       setIsLoading(false);
       return null;
     }
-  }, []);
+  }, [refreshToken]);
 
   const login = useCallback(async (username, password) => {
     try {
@@ -58,6 +84,7 @@ export function AuthProvider({ children }) {
       );
       console.log('LOGIN: response', data);
       localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
       setUser(data.user);
       return null;
@@ -80,6 +107,7 @@ export function AuthProvider({ children }) {
       );
       console.log('REGISTER: response', data);
       localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
       setUser(data.user);
       return null;
@@ -95,10 +123,30 @@ export function AuthProvider({ children }) {
       await axios.post('/api/logout');
     } finally {
       localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
       delete axios.defaults.headers.common['Authorization'];
       setUser(null);
     }
   }, []);
+
+  // Настраиваем axios interceptor для автоматического обновления токенов
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        if (error.response?.status === 401 && !error.config._retry) {
+          error.config._retry = true;
+          const refreshed = await refreshToken();
+          if (refreshed) {
+            return axios(error.config);
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+    
+    return () => axios.interceptors.response.eject(interceptor);
+  }, [refreshToken]);
 
   // Проверяем авторизацию при загрузке
   useEffect(() => {
