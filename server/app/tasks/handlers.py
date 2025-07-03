@@ -2,7 +2,7 @@
 from flask import current_app, jsonify
 
 from .models import *
-from flask_login import current_user
+from flask_jwt_extended import current_user
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 # from dateutil.relativedelta import relativedelta

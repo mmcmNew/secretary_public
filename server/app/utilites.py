@@ -5,7 +5,7 @@ import sqlite3
 from datetime import datetime, timezone, timedelta
 
 from flask import current_app
-from flask_login import current_user
+from flask_jwt_extended import current_user
 from werkzeug.utils import secure_filename
 
 from app import db

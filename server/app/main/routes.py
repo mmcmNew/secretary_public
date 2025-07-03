@@ -10,8 +10,12 @@ from . import main
 from .handlers import fetch_table_records
 from app import socketio
 from flask import Response, current_app, abort, render_template, make_response
-from flask import request, jsonify, send_from_directory, send_file, session
-from flask_login import login_user, logout_user, current_user, login_required
+from flask import request, jsonify, send_from_directory, send_file
+from flask_jwt_extended import (
+    create_access_token,
+    jwt_required,
+    current_user
+)
 from werkzeug.security import check_password_hash
 from sqlalchemy import or_
 from .models import *
@@ -160,9 +164,9 @@ def api_login():
         current_app.logger.warning(f'LOGIN: incorrect password for user: {username}')
         return jsonify({'error': 'Incorrect password'}), 401
 
-    login_user(user)
+    access_token = create_access_token(identity=str(user.user_id))
     current_app.logger.info(f'LOGIN: success for user: {username}')
-    return jsonify({'user': user.to_dict()}), 200
+    return jsonify({'user': user.to_dict(), 'access_token': access_token}), 200
 
 
 @main.route('/api/register', methods=['POST'])
@@ -199,19 +203,18 @@ def api_register():
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
-    login_user(user)
+    access_token = create_access_token(identity=str(user.user_id))
     current_app.logger.info(f'REGISTER: user created: {username}, {email}')
-    return jsonify({'user': user.to_dict()}), 201
+    return jsonify({'user': user.to_dict(), 'access_token': access_token}), 201
 
 
 @main.route('/api/logout', methods=['POST'])
 def api_logout():
-    logout_user()
     return jsonify({'result': 'OK'})
 
 
 @main.route('/api/user', methods=['GET'])
-@login_required
+@jwt_required()
 def api_current_user():
     return jsonify(current_user.to_dict()), 200
 
@@ -332,7 +335,7 @@ def message_emit(status_code, message, namespace='/chat'):
 
 
 @main.route('/chat/new_message', methods=['POST'])
-@login_required
+@jwt_required()
 def new_message():
     data = request.form
     files = request.files
@@ -447,7 +450,7 @@ def post_edited_record(data, timezone=''):
 
 
 @main.route('/post_new_record', methods=['POST'])
-@login_required
+@jwt_required()
 def post_new_record():
     data = request.form
     files = request.files
@@ -468,7 +471,7 @@ def post_new_record():
 
 
 @main.route('/post_edited_record_api', methods=['POST'])
-@login_required
+@jwt_required()
 def post_edited_record_api():
     data = request.form
     files = request.files
@@ -487,7 +490,7 @@ def post_edited_record_api():
 
 
 @main.route('/get_tables', methods=['GET'])
-@login_required
+@jwt_required()
 def get_tables_route():
     tables = get_tables()
     # print(f'get_tables: {tables}')
@@ -531,7 +534,7 @@ def get_table_survey(table_name, conn):
 
 # маршрут для получения списка дней на которые есть записи в журнале по имени таблицы
 @main.route('/get_days', methods=['GET'])
-@login_required
+@jwt_required()
 def get_days_route():
     db_path = current_app.config.get('MAIN_DB_PATH', '')
     table_name = request.args.get('table_name')
@@ -617,7 +620,7 @@ def get_days_route():
 
 
 # @main.route('/journals', methods=['GET'])
-# @login_required
+# @jwt_required()
 # def get_file():
 #     current_app.logger.debug(f'get_file{request.args}')
 #     # Получение параметров из запроса
@@ -642,7 +645,7 @@ def get_days_route():
 
 
 @main.route('/journals/file', methods=['GET'])
-@login_required
+@jwt_required()
 def get_journal_file():
     # current_app.logger.debug(f'get_journal_file{request.args}')
     """Serve files from the journals folder."""
@@ -660,7 +663,7 @@ def get_journal_file():
 
 
 @main.route('/get_table_data', methods=['GET'])
-@login_required
+@jwt_required()
 def get_table_data():
     table_name = request.args.get('table_name')
     date = request.args.get('date')
@@ -678,7 +681,7 @@ def get_table_data():
 
 
 @main.route('/update_record_from_blocks', methods=['POST'])
-@login_required
+@jwt_required()
 def update_record_from_blocks():
     data = request.get_json()
     table_name = data.get('table_name')
@@ -700,7 +703,7 @@ def update_record_from_blocks():
 
 
 @main.route('/get_records', methods=['POST'])
-@login_required
+@jwt_required()
 def get_records_route():
     try:
         data = request.get_json() or {}
@@ -729,6 +732,6 @@ def get_records_route():
 
 
 @main.route('/get_tables_filters/<table_name>', methods=['GET'])
-@login_required
+@jwt_required()
 def api_get_filter_values(table_name):
     return get_all_filters(table_name)

@@ -17,4 +17,5 @@ flask_cors
 flask_socketio
 flask_wtf
 flask_login
+flask_jwt_extended
 edge_tts

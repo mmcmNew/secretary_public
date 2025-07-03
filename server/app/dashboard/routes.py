@@ -5,7 +5,7 @@ import os
 from . import dashboard
 from flask import Response, current_app
 from flask import request, jsonify, send_from_directory
-from flask_login import current_user, login_required
+from flask_jwt_extended import current_user, jwt_required
 from .models import *
 import logging
 
@@ -13,7 +13,7 @@ from app import socketio
 
 
 @dashboard.route('/dashboard', methods=['POST'])
-@login_required
+@jwt_required()
 def update_dashboard():
     data = request.json
     dashboard_id = data['dashboard_data']['id']
@@ -47,13 +47,13 @@ def update_dashboard():
 
 
 @dashboard.route('/dashboards', methods=['GET'])
-@login_required
+@jwt_required()
 def get_dashboards():
     dashboards = Dashboard.query.filter_by(user_id=current_user.id).all()
     return jsonify([{'id': d.id, 'name': d.name} for d in dashboards])
 
 @dashboard.route('/dashboard/<int:dashboard_id>', methods=['GET'])
-@login_required
+@jwt_required()
 def get_dashboard(dashboard_id):
     dashboard_db = Dashboard.query.filter_by(id=dashboard_id, user_id=current_user.id).first()
     # print(f'get_dashboard: {dashboard_db.to_dict()}')
@@ -63,7 +63,7 @@ def get_dashboard(dashboard_id):
 
 
 @dashboard.route('/dashboard/last', methods=['GET'])
-@login_required
+@jwt_required()
 def get_last_dashboard():
     dashboard_db = None
     if current_user.last_dashboard_id:
@@ -81,7 +81,7 @@ def get_last_dashboard():
 
 
 @dashboard.route('/post_timers', methods=['POST'])
-@login_required
+@jwt_required()
 def post_timers():
     data = request.json
     # print(f'data: {data}')
