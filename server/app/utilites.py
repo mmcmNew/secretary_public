@@ -514,10 +514,10 @@ def upload_files_to_server(files_list, dir_name):
 
 
 def get_tables():
-    global modules
+    modules_cfg = get_modules()
     tables = []
 
-    for key, value in modules.items():
+    for key, value in modules_cfg.items():
         if value.get('type') != 'journal':
             continue
 
@@ -550,6 +550,13 @@ def get_tables():
 
 def get_modules():
     global modules
+    try:
+        user_modules = getattr(current_user, 'modules', None)
+    except Exception:
+        user_modules = None
+
+    if user_modules:
+        return {name: modules.get(name, {}) for name in user_modules if name in modules}
     return modules
 
 

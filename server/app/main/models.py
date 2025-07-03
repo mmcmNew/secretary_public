@@ -1,6 +1,7 @@
 from app import db
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Text
+from sqlalchemy.types import JSON
 from flask import current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -15,6 +16,7 @@ class User(db.Model):
     password_hash = Column(String(255))
     avatar_src = Column(Text)
     last_dashboard_id = Column(Integer)
+    modules = Column(JSON, default=lambda: ['diary'])
 
     @property
     def id(self):
@@ -36,9 +38,9 @@ class User(db.Model):
 
         # Проверяем, есть ли пользователи уже в базе данных
         if not User.query.all():  # если база пуста
-            admin = User(user_name="admin", email="admin@example.com", avatar_src="me.png", last_dashboard_id=0)
+            admin = User(user_name="admin", email="admin@example.com", avatar_src="me.png", last_dashboard_id=0, modules=['diary'])
             admin.set_password("password")
-            secretary = User(user_name="Secretary", avatar_src="secretary.png", last_dashboard_id=0)
+            secretary = User(user_name="Secretary", avatar_src="secretary.png", last_dashboard_id=0, modules=['diary'])
             db.session.add(admin)
             db.session.add(secretary)
             db.session.commit()
@@ -51,6 +53,7 @@ class User(db.Model):
             'email': self.email,
             'avatar_src': self.avatar_src,
             'last_dashboard_id': self.last_dashboard_id,
+            'modules': self.modules,
         }
 
 

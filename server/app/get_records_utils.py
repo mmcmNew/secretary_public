@@ -1,4 +1,3 @@
-import sqlite3
 from flask import current_app, jsonify
 from flask_jwt_extended import current_user
 from app.utilites import get_modules
@@ -23,20 +22,7 @@ def get_records_by_ids(table_name, records_ids):
             current_app.logger.error(f"Ошибка при получении записей по ID: {e}")
             return []
 
-    # fallback to legacy tables
-    db_path = current_app.config.get('MAIN_DB_PATH', '')
-    try:
-        with sqlite3.connect(db_path) as connection:
-            connection.row_factory = sqlite3.Row
-            cursor = connection.cursor()
-            placeholders = ','.join('?' for _ in records_ids)
-            sql = f"SELECT * FROM {table_name} WHERE id IN ({placeholders})"
-            cursor.execute(sql, records_ids)
-            rows = cursor.fetchall()
-            return [dict(row) for row in rows]
-    except Exception as e:
-        current_app.logger.error(f"Ошибка при получении записей по ID: {e}")
-        return []
+    raise ValueError("Invalid table name")
 
 
 def fetch_filtered_records(table_name, filters):
