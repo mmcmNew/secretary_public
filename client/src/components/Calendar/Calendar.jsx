@@ -292,9 +292,6 @@ export default function Calendar() {
     }
 
     async function handleEventChange(eventInfo) {
-        // console.log('handleEventChange: eventInfo: ', eventInfo);
-
-        // Применяем смещение времени перед сохранением
         const applyOffset = (date, offset) => {
             const newDate = new Date(date);
             newDate.setHours(newDate.getHours() + offset);
@@ -302,6 +299,8 @@ export default function Calendar() {
         };
 
         const eventDict = {
+            taskId: eventInfo.event.id,
+            listId: selectedListId,
             title: eventInfo.event.title,
             allDay: eventInfo.event.allDay,
         };
@@ -312,7 +311,7 @@ export default function Calendar() {
 
         if (eventInfo.event.end) {
             eventDict.deadline = applyOffset(eventInfo.event.end, timeOffset.current);
-        } else {
+        } else if (eventInfo.event.start) {
             // Время start + 1 час
             const endDate = new Date(eventInfo.event.start);
             endDate.setHours(endDate.getHours() + 1);
@@ -322,18 +321,17 @@ export default function Calendar() {
         const calendarEvent = calendarEvents.find((event) => event.id == eventInfo.event.id);
 
         if (calendarEvent && calendarEvent.rrule) {
-            // console.log('rrule', calendarEvent.rrule)
             eventDict.rrule = {
                 ...calendarEvent.rrule,
                 dtstart: applyOffset(eventInfo.event.start, timeOffset.current),
             };
         }
 
-        // setUpdatedCalendarEvents((prevEvents) => [...prevEvents, eventDict]);
-
-        // console.log('eventDict', eventDict);
-        await updateTask(eventInfo.event.id, eventDict);
-        setUpdates((prevUpdates) => [...prevUpdates, "todo"]);
+        await updateTask(eventDict);
+        // Принудительно обновляем календарь
+        setTimeout(() => {
+            setUpdates((prevUpdates) => [...prevUpdates, "calendar"]);
+        }, 100);
     }
 
     const handleSettingsDialogOpen = () => setSettingsDialogOpen(true);

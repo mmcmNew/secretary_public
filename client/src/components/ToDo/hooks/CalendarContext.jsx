@@ -42,11 +42,16 @@ export const CalendarProvider = ({ children }) => {
   const { tasksVersion: wsVersion } = useUpdateWebSocket();
 
   useEffect(() => {
-    if (wsVersion) {
+    if (wsVersion && wsVersion !== version) {
       fetchCalendarEvents();
       setVersion(wsVersion);
     }
-  }, [wsVersion, fetchCalendarEvents, setVersion]);
+  }, [wsVersion, version, fetchCalendarEvents]);
+
+  // Начальная загрузка
+  useEffect(() => {
+    fetchCalendarEvents();
+  }, []);
 
   // Обновить событие календаря
   const updateCalendarEvent = useCallback((params) => api("/tasks/edit_task", "PUT", params), []);

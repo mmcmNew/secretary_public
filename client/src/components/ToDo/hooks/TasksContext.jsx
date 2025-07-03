@@ -76,11 +76,11 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     const res = await api("/tasks/edit_task", "PUT", params);
     if (fetchLists) await fetchLists();
     // Локальное обновление задачи
-    if (res.task && params.listId === listsSelectedListId) {
+    if (res.task && (params.listId === listsSelectedListId || !params.listId)) {
       setTasks(prev => ({
         ...prev,
         data: prev.data.map(task =>
-          task.id === params.taskId ? { ...task, ...res.task } : task
+          task.id == params.taskId ? { ...task, ...res.task } : task
         )
       }));
     }

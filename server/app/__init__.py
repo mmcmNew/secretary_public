@@ -1,7 +1,7 @@
 import os
 import sys
 
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, jsonify
 from flask_jwt_extended import JWTManager
 from .config import WorkConfig, TestingConfig
 # from flask_ngrok2 import run_with_ngrok
