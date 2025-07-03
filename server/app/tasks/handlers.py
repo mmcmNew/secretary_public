@@ -228,7 +228,7 @@ def add_task(data):
 
         db.session.commit()
 
-        return {'success': True, 'message': 'Задача добавлена', 'new_object': new_task.to_dict(),
+        return {'success': True, 'message': 'Задача добавлена', 'task': new_task.to_dict(),
                 'task_list': task_list_dict}, 200
     else:
         return {'success': False, 'message': 'Недостаточно данных для создания задачи'}, 404

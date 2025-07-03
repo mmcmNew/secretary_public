@@ -8,7 +8,7 @@ from .handlers import (get_lists_and_groups_data, add_object, add_task, edit_lis
                        add_anti_task, edit_anti_task, del_anti_task)
 from .versioning import check_version
 from .models import DataVersion, TaskTypes
-from app.socketio_utils import notify_data_update
+from app.socketio_utils import notify_data_update, notify_task_change
 
 
 @to_do_app.route('/tasks/get_lists', methods=['GET'])

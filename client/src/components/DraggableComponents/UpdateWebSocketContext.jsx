@@ -19,6 +19,11 @@ export default function UpdateWebSocketProvider({ children }) {
       setVersions((prev) => ({ ...prev, ...data }));
     });
 
+    socket.on('task_changed', (data) => {
+      console.log('task_changed', data);
+      setVersions((prev) => ({ ...prev, taskChange: data, timestamp: Date.now() }));
+    });
+
     socket.on('disconnect', () => {
       console.log('Disconnected from updates WebSocket');
     });

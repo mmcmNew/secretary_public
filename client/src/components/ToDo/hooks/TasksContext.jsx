@@ -58,57 +58,96 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const addTask = useCallback(async (params) => {
     const res = await api("/tasks/add_task", "POST", params);
     await fetchLists();
-    // console.log(params)
-    if (params.listId) {
-      // console.log('addTask: fetchTasks', params.listId);
-      await fetchTasks(params.listId);
+    // Локальное обновление вместо полной перезагрузки
+    if (res.task && (params.listId === selectedTaskId || 
+        (selectedTaskId === 'tasks' && !params.listId) ||
+        (selectedTaskId === 'my_day' && params.listId === 'my_day') ||
+        (selectedTaskId === 'important' && params.listId === 'important') ||
+        (selectedTaskId === 'background' && params.listId === 'background'))) {
+      setTasks(prev => ({
+        ...prev,
+        data: [res.task, ...prev.data]
+      }));
     }
     return res;
-  }, [fetchLists, fetchTasks]);
+  }, [fetchLists, selectedTaskId]);
 
   const updateTask = useCallback(async (params) => {
-    // console.log('updateTask: params', params);
     const res = await api("/tasks/edit_task", "PUT", params);
     if (fetchLists) await fetchLists();
-    if (params.listId && typeof fetchTasks === 'function') {
-      // console.log('updateTask: fetchTasks', params.listId);
-      await fetchTasks(params.listId);
+    // Локальное обновление задачи
+    if (res.task && params.listId === selectedTaskId) {
+      setTasks(prev => ({
+        ...prev,
+        data: prev.data.map(task => 
+          task.id === params.taskId ? { ...task, ...res.task } : task
+        )
+      }));
     }
     return res;
-  }, [fetchLists, fetchTasks]);
+  }, [fetchLists, selectedTaskId]);
 
   const changeTaskStatus = useCallback(async (params) => {
     const res = await api("/tasks/change_status", "PUT", params);
     if (fetchLists) await fetchLists();
-    if (params.listId && typeof fetchTasks === 'function') await fetchTasks(params.listId);
+    // Локальное обновление статуса
+    if (params.listId === selectedTaskId) {
+      setTasks(prev => ({
+        ...prev,
+        data: prev.data.map(task => 
+          task.id === params.taskId ? { ...task, status: params.status } : task
+        )
+      }));
+    }
     return res;
-  }, [fetchLists, fetchTasks]);
+  }, [fetchLists, selectedTaskId]);
 
   const addSubTask = useCallback(async (params) => {
     const res = await api("/tasks/add_subtask", "POST", params);
     if (fetchLists) await fetchLists();
-    if (params.listId && typeof fetchTasks === 'function') {
-      // console.log('addSubTask: fetchTasks', params.listId);
-      await fetchTasks(params.listId);
+    // Локальное обновление подзадачи
+    if (res.subtask && params.listId === selectedTaskId) {
+      setTasks(prev => ({
+        ...prev,
+        data: prev.data.map(task => 
+          task.id === params.parentTaskId 
+            ? { ...task, subtasks: [...(task.subtasks || []), res.subtask] }
+            : task
+        )
+      }));
     }
     return res;
-  }, [fetchLists, fetchTasks]);
+  }, [fetchLists, selectedTaskId]);
 
   const deleteTask = useCallback(async (params) => {
     const res = await api("/tasks/del_task", "DELETE", params);
     if (fetchLists) await fetchLists();
-    if (params.listId && typeof fetchTasks === 'function') await fetchTasks(params.listId);
+    // Локальное удаление задачи
+    if (params.listId === selectedTaskId) {
+      setTasks(prev => ({
+        ...prev,
+        data: prev.data.filter(task => task.id !== params.taskId)
+      }));
+    }
     return res;
-  }, [fetchLists, fetchTasks]);
+  }, [fetchLists, selectedTaskId]);
   
   const linkTaskList = useCallback(async (params) => {
     const res = await api("/tasks/link_task", "PUT", params);
     if (fetchLists) await fetchLists();
-    // Обновляем задачи для текущего выбранного списка, а не для целевого
-    const currentListId = listsSelectedListId;
-    if (typeof fetchTasks === 'function' && currentListId) await fetchTasks(currentListId);
+    // При перемещении задачи нужна полная перезагрузка только текущего списка
+    if (listsSelectedListId && listsSelectedListId === params.fromListId) {
+      await fetchTasks(listsSelectedListId);
+    }
     return res;
   }, [fetchLists, fetchTasks, listsSelectedListId]);
+
+  // Принудительное обновление задач (когда локальные обновления недостаточны)
+  const forceRefreshTasks = useCallback(async () => {
+    if (selectedTaskId) {
+      await fetchTasks(selectedTaskId);
+    }
+  }, [selectedTaskId, fetchTasks]);
 
   // Получить конфиг полей задач
   const fetchTaskFields = useCallback(async () => {
@@ -128,14 +167,48 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     }
   }, [fetchTaskFields, user, isLoading]);
 
-  const { tasksVersion: wsVersion } = useUpdateWebSocket();
+  const { tasksVersion: wsVersion, taskChange } = useUpdateWebSocket();
 
+  // Обработка детальных изменений задач через WebSocket
   useEffect(() => {
-    if (wsVersion && selectedTaskId) {
-      fetchTasks(selectedTaskId);
+    if (taskChange && taskChange.listId === selectedTaskId) {
+      const { action, task } = taskChange;
+      
+      switch (action) {
+        case 'added':
+          setTasks(prev => ({
+            ...prev,
+            data: [...prev.data, task]
+          }));
+          break;
+        case 'updated':
+          setTasks(prev => ({
+            ...prev,
+            data: prev.data.map(t => t.id === task.id ? { ...t, ...task } : t)
+          }));
+          break;
+        case 'deleted':
+          setTasks(prev => ({
+            ...prev,
+            data: prev.data.filter(t => t.id !== task.id)
+          }));
+          break;
+        case 'status_changed':
+          setTasks(prev => ({
+            ...prev,
+            data: prev.data.map(t => t.id === task.id ? { ...t, status: task.status } : t)
+          }));
+          break;
+      }
+    }
+  }, [taskChange, selectedTaskId]);
+
+  // Обновление версии без полной перезагрузки
+  useEffect(() => {
+    if (wsVersion && wsVersion !== version) {
       setVersion(wsVersion);
     }
-  }, [wsVersion, selectedTaskId, fetchTasks, setVersion]);
+  }, [wsVersion, version]);
 
   const contextValue = useMemo(() => ({
     tasks,
@@ -143,6 +216,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     selectedTaskId,
     setSelectedTaskId,
     fetchTasks,
+    forceRefreshTasks,
     addTask,
     updateTask,
     changeTaskStatus,
@@ -152,7 +226,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     version,
     setVersion,
     loading: tasks.loading,
-  }), [tasks, taskFields, selectedTaskId, fetchTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, version]);
+  }), [tasks, taskFields, selectedTaskId, fetchTasks, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, version]);
 
   return <TasksContext.Provider value={contextValue}>{children}</TasksContext.Provider>;
 };
