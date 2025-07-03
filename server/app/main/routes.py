@@ -1,4 +1,3 @@
-import sqlite3
 import re
 from datetime import timedelta
 
@@ -34,6 +33,7 @@ from app.utilites import (
 from app.text_to_edge_tts import generate_tts, del_all_audio_files
 from ..tasks.handlers import create_daily_scenario
 from app.get_records_utils import get_all_filters, fetch_filtered_records
+from app.journals.models import JournalEntry
 
 
 EMAIL_REGEX = r'^[\w\.-]+@[\w\.-]+\.[A-Za-z]{2,}$'
@@ -213,7 +213,7 @@ def api_register():
         current_app.logger.warning(f'REGISTER: email already registered: {email}')
         return jsonify({'error': 'Email already registered'}), 400
 
-    user = User(user_name=username, email=email)
+    user = User(user_name=username, email=email, modules=['diary'])
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
@@ -555,7 +555,6 @@ def get_table_survey(table_name, conn=None):
 @main.route('/get_days', methods=['GET'])
 @jwt_required()
 def get_days_route():
-    db_path = current_app.config.get('MAIN_DB_PATH', '')
     table_name = request.args.get('table_name')
     month = request.args.get('month')
     year = request.args.get('year')  # Новый параметр year
@@ -576,59 +575,34 @@ def get_days_route():
     try:
         start_date = datetime(int(year), int(month), 1)
         if int(month) == 12:
-            end_date = datetime(int(year) + 1, 1, 1)  # Январь следующего года
+            end_date = datetime(int(year) + 1, 1, 1)
         else:
-            end_date = datetime(int(year), int(month) + 1, 1)  # Первый день следующего месяца
+            end_date = datetime(int(year), int(month) + 1, 1)
 
-        # Применяем смещение временной зоны клиента
         start_date_utc = start_date - timedelta(minutes=client_timezone_offset)
         end_date_utc = end_date - timedelta(minutes=client_timezone_offset)
+        modules = get_modules()
+        days = []
+        unique_dates_set = set()
 
-        with sqlite3.connect(db_path) as connection:
-            cursor = connection.cursor()
-            # Используем параметризованный запрос для безопасности
-            cursor.execute(f"""
-                            SELECT date FROM {table_name} 
-                            WHERE date >= ? AND date < ?
-                        """, (start_date_utc.strftime('%Y-%m-%d'), end_date_utc.strftime('%Y-%m-%d')))
+        if modules.get(table_name, {}).get('type') == 'journal':
+            entries = (
+                JournalEntry.query
+                .filter(JournalEntry.journal_type == table_name,
+                        JournalEntry.user_id == current_user.id,
+                        JournalEntry.created_at >= start_date_utc,
+                        JournalEntry.created_at < end_date_utc)
+                .all()
+            )
+            for e in entries:
+                dt_client = e.created_at + timedelta(minutes=client_timezone_offset)
+                days.append(dt_client)
+                unique_dates_set.add(dt_client.date().isoformat())
+        else:
+            raise ValueError('Unsupported table')
 
-            # Сохраняем результат в переменную dates
-            dates = cursor.fetchall()
-
-            # current_app.logger.debug(f'get_days: {dates}')
-
-            days = []
-            for date in dates:
-                # Преобразуем строку даты в объект datetime
-                # current_app.logger.debug(f'{date[0]}')
-                date_obj = datetime.strptime(date[0], '%Y-%m-%d %H:%M:%S')
-                # current_app.logger.debug(f'{date_obj}')
-                # Применяем обратное смещение временной зоны клиента (возвращаем в часовой пояс клиента)
-                client_time = date_obj + timedelta(minutes=client_timezone_offset)
-
-                # Добавляем преобразованную дату в список
-                days.append(client_time)
-
-                # Получаем все уникальные даты
-            cursor.execute(f"""
-                                SELECT DATETIME(date) FROM {table_name}
-                            """)
-            unique_dates_raw = cursor.fetchall()
-            # current_app.logger.debug(f'get_days: {unique_dates_raw}')
-            unique_dates_set = set()
-            for date in unique_dates_raw:
-                # current_app.logger.info(f'get_days: {date}')
-                # Преобразуем строку даты в объект datetime
-                datetime_obj = datetime.strptime(date[0], '%Y-%m-%d %H:%M:%S')
-                # Применяем обратное смещение временной зоны клиента
-                client_date = datetime_obj + timedelta(minutes=client_timezone_offset)
-                # Добавляем уникальную дату в список
-                unique_dates_set.add(client_date.date().isoformat())
-
-            # current_app.logger.debug(f'get_days: {unique_dates_set}')
-            unique_dates = sorted(list(unique_dates_set))
-            survey = get_table_survey(table_name)
-            # current_app.logger.debug(f'get_days: survey: {survey}')
+        unique_dates = sorted(list(unique_dates_set))
+        survey = get_table_survey(table_name)
 
     except Exception as e:
         current_app.logger.error(f'get_days: error: {e}')
@@ -692,7 +666,12 @@ def get_table_data():
         records, columns = fetch_table_records(table_name, date, timezone_offset)
         if not records:
             return jsonify({'records': [], 'columns': columns}), 200
-        result = [dict(r) for r in records]
+
+        modules = get_modules()
+        if modules.get(table_name, {}).get('type') == 'journal':
+            result = records
+        else:
+            result = [dict(r) for r in records]
         return jsonify({'records': result, 'columns': columns}), 200
     except Exception as e:
         current_app.logger.error(f'Ошибка при получении записей: {e}')

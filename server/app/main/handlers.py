@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta
-import sqlite3
 
 from flask import current_app
+from flask_jwt_extended import current_user
+
+from app.journals.models import JournalEntry
+from app.utilites import get_modules
 
 
 def fetch_table_records(table_name, date_str, timezone_offset_ms):
-    db_path = current_app.config.get('MAIN_DB_PATH', '')
+    modules = get_modules()
 
     date_obj = datetime.strptime(date_str[:10], '%Y-%m-%d')
 
@@ -19,13 +22,22 @@ def fetch_table_records(table_name, date_str, timezone_offset_ms):
     utc_start = local_start + timezone_offset
     utc_end = local_end + timezone_offset
 
-    with sqlite3.connect(db_path) as connection:
-        connection.row_factory = sqlite3.Row
-        cursor = connection.cursor()
-        sql_request = f"""
-            SELECT * FROM {table_name} 
-            WHERE date BETWEEN ? AND ?
-        """
-        cursor.execute(sql_request, (utc_start.isoformat(), utc_end.isoformat()))
-        return cursor.fetchall(), [description[0] for description in cursor.description]
+    if modules.get(table_name, {}).get('type') == 'journal':
+        entries = (
+            JournalEntry.query
+            .filter(JournalEntry.journal_type == table_name,
+                    JournalEntry.user_id == current_user.id,
+                    JournalEntry.created_at >= utc_start,
+                    JournalEntry.created_at <= utc_end)
+            .all()
+        )
+        records = []
+        for e in entries:
+            data = e.data or {}
+            record = {**data, 'id': e.id, 'created_at': e.created_at.isoformat()}
+            records.append(record)
+        columns = sorted({k for r in records for k in r.keys()})
+        return records, columns
+
+    raise ValueError("Unsupported table")
 
