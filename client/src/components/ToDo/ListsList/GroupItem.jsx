@@ -13,7 +13,8 @@ import {
   AccountTree as AccountTreeIcon,
   ExpandLess,
   ExpandMore,
-  FormatListBulleted
+  FormatListBulleted,
+  DragIndicator
 } from '@mui/icons-material';
 import FilterNoneIcon from '@mui/icons-material/FilterNone';
 import CheckIcon from '@mui/icons-material/Check';
@@ -50,8 +51,6 @@ export default function GroupItem({
     <div
       key={item.id}
       style={{ left: "auto !important", top: "auto !important" }}
-      draggable={isDraggable}
-      onDragStart={(e) => onDragStart && onDragStart(e, item)}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => onListDrop && onListDrop(e, item.id)}
     >
@@ -59,6 +58,15 @@ export default function GroupItem({
         onClick={onToggle}
         onContextMenu={onContextMenu}
       >
+        {isDraggable && (
+          <ListItemIcon
+            sx={{ minWidth: 24, cursor: 'grab' }}
+            draggable
+            onDragStart={(e) => onDragStart && onDragStart(e, item)}
+          >
+            <DragIndicator />
+          </ListItemIcon>
+        )}
         <ListItemIcon sx={{ minWidth: 35 }}>
           {item.type === 'project' ? <AccountTreeIcon /> : <FilterNoneIcon />}
         </ListItemIcon>
