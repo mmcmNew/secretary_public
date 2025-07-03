@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 # Модель для таблицы users
 class User(UserMixin, db.Model):
-    __bind_key__ = 'app_session_meta'
+    __bind_key__ = 'users'
     __tablename__ = 'users'  # Название таблицы в нижнем регистре
     user_id = Column(Integer, primary_key=True)
     user_name = Column(Text, unique=True)
@@ -55,7 +55,7 @@ class User(UserMixin, db.Model):
 
 # Модель для таблицы chat_history
 class ChatHistory(db.Model):
-    __bind_key__ = 'main'
+    __bind_key__ = 'communication'
     __tablename__ = 'chat_history'  # Название таблицы в нижнем регистре
     message_id = Column(Integer, primary_key=True)
     user_id = Column(Integer)
@@ -81,7 +81,7 @@ class ChatHistory(db.Model):
 
 # Модель для таблицы quotes
 class Quote(db.Model):
-    __bind_key__ = 'main'
+    __bind_key__ = 'communication'
     __tablename__ = 'quotes'  # Название таблицы в нижнем регистре
     quote_id = Column(Integer, primary_key=True)
     quote = Column(String(255))  # Использование String вместо Text для коротких строковых полей

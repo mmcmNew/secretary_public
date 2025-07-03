@@ -16,12 +16,18 @@ def app(tmp_path):
     # use tmp_path for database file
     db_file = tmp_path / "test.sqlite"
     from app import config
-    config.TestingConfig.MAIN_DB_PATH = str(db_file)
     uri = f"sqlite:///{db_file}"
     config.TestingConfig.SQLALCHEMY_DATABASE_URI = uri
+    config.TestingConfig.USERS_DB_PATH = str(db_file)
+    config.TestingConfig.PRODUCTIVITY_DB_PATH = str(db_file)
+    config.TestingConfig.CONTENT_DB_PATH = str(db_file)
+    config.TestingConfig.WORKSPACE_DB_PATH = str(db_file)
+    config.TestingConfig.COMMUNICATION_DB_PATH = str(db_file)
     config.TestingConfig.SQLALCHEMY_BINDS = {
-        'main': uri,
-        'app_session_meta': uri,
+        'users': uri,
+        'content': uri,
+        'workspace': uri,
+        'communication': uri,
     }
     app = create_app('test')
     yield app
