@@ -172,10 +172,24 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
         });
     }
 
+    function addFieldFiles(fieldId, selectedFiles) {
+        setFieldFiles(prev => {
+            const existing = prev[fieldId] || [];
+            const newFiles = selectedFiles.filter(newFile => !existing.some(ex =>
+                ex.name === newFile.name && ex.lastModified === newFile.lastModified));
+            return { ...prev, [fieldId]: [...existing, ...newFiles] };
+        });
+    }
+
     function handleAddFiles(event) {
         const selectedFiles = Array.from(event.target.files);
         addUniqueFiles(selectedFiles);
         fileInputRef.current.value = "";
+    }
+
+    function handleFieldInputChange(fieldId, event) {
+        const selectedFiles = Array.from(event.target.files);
+        addFieldFiles(fieldId, selectedFiles);
     }
 
     function handlePaste(event) {
@@ -194,6 +208,22 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
         }
     }
 
+    function handleFieldPaste(fieldId, event) {
+        const items = event.clipboardData?.items;
+        if (!items) return;
+        const pastedFiles = [];
+        for (const item of items) {
+            if (item.kind === 'file') {
+                const file = item.getAsFile();
+                if (file) pastedFiles.push(file);
+            }
+        }
+        if (pastedFiles.length) {
+            event.preventDefault();
+            addFieldFiles(fieldId, pastedFiles);
+        }
+    }
+
     function handleDrop(event) {
         event.preventDefault();
         const droppedFiles = Array.from(event.dataTransfer.files);
@@ -202,7 +232,19 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
         }
     }
 
+    function handleFieldDrop(fieldId, event) {
+        event.preventDefault();
+        const droppedFiles = Array.from(event.dataTransfer.files);
+        if (droppedFiles.length) {
+            addFieldFiles(fieldId, droppedFiles);
+        }
+    }
+
     function handleDragOver(event) {
+        event.preventDefault();
+    }
+
+    function handleFieldDragOver(event) {
         event.preventDefault();
     }
 
@@ -334,20 +376,20 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
                 
                 if (fieldType === 'file') {
                     return (
-                        <div key={id + field.field_id} style={{ marginBottom: '1rem' }}>
+                        <div
+                            key={id + field.field_id}
+                            style={{ marginBottom: '1rem' }}
+                            onDrop={(e) => handleFieldDrop(field.field_id, e)}
+                            onDragOver={handleFieldDragOver}
+                            onPaste={(e) => handleFieldPaste(field.field_id, e)}
+                        >
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
                                 {field.field_name}
                             </label>
                             <input
                                 type="file"
                                 multiple={field.multiple}
-                                onChange={(e) => {
-                                    const selectedFiles = Array.from(e.target.files);
-                                    setFieldFiles(prev => ({
-                                        ...prev,
-                                        [field.field_id]: selectedFiles
-                                    }));
-                                }}
+                                onChange={(e) => handleFieldInputChange(field.field_id, e)}
                                 style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
                             />
                             {fieldFiles[field.field_id] && fieldFiles[field.field_id].length > 0 && (
