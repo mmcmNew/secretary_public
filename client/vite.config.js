@@ -42,8 +42,8 @@ export default defineConfig({
       manifest: {
         name: 'Secretary App',
         short_name: 'Secretary',
-        start_url: '/mobile/', // или '.' если хотите от текущего
-        id: '/mobile/', // или '.'
+        start_url: '/',
+        id: '/',
         display: 'standalone',
         orientation: 'portrait',
         description: 'Secretary Application',
@@ -52,30 +52,30 @@ export default defineConfig({
         categories: ['productivity'],
         screenshots: [
           {
-            src: 'screenshot-wide.png',
+            src: '/screenshot-wide.png',
             sizes: '1280x720',
             type: 'image/png',
-            form_factor: 'wide' // Для ПК
+            form_factor: 'wide'
           },
           {
-            src: 'screenshot-mobile.png',
+            src: '/screenshot-mobile.png',
             sizes: '750x1334',
-            type: 'image/png' // Для мобильных устройств
+            type: 'image/png'
           }
         ],
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: '/pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png',
+            src: '/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: 'pwa-maskable-512x512.png',
+            src: '/pwa-maskable-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'
@@ -255,12 +255,6 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
-      '/journals': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-
     },
   }
 })
