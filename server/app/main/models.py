@@ -93,16 +93,13 @@ class ChatHistory(db.Model):
     text = Column(Text)
     files = Column(Text)
     position = Column(Text)
-    user = db.relationship(
-        'User',
-        primaryjoin='foreign(ChatHistory.user_id) == User.user_id',
-        viewonly=True,
-    )
 
     def to_dict(self):
+        # Получаем пользователя отдельно
+        user = User.query.filter_by(user_id=self.user_id).first()
         return {
             'message_id': str(self.message_id),
-            'user': self.user.to_dict(),
+            'user': user.to_dict() if user else {'user_name': 'Unknown', 'avatar_src': 'default.png'},
             'text': self.text,
             'datetime': self.datetime.isoformat() + 'Z',
             'files': self.files,

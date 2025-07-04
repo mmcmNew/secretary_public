@@ -3,11 +3,11 @@
 .gitignore
 
 # Node modules
-client/node_modules
-client/dist
+client/
 
-# Python
+# Python cache
 server/__pycache__
+server/**/__pycache__
 server/*.pyc
 server/*.pyo
 server/*.pyd
@@ -15,8 +15,6 @@ server/.Python
 server/env
 server/venv
 server/.venv
-server/pip-log.txt
-server/pip-delete-this-directory.txt
 
 # Logs
 logs/
@@ -32,7 +30,7 @@ server/logs/
 .DS_Store
 Thumbs.db
 
-# SSL certificates (будут добавлены отдельно если нужно)
+# SSL certificates
 *.pem
 *.key
 *.crt
@@ -41,14 +39,31 @@ Thumbs.db
 *.tmp
 *.temp
 
+# Большие файлы данных
+server/app/user_data/memory/
+server/app/user_data/static/
+server/app/temp/
+
 # Database backups
 server/user_data/db/backup_*
-server/migrations/user_data/db/backup_*
+server/migrations/
 
 # Test files
 tests/
 server/tests/
+server/dev.py
+server/test_*.py
+server/start.bat
 
 # Documentation
 *.md
 docs/
+
+# Build files
+build*.bat
+build.sh
+*.yml
+docker-compose*.yml
+analyze-docker-size.bat
+.dockerignore.optimized
+DOCKER_OPTIMIZATION.md

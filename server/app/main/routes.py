@@ -103,20 +103,37 @@ def updates_ws_disconnect():
 
 
 @socketio.on('request_messages', namespace='/chat')
+def handle_request_messages():
+    """WebSocket обработчик для запроса сообщений"""
+    messages = get_messages_data()
+    emit('all_messages', messages, to=request.sid)
+
 @main.route('/api/chat/messages', methods=['GET'])
 def get_messages():
-    # current_app.logger.info('request_messages')
-    messages_list = ChatHistory.query.join(ChatHistory.user).order_by(ChatHistory.message_id.desc()).limit(100).all()
+    """HTTP API для получения сообщений"""
+    messages = get_messages_data()
+    return Response(json.dumps(messages), mimetype='application/json')
+
+def get_messages_data():
+    """Общая функция для получения данных сообщений"""
+    messages_list = ChatHistory.query.order_by(ChatHistory.message_id.desc()).limit(100).all()
     if messages_list:
         messages_list = messages_list[::-1]
-        messages = [message.to_dict() for message in messages_list]
+        messages = []
+        for message in messages_list:
+            # Получаем пользователя отдельно
+            user = User.query.filter_by(user_id=message.user_id).first()
+            message_dict = {
+                'message_id': str(message.message_id),
+                'user': user.to_dict() if user else {'user_name': 'Unknown', 'avatar_src': 'default.png'},
+                'text': message.text,
+                'datetime': message.datetime.isoformat() + 'Z',
+                'files': message.files,
+            }
+            messages.append(message_dict)
     else:
         messages = []
-    # print('dict_messages: ', messages)
-    response = Response(json.dumps(messages), mimetype='application/json')
-    # print(response)
-    emit('all_messages', messages, to=request.sid)
-    return response
+    return messages
 
 
 @main.route('/avatars/<path:filename>', methods=['GET'])
