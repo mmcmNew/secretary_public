@@ -15,21 +15,21 @@ def init_subscription_data():
             'id': 1,
             'name': 'Free',
             'description': 'Бесплатный тариф',
-            'max_containers': 2,
+            'max_containers': 5,
             'features': json.dumps(['tasks', 'calendar'])
         },
         {
             'id': 2,
             'name': 'Basic',
             'description': 'Базовый тариф',
-            'max_containers': 5,
+            'max_containers': 10,
             'features': json.dumps(['tasks', 'calendar', 'memory', 'JournalEditor', 'chat'])
         },
         {
             'id': 3,
             'name': 'Premium',
             'description': 'Премиум тариф',
-            'max_containers': 10,
+            'max_containers': -1,
             'features': json.dumps(['tasks', 'calendar', 'memory', 'JournalEditor', 'metronome', 'Scenario', 'AntiSchedule', 'chat'])
         },
         {

@@ -137,38 +137,61 @@ def get_messages_data():
 
 
 @main.route('/avatars/<path:filename>', methods=['GET'])
-@main.route('/static/<path:filename>', methods=['GET'])
 @main.route('/sounds/<path:filename>', methods=['GET'])
 @main.route('/memory/<path:filename>', methods=['GET'])
-@main.route('/audio/<path:filename>', methods=['GET'])
+@jwt_required(optional=True)
 def static_files(filename):
-    # Получаем полный путь маршрута
+    from app.data_paths import get_system_data_path, get_user_data_path
+    
     route = request.path
-    # print(f'Requested route: {route}')
-    base_dir = current_app.root_path
-    # Устанавливаем базовую директорию на основе пути запроса
+    
     if route.startswith('/avatars'):
-        base_dir = os.path.join(base_dir, 'user_data', 'static', 'avatars')
-    elif route.startswith('/static'):
-        base_dir = os.path.join(base_dir, 'user_data', 'static')
+        avatars_path = get_system_data_path('avatars')
+        if avatars_path and os.path.isfile(os.path.join(avatars_path, filename)):
+            return send_from_directory(avatars_path, filename)
+    
     elif route.startswith('/sounds'):
-        base_dir = os.path.join(base_dir, 'user_data', 'static', 'sounds')
+        sounds_path = get_system_data_path('sounds')
+        if sounds_path and os.path.isfile(os.path.join(sounds_path, filename)):
+            return send_from_directory(sounds_path, filename)
+    
     elif route.startswith('/memory'):
-        base_dir = os.path.join(base_dir, 'user_data', 'memory')
-    elif route.startswith('/audio'):
-        base_dir = os.path.join(base_dir, 'user_data', 'static', 'audio')
+        # Сначала пользовательские, потом системные
+        if current_user:
+            user_memory_path = get_user_data_path(current_user.id, 'memory')
+            user_file = os.path.join(user_memory_path, filename)
+            if os.path.isfile(user_file):
+                return send_from_directory(user_memory_path, filename)
+        
+        # Системные изображения памяти
+        memory_path = get_system_data_path('memory_images')
+        if memory_path and os.path.isfile(os.path.join(memory_path, filename)):
+            return send_from_directory(memory_path, filename)
+    
+    return 'File not found', 404
 
-    # print(f'static_files: Base directory: {base_dir}')
 
-    # Проверка на существование файла
-    file_path = os.path.join(base_dir, filename)
-    # print(f'static_files: File path: {file_path}')
-    if not os.path.isfile(file_path):
-        current_app.logger.error(f'static_files: File not found: {file_path}')
-        return f'File not found: {file_path}', 404
+@main.route('/audio/<path:filename>', methods=['GET'])
+@jwt_required()
+def audio_files(filename):
+    from app.data_paths import get_user_data_path
+    
+    user_audio_path = get_user_data_path(current_user.id, 'audio')
+    if os.path.isfile(os.path.join(user_audio_path, filename)):
+        return send_from_directory(user_audio_path, filename)
+    return 'Audio file not found', 404
 
-    # Возвращаем файл из базовой директории
-    return send_from_directory(base_dir, filename)
+
+@main.route('/static/<path:filename>', methods=['GET'])
+@jwt_required(optional=True)
+def user_static_files(filename):
+    from app.data_paths import get_user_data_path
+    
+    if current_user:
+        user_static_path = get_user_data_path(current_user.id, 'static')
+        if os.path.isfile(os.path.join(user_static_path, filename)):
+            return send_from_directory(user_static_path, filename)
+    return 'Static file not found', 404
 
 
 @main.route('/api/login', methods=['POST'])
@@ -235,8 +258,8 @@ def api_register():
     db.session.add(user)
     db.session.commit()
     
-    # Создаем дефолтный журнал diary
-    user.create_default_journal()
+    # Инициализируем рабочее пространство пользователя
+    user.initialize_user_workspace()
     
     access_token = create_access_token(identity=str(user.user_id))
     refresh_token = create_refresh_token(identity=str(user.user_id))
@@ -313,24 +336,41 @@ def get_tts_audio():
 
 
 @main.route('/get_scenario/<string:name>', methods=['GET'])
+@jwt_required(optional=True)
 def get_scenario(name):
     if name == 'my_day':
         scenario = create_daily_scenario()
-        # print(f'get_scenario: my_day: {scenario}')
         return {"scenario": scenario}, 200
-    scenario_path = os.path.join(current_app.root_path, 'app', 'user_data', 'scenarios', f'{name}.json')
-    # print(f'get_scenario: scenario_path: {scenario_path}')
+    
+    from app.data_paths import get_user_data_path, get_system_data_path
+    
+    scenario_path = None
+    
+    # Сначала ищем в пользовательских сценариях
+    if current_user:
+        user_scenarios_path = get_user_data_path(current_user.id, 'scenarios')
+        user_scenario_file = os.path.join(user_scenarios_path, f'{name}.json')
+        if os.path.isfile(user_scenario_file):
+            scenario_path = user_scenario_file
+    
+    # Если не найден, ищем в системных
+    if not scenario_path:
+        system_scenarios_path = get_system_data_path('scenarios')
+        if system_scenarios_path:
+            system_scenario_file = os.path.join(system_scenarios_path, f'{name}.json')
+            if os.path.isfile(system_scenario_file):
+                scenario_path = system_scenario_file
+    
+    if not scenario_path:
+        abort(404, description="Scenario not found")
+    
     try:
         with open(scenario_path, 'r', encoding='utf-8') as file:
             scenario = json.load(file)
-    except Exception as e:
-        print(f'action_module_processing: {e}')
-        abort(404, description=f"Scenario error: {e}")
-    if scenario:
-        # print(f'get_scenario: scenario: {scenario}')
         return {"scenario": scenario}, 200
-    else:
-        abort(404, description="Scenario not found")
+    except Exception as e:
+        current_app.logger.error(f'get_scenario error: {e}')
+        abort(404, description=f"Scenario error: {e}")
 
 
 @main.route('/get_tts_audio_filename', methods=['POST'])
@@ -688,19 +728,18 @@ def get_days_route():
 @main.route('/journals/file', methods=['GET'])
 @jwt_required()
 def get_journal_file():
-    # current_app.logger.debug(f'get_journal_file{request.args}')
-    """Serve files from the journals folder."""
+    from app.data_paths import get_user_data_path
+    
     category = request.args.get('category')
     date_folder = request.args.get('date_folder')
     filename = request.args.get('filename')
 
-    base_dir = os.path.join(current_app.root_path, 'user_data', 'journals',
-                            category or '', date_folder or '')
-    file_path = os.path.join(base_dir, filename)
-    # current_app.logger.debug(f'get_journal_file: {file_path}')
-    if not os.path.isfile(file_path):
-        abort(404, description="File not found")
-    return send_from_directory(base_dir, filename)
+    user_journals_path = get_user_data_path(current_user.id, 'journals')
+    base_dir = os.path.join(user_journals_path, category or '', date_folder or '')
+    
+    if os.path.isfile(os.path.join(base_dir, filename)):
+        return send_from_directory(base_dir, filename)
+    abort(404, description="File not found")
 
 
 @main.route('/get_table_data', methods=['GET'])

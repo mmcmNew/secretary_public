@@ -123,7 +123,7 @@ function handleNewSet(type) {
       num = Math.floor(Math.random() * 100) + 1;
       return {
         text: num.toString(),
-        url: `${num}.png`
+        url: `${num}.jpg`
       };
     });
 

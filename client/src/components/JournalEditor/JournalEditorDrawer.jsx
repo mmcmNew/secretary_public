@@ -494,7 +494,7 @@ export default function JournalEditorDrawer() {
         <Box sx={{ flexGrow: 1, overflow: 'none', height: '100%', width: '100%', flexDirection: 'column', display: 'flex', paddingBottom: 2, marginLeft: 2 }}>
           {/* { tableName && calendarDate ? */}
           <Box sx={{ height: '95%', width: '100%'}}>
-          {!tablesList && tablesList.length != 0 ? (
+          {tablesList.length != 0 ? (
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'left', marginBottom: 2 }}>
               {/* <Typography variant="h6" component="div">
                 {tableName}

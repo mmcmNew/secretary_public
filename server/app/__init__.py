@@ -117,6 +117,10 @@ def create_app(config_type='work'):
         Priority.add_initial_priorities()
         from app.tasks.models import Interval
         Interval.add_initial_intervals()
+        
+        # Инициализация данных подписки
+        from .init_subscription_data import init_subscription_data
+        init_subscription_data()
 
 
         # Отдаем index.html и статику (должно быть в конце, чтобы не перехватывать API маршруты)

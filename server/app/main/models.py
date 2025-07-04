@@ -46,6 +46,11 @@ class User(db.Model):
             db.session.add(admin)
             db.session.add(secretary)
             db.session.commit()
+            
+            # Инициализируем рабочие пространства для начальных пользователей
+            admin.initialize_user_workspace()
+            secretary.initialize_user_workspace()
+            
             current_app.logger.info("Initial users added.")
 
     def create_default_journal(self):
@@ -72,6 +77,16 @@ class User(db.Model):
             )
             db.session.add(default_schema)
             db.session.commit()
+    
+    def initialize_user_workspace(self):
+        """Инициализирует рабочее пространство пользователя"""
+        try:
+            from app.user_data_manager import UserDataManager
+            UserDataManager.create_user_workspace(self.user_id)
+            self.create_default_journal()
+            current_app.logger.info(f"Workspace initialized for user {self.user_id}")
+        except Exception as e:
+            current_app.logger.error(f"Failed to initialize workspace for user {self.user_id}: {e}")
 
     def to_dict(self):
         return {
