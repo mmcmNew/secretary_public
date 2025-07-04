@@ -40,7 +40,10 @@ def fetch_filtered_records(table_name, filters):
     records = []
     for entry in entries:
         data = entry.data or {}
-        record = {**data, 'id': entry.id, 'created_at': entry.created_at.isoformat()}
+        record = {**data,
+                 'id': entry.id,
+                 'created_at': entry.created_at.isoformat(),
+                 'files': [f.to_dict() for f in entry.files]}
         include = True
 
         for field in date_fields:
