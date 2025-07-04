@@ -38,6 +38,7 @@ const FIELD_TYPES = [
   { value: 'number', label: 'Число' },
   { value: 'date', label: 'Дата' },
   { value: 'select', label: 'Выбор из списка' },
+  { value: 'file', label: 'Файл' },
   { value: 'tags', label: 'Теги' },
   { value: 'checkbox', label: 'Флажок' }
 ];
@@ -270,6 +271,17 @@ export default function JournalManager() {
                     }
                     label="Обязательное"
                   />
+                  {field.type === 'file' && (
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={field.multiple || false}
+                          onChange={(e) => updateField(index, { ...field, multiple: e.target.checked })}
+                        />
+                      }
+                      label="Множественные"
+                    />
+                  )}
                   <IconButton onClick={() => removeField(index)} color="error">
                     <DeleteIcon />
                   </IconButton>

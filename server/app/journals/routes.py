@@ -1,8 +1,11 @@
-from flask import request, jsonify
+import os
+import uuid
+from werkzeug.utils import secure_filename
+from flask import request, jsonify, send_from_directory
 from flask_jwt_extended import jwt_required, current_user
 
 from . import journals
-from .models import JournalEntry, JournalSchema
+from .models import JournalEntry, JournalSchema, JournalFile
 from app import db
 
 
@@ -26,9 +29,21 @@ def create_journal(journal_type):
     if not schema:
         return jsonify({'error': 'Журнал не найден'}), 404
     
-    data = request.get_json() or {}
+    # Получаем данные из формы или JSON
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form.to_dict()
+        files = request.files
+    else:
+        data = request.get_json() or {}
+        files = {}
+    
     entry = JournalEntry(user_id=current_user.id, journal_type=journal_type, data=data)
     db.session.add(entry)
+    db.session.flush()  # Получаем ID записи
+    
+    # Обрабатываем файлы для полей типа 'file'
+    _process_journal_files(entry, schema, files)
+    
     db.session.commit()
     return jsonify(entry.to_dict()), 201
 
@@ -42,8 +57,20 @@ def update_journal(journal_type, entry_id):
         return jsonify({'error': 'Журнал не найден'}), 404
     
     entry = JournalEntry.query.filter_by(id=entry_id, user_id=current_user.id, journal_type=journal_type).first_or_404()
-    data = request.get_json() or {}
+    
+    # Получаем данные из формы или JSON
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form.to_dict()
+        files = request.files
+    else:
+        data = request.get_json() or {}
+        files = {}
+    
     entry.data = data
+    
+    # Обрабатываем новые файлы
+    _process_journal_files(entry, schema, files)
+    
     db.session.commit()
     return jsonify(entry.to_dict())
 
@@ -57,6 +84,11 @@ def delete_journal(journal_type, entry_id):
         return jsonify({'error': 'Журнал не найден'}), 404
     
     entry = JournalEntry.query.filter_by(id=entry_id, user_id=current_user.id, journal_type=journal_type).first_or_404()
+    
+    # Удаляем физические файлы
+    for file in entry.files:
+        file.delete_file()
+    
     db.session.delete(entry)
     db.session.commit()
     return jsonify({'result': 'OK'})
@@ -119,8 +151,115 @@ def delete_schema(schema_id):
     if schema.is_default:
         return jsonify({'error': 'Нельзя удалить системный журнал'}), 403
     
-    # Удаляем все записи этого типа журнала
+    # Удаляем все записи этого типа журнала и связанные файлы
+    entries = JournalEntry.query.filter_by(user_id=current_user.id, journal_type=schema.name).all()
+    for entry in entries:
+        for file in entry.files:
+            file.delete_file()
     JournalEntry.query.filter_by(user_id=current_user.id, journal_type=schema.name).delete()
     db.session.delete(schema)
     db.session.commit()
+    return jsonify({'result': 'OK'})
+
+
+def _get_upload_path(user_id, journal_type):
+    """Получаем путь для загрузки файлов журнала"""
+    from app.data_paths import get_user_data_path
+    base_path = get_user_data_path(user_id, 'journals')
+    upload_path = os.path.join(base_path, journal_type, 'files')
+    os.makedirs(upload_path, exist_ok=True)
+    return upload_path
+
+
+def _process_journal_files(entry, schema, files):
+    """Обрабатываем файлы для полей типа 'file'"""
+    if not files:
+        return
+    
+    # Находим поля типа 'file' в схеме
+    file_fields = [f for f in schema.fields if f.get('type') == 'file']
+    
+    for field in file_fields:
+        field_name = field['name']
+        if field_name in files:
+            file_list = files.getlist(field_name)
+            for file in file_list:
+                if file and file.filename:
+                    # Генерируем уникальное имя файла
+                    file_ext = os.path.splitext(file.filename)[1]
+                    unique_filename = f"{uuid.uuid4().hex}{file_ext}"
+                    
+                    # Определяем путь для сохранения
+                    upload_path = _get_upload_path(entry.user_id, entry.journal_type)
+                    file_path = os.path.join(upload_path, unique_filename)
+                    
+                    # Сохраняем файл
+                    file.save(file_path)
+                    
+                    # Создаем запись в базе
+                    journal_file = JournalFile(
+                        entry_id=entry.id,
+                        field_name=field_name,
+                        filename=unique_filename,
+                        original_filename=secure_filename(file.filename),
+                        file_path=file_path,
+                        file_size=os.path.getsize(file_path),
+                        mime_type=file.content_type
+                    )
+                    db.session.add(journal_file)
+
+
+@journals.route('/<journal_type>/<int:entry_id>/files/<int:file_id>', methods=['GET'])
+@jwt_required()
+def download_journal_file(journal_type, entry_id, file_id):
+    """Скачивание файла журнала"""
+    # Проверяем доступ
+    entry = JournalEntry.query.filter_by(
+        id=entry_id, 
+        user_id=current_user.id, 
+        journal_type=journal_type
+    ).first_or_404()
+    
+    journal_file = JournalFile.query.filter_by(
+        id=file_id, 
+        entry_id=entry_id
+    ).first_or_404()
+    
+    if not os.path.exists(journal_file.file_path):
+        return jsonify({'error': 'Файл не найден'}), 404
+    
+    directory = os.path.dirname(journal_file.file_path)
+    filename = os.path.basename(journal_file.file_path)
+    
+    return send_from_directory(
+        directory, 
+        filename, 
+        as_attachment=True, 
+        download_name=journal_file.original_filename
+    )
+
+
+@journals.route('/<journal_type>/<int:entry_id>/files/<int:file_id>', methods=['DELETE'])
+@jwt_required()
+def delete_journal_file(journal_type, entry_id, file_id):
+    """Удаление файла журнала"""
+    # Проверяем доступ
+    entry = JournalEntry.query.filter_by(
+        id=entry_id, 
+        user_id=current_user.id, 
+        journal_type=journal_type
+    ).first_or_404()
+    
+    journal_file = JournalFile.query.filter_by(
+        id=file_id, 
+        entry_id=entry_id
+    ).first_or_404()
+    
+    # Удаляем физический файл
+    journal_file.delete_file()
+    
+    # Удаляем запись из базы
+    db.session.delete(journal_file)
+    db.session.commit()
+    
     return jsonify({'result': 'OK'})

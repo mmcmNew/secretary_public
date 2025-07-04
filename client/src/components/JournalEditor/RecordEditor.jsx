@@ -12,6 +12,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import MarkdownEditor from './MarkdownEditor';
 import MDNotionEditor from './MDNotionEditor';
 import FileRenderer from '../FileRenderer';
+import JournalFilesList from './JournalFilesList';
 import pathToUrl from '../../utils/pathToUrl';
 
 function RecordEditor({
@@ -163,7 +164,7 @@ function RecordEditor({
           {fields.map((field) => (
             field === 'files' && record[field] ? (
               <Box key={field} sx={{ mb: 1 }}>
-                <Typography variant="h6">Вложения</Typography>
+                <Typography variant="h6">Вложения (старые)</Typography>
                 {renderFiles(record[field])}
               </Box>
             ) : field === 'id' ? (
@@ -181,6 +182,24 @@ function RecordEditor({
               </Box>
             )
           ))}
+          {/* Отображаем новые файлы журналов */}
+          {record.files && record.files.length > 0 && (
+            <JournalFilesList 
+              files={record.files}
+              journalType={tableSurvey?.table_name}
+              entryId={record.id}
+              onFileDelete={(fileId) => {
+                // Обновляем список файлов после удаления
+                const updatedFiles = record.files.filter(f => f.id !== fileId);
+                dispatchEditors({ 
+                  type: 'UPDATE_RECORD_FIELD', 
+                  index, 
+                  field: 'files', 
+                  value: updatedFiles 
+                });
+              }}
+            />
+          )}
         </Box>
 
         {editor.aiResponse && (

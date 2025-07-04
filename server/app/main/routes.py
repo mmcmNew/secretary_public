@@ -627,6 +627,9 @@ def get_table_survey(table_name, conn=None):
                     "type": field.get('type', 'text'),
                     "check": "true"
                 }
+                # Добавляем дополнительные свойства для полей типа file
+                if field.get('type') == 'file':
+                    field_entry['multiple'] = field.get('multiple', False)
                 action["fields"].append(field_entry)
             return action
     except:

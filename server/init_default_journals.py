@@ -34,6 +34,7 @@ def init_default_journals():
                     fields=[
                         {'name': 'content', 'type': 'textarea', 'label': 'Содержание', 'required': True},
                         {'name': 'mood', 'type': 'select', 'label': 'Настроение', 'options': ['😊', '😐', '😔', '😡', '😴']},
+                        {'name': 'attachments', 'type': 'file', 'label': 'Приложения', 'multiple': True},
                         {'name': 'tags', 'type': 'tags', 'label': 'Теги'}
                     ],
                     is_default=True

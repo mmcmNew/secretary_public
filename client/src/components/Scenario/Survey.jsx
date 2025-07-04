@@ -27,6 +27,23 @@ async function sendNewRecord(table_name, record_info) {
     }
 }
 
+async function sendNewRecordWithFiles(table_name, formData) {
+    const url = `/api/journals/${table_name}`;
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData,
+        });
+        if (!response.ok) {
+            throw new Error('Ошибка при отправке новой записи с файлами');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Ошибка при создании записи с файлами:', error);
+        return null;
+    }
+}
+
 async function updateRecord(table_name, record_info) {
     const url = `/api/journals/${table_name}/${record_info.id}`;
     try {
@@ -45,12 +62,29 @@ async function updateRecord(table_name, record_info) {
     }
 }
 
+async function updateRecordWithFiles(table_name, record_id, formData) {
+    const url = `/api/journals/${table_name}/${record_id}`;
+    try {
+        const response = await fetch(url, {
+            method: 'PUT',
+            body: formData,
+        });
+        if (!response.ok) {
+            throw new Error('Ошибка при обновлении записи с файлами');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Ошибка при обновлении записи с файлами:', error);
+        return null;
+    }
+}
+
 
 export default function Survey({ id, survey, activeElementId=null, onExpireFunc=null, autosend=true, taskId=null }) {
 
     const unfiltredFields = survey?.fields
     // Массив полей, которые нужно исключить
-    const excludeFields = ['id', 'date', 'files', 'time', 'table_name', 'task_id'];
+    const excludeFields = ['id', 'date', 'time', 'table_name', 'task_id'];
 
     // Фильтруем поля, исключая те, которые есть в excludeFields
     const fields = unfiltredFields.filter((field) => !excludeFields.includes(field.field_id));
@@ -71,6 +105,7 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
     const [actionIdTTS, setActionIdTTS] = useState(null)
     const fileInputRef = useRef(null);
     const [files, setFiles] = useState([]);
+    const [fieldFiles, setFieldFiles] = useState({});  // Файлы для конкретных полей
     const [fieldOptions, setFieldOptions] = useState({});
 
     const { finalTranscript, resetTranscript, listening } = useSpeechRecognition();
@@ -188,15 +223,34 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
         const isNew = !updatedParams.id;
         let result = null;
         try {
+            // Создаем FormData для отправки файлов
+            const formData = new FormData();
+            
+            // Добавляем обычные поля
+            Object.keys(updatedParams).forEach(key => {
+                if (updatedParams[key] !== null && updatedParams[key] !== undefined) {
+                    formData.append(key, updatedParams[key]);
+                }
+            });
+            
+            // Добавляем файлы для каждого поля
+            Object.keys(fieldFiles).forEach(fieldName => {
+                const files = fieldFiles[fieldName] || [];
+                files.forEach(file => {
+                    formData.append(fieldName, file);
+                });
+            });
+            
             if (isNew) {
-                result = await sendNewRecord(survey.table_name, updatedParams);
+                result = await sendNewRecordWithFiles(survey.table_name, formData);
             } else {
-                result = await updateRecord(survey.table_name, updatedParams);
+                result = await updateRecordWithFiles(survey.table_name, updatedParams.id, formData);
             }
             if (!result) {
                 throw new Error('Ошибка при отправке');
             }
             setFiles([]);
+            setFieldFiles({});
             // Обновляем поля данными созданной/обновленной записи
             const newParams = {};
             if (result.data) {
@@ -278,6 +332,38 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
                 const fieldType = field.type || 'text';
                 const options = fieldOptions[field.field_id] || [];
                 
+                if (fieldType === 'file') {
+                    return (
+                        <div key={id + field.field_id} style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                                {field.field_name}
+                            </label>
+                            <input
+                                type="file"
+                                multiple={field.multiple}
+                                onChange={(e) => {
+                                    const selectedFiles = Array.from(e.target.files);
+                                    setFieldFiles(prev => ({
+                                        ...prev,
+                                        [field.field_id]: selectedFiles
+                                    }));
+                                }}
+                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+                            />
+                            {fieldFiles[field.field_id] && fieldFiles[field.field_id].length > 0 && (
+                                <div style={{ marginTop: '0.5rem' }}>
+                                    <strong>Выбранные файлы:</strong>
+                                    <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
+                                        {fieldFiles[field.field_id].map((file, index) => (
+                                            <li key={index}>{file.name}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    );
+                }
+                
                 if (fieldType === 'select' && options.length > 0) {
                     return (
                         <div key={id + field.field_id} style={{ marginBottom: '1rem' }}>
@@ -320,16 +406,7 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
             })}
             {isSending ? <CircularProgress size={24} /> :
                 <Box>
-                    {files && files.length > 0 && <FilesListComponent files={files} setFiles={setFiles} />}
-                    <input
-                        type="file"
-                        multiple
-                        ref={fileInputRef}
-                        style={{ display: 'none' }}
-                        onChange={handleAddFiles}
-                    />
                     <Button onClick={handleSubmit} disabled={isSending}>Записать</Button>
-                    <Button onClick={() => fileInputRef.current.click()} disabled={isSending}>Прикрепить файл</Button>
                 </Box>}
             {inputError && <p style={{ color: 'red' }}>{inputError}</p>}
             {isUpdateSuccess &&
