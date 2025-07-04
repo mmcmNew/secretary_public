@@ -12,8 +12,6 @@ import SaveIcon from '@mui/icons-material/Save';
 import MarkdownEditor from './MarkdownEditor';
 import MDNotionEditor from './MDNotionEditor';
 import FileRenderer from '../FileRenderer';
-import JournalFilesList from './JournalFilesList';
-import pathToUrl from '../../utils/pathToUrl';
 
 function RecordEditor({
   editor,
@@ -36,22 +34,9 @@ function RecordEditor({
     return found ? found.field_name : field;
   };
 
-  const renderFiles = (files) => {
-    if (!files) return null;
-    const list = files.split(';').filter(Boolean);
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {list.map((f, i) => {
-          const url = pathToUrl(f.trim());
-          if (/\.(png|jpe?g|gif|webp|md|txt)$/i.test(url)) {
-            return <FileRenderer key={i} url={url} />;
-          }
-          return (
-            <Button key={i} href={url} target="_blank" startIcon={<AttachFileIcon />}>Файл {i + 1}</Button>
-          );
-        })}
-      </Box>
-    );
+  const fileUrl = (file) => `/api/journals/${tableSurvey?.table_name}/${record.id}/files/${file.id}?raw=1`;
+  const getFilesForField = (fieldId) => {
+    return (record.files || []).filter(f => f.field_name === fieldId);
   };
 
   return (
@@ -161,45 +146,39 @@ function RecordEditor({
         transition: 'border-color 0.5s ease',
       }}>
         <Box sx={{ flex: editor.aiResponse ? 1 : '100%', p: 1 }}>
-          {fields.map((field) => (
-            field === 'files' && record[field] ? (
-              <Box key={field} sx={{ mb: 1 }}>
-                <Typography variant="h6">Вложения (старые)</Typography>
-                {renderFiles(record[field])}
-              </Box>
-            ) : field === 'id' ? (
-              <Box key={field} sx={{ mb: 1 }}>
-                <Typography variant="h6">id Записи: {record[field]}</Typography>
-              </Box>
-            ) : (
+          {fields.map((field) => {
+            if (field === 'files') return null; // скрываем старое поле
+            if (field === 'id') {
+              return (
+                <Box key={field} sx={{ mb: 1 }}>
+                  <Typography variant="h6">id Записи: {record[field]}</Typography>
+                </Box>
+              );
+            }
+
+            const fieldInfo = tableSurvey?.fields?.find(fld => fld.field_id === field);
+            const isFileField = fieldInfo?.type === 'file';
+            const filesForField = isFileField ? getFilesForField(fieldInfo.field_id) : [];
+
+            return (
               <Box key={field} sx={{ mb: 1 }}>
                 <Typography variant="h6">{getFieldName(field)}</Typography>
-                <MarkdownEditor
-                  ref={fieldRefs[field]}
-                  initialMarkdown={record[field] || ''}
-                  onChange={() => dispatchEditors({ type: 'SET_HAS_UNSAVED', index })}
-                />
+                {isFileField ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {filesForField.map((f) => (
+                      <FileRenderer key={f.id} url={fileUrl(f)} />
+                    ))}
+                  </Box>
+                ) : (
+                  <MarkdownEditor
+                    ref={fieldRefs[field]}
+                    initialMarkdown={record[field] || ''}
+                    onChange={() => dispatchEditors({ type: 'SET_HAS_UNSAVED', index })}
+                  />
+                )}
               </Box>
-            )
-          ))}
-          {/* Отображаем новые файлы журналов */}
-          {record.files && record.files.length > 0 && (
-            <JournalFilesList 
-              files={record.files}
-              journalType={tableSurvey?.table_name}
-              entryId={record.id}
-              onFileDelete={(fileId) => {
-                // Обновляем список файлов после удаления
-                const updatedFiles = record.files.filter(f => f.id !== fileId);
-                dispatchEditors({ 
-                  type: 'UPDATE_RECORD_FIELD', 
-                  index, 
-                  field: 'files', 
-                  value: updatedFiles 
-                });
-              }}
-            />
-          )}
+            );
+          })}
         </Box>
 
         {editor.aiResponse && (

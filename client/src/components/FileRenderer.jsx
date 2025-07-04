@@ -7,16 +7,25 @@ import MDNotionEditor from './JournalEditor/MDNotionEditor';
 export default function FileRenderer({ url }) {
   const extension = url.split('.').pop().toLowerCase();
   const [content, setContent] = useState(null);
+  const [blobUrl, setBlobUrl] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
     if (['md', 'txt'].includes(extension)) {
-      let isMounted = true;
       fetch(url)
         .then(r => r.text())
         .then(text => { if (isMounted) setContent(text); })
         .catch(() => { if (isMounted) setContent(''); });
-      return () => { isMounted = false; };
+    } else {
+      fetch(url)
+        .then(r => r.blob())
+        .then(b => { if (isMounted) setBlobUrl(URL.createObjectURL(b)); })
+        .catch(() => { if (isMounted) setBlobUrl(''); });
     }
+    return () => {
+      isMounted = false;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
   }, [url, extension]);
 
   if (['md', 'txt'].includes(extension)) {
@@ -25,14 +34,15 @@ export default function FileRenderer({ url }) {
   }
 
   if (/(png|jpe?g|gif|webp)$/i.test(extension)) {
-    const markdown = `![file](${url})`;
+    if (!blobUrl) return <CircularProgress size={20} />;
+    const markdown = `![file](${blobUrl})`;
     return <MDNotionEditor readOnly initialMarkdown={markdown} />;
   }
 
   return (
-    <Button href={url} target="_blank" startIcon={<AttachFileIcon />}>
-      Открыть файл
-    </Button>
+    blobUrl
+      ? <Button href={blobUrl} target="_blank" startIcon={<AttachFileIcon />}>Открыть файл</Button>
+      : <CircularProgress size={20} />
   );
 }
 
