@@ -90,10 +90,10 @@ export default function JournalEditorDrawer() {
   const [loadingFilteredRecords, setLoadingFilteredRecords] = useState(false);
   const [dropdownValues, setDropdownValues] = useState({});
 
-  const editorsReducer = (state, action) => {
-    switch(action.type) {
-      case 'SET_EDITORS':
-        return action.payload;
+    const editorsReducer = (state, action) => {
+      switch(action.type) {
+        case 'SET_EDITORS':
+          return action.payload;
       case 'SET_STATUS':
         return state.map((ed, i) => i === action.index ? { ...ed, [action.key]: action.value } : ed);
       case 'SET_CHECKED':
@@ -106,10 +106,21 @@ export default function JournalEditorDrawer() {
         return state.map((ed, i) => i === action.index ? { ...ed, hasUnsavedChanges: true } : ed);
       case 'CLEAR_UNSAVED':
         return state.map((ed, i) => i === action.index ? { ...ed, hasUnsavedChanges: false } : ed);
+      case 'UPDATE_RECORD_FIELD':
+        return state.map((ed, i) => {
+          if (i !== action.index) return ed;
+          return {
+            ...ed,
+            record: {
+              ...ed.record,
+              [action.field]: action.value
+            }
+          };
+        });
       default:
         return state;
-    }
-  };
+      }
+    };
   const [editors, dispatchEditors] = useReducer(editorsReducer, []);
   
   // Стабильные refs для редакторов
