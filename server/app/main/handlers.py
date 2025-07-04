@@ -8,8 +8,6 @@ from app.utilites import get_modules
 
 
 def fetch_table_records(table_name, date_str, timezone_offset_ms):
-    modules = get_modules()
-
     date_obj = datetime.strptime(date_str[:10], '%Y-%m-%d')
 
     if timezone_offset_ms:
@@ -24,7 +22,11 @@ def fetch_table_records(table_name, date_str, timezone_offset_ms):
     utc_start = local_start - timezone_offset
     utc_end = local_end - timezone_offset
 
-    if modules.get(table_name, {}).get('type') == 'journal':
+    # Проверяем пользовательские журналы
+    from app.journals.models import JournalSchema
+    user_schema = JournalSchema.query.filter_by(user_id=current_user.id, name=table_name).first()
+    
+    if user_schema:
         current_app.logger.debug(f'fetch_table_records: table={table_name}, date={date_str}, tz_offset_ms={timezone_offset_ms}')
         current_app.logger.debug(f'fetch_table_records: utc_start={utc_start}, utc_end={utc_end}, user_id={current_user.id}')
         

@@ -30,6 +30,7 @@ import MDNotionEditor from './MDNotionEditor';
 import FiltersPanel from './FiltersPanel';
 import { Virtuoso } from 'react-virtuoso';
 import RecordEditor from './RecordEditor';
+import { useNavigate } from 'react-router-dom';
 
 
 dayjs.extend(utc);
@@ -71,6 +72,7 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 
 export default function JournalEditorDrawer() {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [open, setOpen] = React.useState(true);
 
   const [tableName, setTableName] = useState();
@@ -492,13 +494,14 @@ export default function JournalEditorDrawer() {
         <Box sx={{ flexGrow: 1, overflow: 'none', height: '100%', width: '100%', flexDirection: 'column', display: 'flex', paddingBottom: 2, marginLeft: 2 }}>
           {/* { tableName && calendarDate ? */}
           <Box sx={{ height: '95%', width: '100%'}}>
+          {!tablesList && tablesList.length != 0 ? (
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'left', marginBottom: 2 }}>
               {/* <Typography variant="h6" component="div">
                 {tableName}
               </Typography> */}
-              <Button onClick={handleNewRecordDialogOpen}>
-                Добавить запись на сегодня
-              </Button>
+                <Button onClick={handleNewRecordDialogOpen}>
+                  Добавить запись на сегодня
+                </Button>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button variant="outlined"
                   startIcon={<FilterAltIcon />}
@@ -522,6 +525,7 @@ export default function JournalEditorDrawer() {
                 </Button>
               </Box>
             </Box>
+            ): null}
             <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'none', height: '100%' }}>
               {showFilters && tableName && (
                 <Box sx={{ flexShrink: 0 }}>
@@ -539,6 +543,23 @@ export default function JournalEditorDrawer() {
                 </Box>
               )}
               <Box sx={{ flexGrow: 1, overflowY: 'none', height: '100%', marginTop: 1 }}>
+                {tablesList && tablesList.length === 0 ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 2 }}>
+                    <Typography variant="h5" color="text.secondary">
+                      У вас нет журналов
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" textAlign="center">
+                      Создайте свой первый журнал через профиль пользователя
+                    </Typography>
+                    <Button 
+                      variant="contained" 
+                      onClick={() => navigate('/account')}
+                      size="large"
+                    >
+                      Перейти в профиль
+                    </Button>
+                  </Box>
+                ) : (
                 <Box sx={{ display: 'flex', flexGrow: 1, flexDirection: 'column', gap: 2, overflowY: 'none', height: '98%', marginTop: 1, paddingBottom: 2,
                   border: editors.some(editor => editor.hasUnsavedChanges) ? '2px solid #f44336' : '2px solid #ccc',
                   borderRadius: 2,
@@ -579,6 +600,7 @@ export default function JournalEditorDrawer() {
                     )}
                   />
                 </Box>
+                )}
               </Box>
               {allRecordDates?.length > 0 && Object.keys(filters).length === 0 ? (
                 <Pagination

@@ -1,5 +1,5 @@
 import { PropTypes } from 'prop-types';
-import { Alert, Button, CircularProgress, TextField } from "@mui/material";
+import { Alert, Autocomplete, Button, CircularProgress, TextField } from "@mui/material";
 import { Box } from "@mui/system";
 import CheckIcon from '@mui/icons-material/Check';
 import { useEffect, useRef, useState } from "react";
@@ -71,8 +71,27 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
     const [actionIdTTS, setActionIdTTS] = useState(null)
     const fileInputRef = useRef(null);
     const [files, setFiles] = useState([]);
+    const [fieldOptions, setFieldOptions] = useState({});
 
     const { finalTranscript, resetTranscript, listening } = useSpeechRecognition();
+
+    // Загружаем опции для полей при монтировании
+    useEffect(() => {
+        const loadFieldOptions = async () => {
+            try {
+                const response = await fetch(`/get_tables_filters/${survey.table_name}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setFieldOptions(data);
+                }
+            } catch (error) {
+                console.error('Error loading field options:', error);
+            }
+        };
+        if (survey?.table_name) {
+            loadFieldOptions();
+        }
+    }, [survey?.table_name]);
 
     useEffect(() => {
         if (activeElementId === id)
@@ -178,7 +197,26 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
                 throw new Error('Ошибка при отправке');
             }
             setFiles([]);
-            setEditedParams(result);
+            // Обновляем поля данными созданной/обновленной записи
+            const newParams = {};
+            if (result.data) {
+                // Для новых записей данные в result.data
+                Object.keys(result.data).forEach(key => {
+                    if (fields.some(field => field.field_id === key)) {
+                        newParams[key] = result.data[key];
+                    }
+                });
+                newParams.id = result.id;
+            } else {
+                // Для обновленных записей данные в result
+                Object.keys(result).forEach(key => {
+                    if (fields.some(field => field.field_id === key)) {
+                        newParams[key] = result[key];
+                    }
+                });
+                newParams.id = result.id;
+            }
+            setEditedParams(newParams);
             setSuccessMessage(isNew ? 'Запись создана' : 'Запись обновлена');
             setIsUpdateSuccess(true);
         } catch (record_edit_error) {
@@ -236,19 +274,50 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
             <p>Имя таблицы: {survey.table_name}</p>
             <TTSText key={id + survey.table_name} element={{'text': survey.text}}
                 elementId={id + survey.table_name} onExpireFunc={onExpireTTS} currentActionId={actionIdTTS}/>
-            {fields.map((field) => (
-                <div key={id + field.field_id} style={{ marginBottom: '1rem' }}>
-                    <TextField
-                        id={id + field.field_id}
-                        label={field.field_name}
-                        multiline
-                        maxRows={15}
-                        fullWidth
-                        value={editedParams[field.field_id] || ''}
-                        onChange={(e) => handleParamChange(field.field_id, e.target.value)}
-                    />
-                </div>
-            ))}
+            {fields.map((field) => {
+                const fieldType = field.type || 'text';
+                const options = fieldOptions[field.field_id] || [];
+                
+                if (fieldType === 'select' && options.length > 0) {
+                    return (
+                        <div key={id + field.field_id} style={{ marginBottom: '1rem' }}>
+                            <Autocomplete
+                                freeSolo
+                                options={options}
+                                value={editedParams[field.field_id] || ''}
+                                onChange={(event, newValue) => {
+                                    handleParamChange(field.field_id, newValue || '');
+                                }}
+                                onInputChange={(event, newInputValue) => {
+                                    handleParamChange(field.field_id, newInputValue);
+                                }}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label={field.field_name}
+                                        fullWidth
+                                    />
+                                )}
+                            />
+                        </div>
+                    );
+                }
+                
+                return (
+                    <div key={id + field.field_id} style={{ marginBottom: '1rem' }}>
+                        <TextField
+                            id={id + field.field_id}
+                            label={field.field_name}
+                            multiline={fieldType === 'textarea'}
+                            maxRows={15}
+                            fullWidth
+                            type={fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'}
+                            value={editedParams[field.field_id] || ''}
+                            onChange={(e) => handleParamChange(field.field_id, e.target.value)}
+                        />
+                    </div>
+                );
+            })}
             {isSending ? <CircularProgress size={24} /> :
                 <Box>
                     {files && files.length > 0 && <FilesListComponent files={files} setFiles={setFiles} />}

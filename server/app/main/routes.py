@@ -525,10 +525,8 @@ def post_edited_record_api():
 def get_tables_route():
     from app.journals.models import JournalSchema
     
-    # Получаем стандартные таблицы
-    tables = get_tables()
-    
-    # Добавляем пользовательские журналы
+    # Только пользовательские журналы
+    tables = []
     user_schemas = JournalSchema.query.filter_by(user_id=current_user.id).all()
     for schema in user_schemas:
         tables.append({
@@ -542,40 +540,32 @@ def get_tables_route():
 
 
 def get_table_survey(table_name, conn=None):
-    columns_names = get_columns_names()
-    modules = get_modules()
-
     # Проверяем пользовательские журналы
     try:
         from app.journals.models import JournalSchema
         user_schema = JournalSchema.query.filter_by(user_id=current_user.id, name=table_name).first()
         if user_schema:
-            columns = [field['name'] for field in user_schema.fields]
-        else:
-            module_cfg = modules.get(table_name, {})
-            columns = module_cfg.get('info', [])
+            # Формируем структуру для JSON-ответа
+            action = {
+                "type": "survey",
+                "table_name": table_name,
+                "text": "Продиктуйте новую запись",
+                "fields": []
+            }
+            
+            for field in user_schema.fields:
+                field_entry = {
+                    "field_id": field['name'],
+                    "field_name": field['label'],
+                    "type": field.get('type', 'text'),
+                    "check": "true"
+                }
+                action["fields"].append(field_entry)
+            return action
     except:
-        module_cfg = modules.get(table_name, {})
-        columns = module_cfg.get('info', [])
+        pass
 
-    # Формируем структуру для JSON-ответа
-    action = {
-        "type": "survey",
-        "table_name": table_name,
-        "text": "Продиктуйте новую запись",
-        "fields": []
-    }
-
-    for col in columns:
-        field_name = columns_names.get(col, col)  # Если в columns_names нет, используем само имя столбца
-        field_entry = {
-            "field_id": col,
-            "field_name": field_name,
-            "check": "true"
-        }
-        action["fields"].append(field_entry)
-
-    return action
+    return None
 
 
 # маршрут для получения списка дней на которые есть записи в журнале по имени таблицы
@@ -616,7 +606,7 @@ def get_days_route():
         from app.journals.models import JournalSchema
         user_schema = JournalSchema.query.filter_by(user_id=current_user.id, name=table_name).first()
         
-        if user_schema or modules.get(table_name, {}).get('type') == 'journal':
+        if user_schema:
             entries = (
                 JournalEntry.query
                 .filter(JournalEntry.journal_type == table_name,
@@ -698,12 +688,11 @@ def get_table_data():
         if not records:
             return jsonify({'records': [], 'columns': columns}), 200
 
-        modules = get_modules()
         # Проверяем пользовательские журналы
         from app.journals.models import JournalSchema
         user_schema = JournalSchema.query.filter_by(user_id=current_user.id, name=table_name).first()
         
-        if user_schema or modules.get(table_name, {}).get('type') == 'journal':
+        if user_schema:
             result = records
         else:
             result = [dict(r) for r in records]
@@ -767,4 +756,34 @@ def get_records_route():
 @main.route('/get_tables_filters/<table_name>', methods=['GET'])
 @jwt_required()
 def api_get_filter_values(table_name):
-    return get_all_filters(table_name)
+    from app.journals.models import JournalSchema
+    
+    # Проверяем пользовательские журналы
+    user_schema = JournalSchema.query.filter_by(user_id=current_user.id, name=table_name).first()
+    if user_schema:
+        # Получаем уникальные значения для каждого поля
+        entries = JournalEntry.query.filter_by(user_id=current_user.id, journal_type=table_name).all()
+        field_values = {}
+        
+        for field in user_schema.fields:
+            field_name = field['name']
+            values = set()
+            
+            # Добавляем варианты из схемы
+            if field.get('options'):
+                for option in field['options']:
+                    if option and str(option).strip():
+                        values.add(str(option).strip())
+            
+            # Добавляем варианты из существующих записей
+            for entry in entries:
+                if entry.data and field_name in entry.data:
+                    value = entry.data[field_name]
+                    if value and str(value).strip():
+                        values.add(str(value).strip())
+            
+            field_values[field_name] = sorted(list(values))
+        
+        return jsonify(field_values)
+    
+    return jsonify({})

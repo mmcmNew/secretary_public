@@ -129,6 +129,16 @@ export default function JournalManager() {
     setFormData({ ...formData, fields: newFields });
   };
 
+  const updateFieldOptions = (index, optionsString) => {
+    const newFields = [...formData.fields];
+    newFields[index] = {
+      ...newFields[index],
+      optionsString: optionsString,
+      options: optionsString ? optionsString.split(',').map(s => s.trim()).filter(s => s) : []
+    };
+    setFormData({ ...formData, fields: newFields });
+  };
+
   const removeField = (index) => {
     const newFields = formData.fields.filter((_, i) => i !== index);
     setFormData({ ...formData, fields: newFields });
@@ -268,11 +278,8 @@ export default function JournalManager() {
                 {field.type === 'select' && (
                   <TextField
                     label="Варианты (через запятую)"
-                    value={field.options?.join(', ') || ''}
-                    onChange={(e) => updateField(index, { 
-                      ...field, 
-                      options: e.target.value.split(',').map(s => s.trim()).filter(s => s) 
-                    })}
+                    value={field.optionsString || field.options?.join(', ') || ''}
+                    onChange={(e) => updateFieldOptions(index, e.target.value)}
                     fullWidth
                     sx={{ mt: 1 }}
                     size="small"
