@@ -778,16 +778,39 @@ def update_record_from_blocks():
     data = request.get_json()
     table_name = data.get('table_name')
     records = data.get('records', [])
-    # current_app.logger.debug(f'update_record_from_blocks: {table_name}, {records}')
     if not table_name or not isinstance(records, list):
-        current_app.logger.error(f'update_record_from_blocks: Invalid payload')
+        current_app.logger.error('update_record_from_blocks: Invalid payload')
         return jsonify({'error': 'Invalid payload'}), 400
 
     try:
+        from app.journals.models import JournalSchema, JournalEntry
+        from app import db
+
+        schema = JournalSchema.query.filter_by(user_id=current_user.id, name=table_name).first()
+
+        if schema:
+            for record in records:
+                entry_id = record.get('id')
+                if not entry_id:
+                    continue
+                entry = JournalEntry.query.filter_by(
+                    id=entry_id,
+                    user_id=current_user.id,
+                    journal_type=table_name
+                ).first()
+                if not entry:
+                    current_app.logger.error(
+                        f'Record {entry_id} not found in journal {table_name}')
+                    continue
+                entry.data = {**(entry.data or {}), **{k: v for k, v in record.items() if k not in ["id", "files"]}}
+            db.session.commit()
+            return jsonify({'success': True}), 200
+
         for record in records:
             res = update_record(table_name, record)
             if res.get('error'):
-                current_app.logger.error(f"Ошибка обновления записи {record.get('id')}: {res['error']}")
+                current_app.logger.error(
+                    f"Ошибка обновления записи {record.get('id')}: {res['error']}")
         return jsonify({'success': True}), 200
     except Exception as e:
         current_app.logger.error(f'Ошибка при обновлении записи: {e}')

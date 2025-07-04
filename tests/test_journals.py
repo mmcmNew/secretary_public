@@ -34,3 +34,24 @@ def test_journal_crud(client):
     assert entry_id not in ids
     logout(client)
 
+
+def test_update_record_from_blocks_journal(client):
+    register(client, username='userjb', email='userjb@example.com')
+    login(client, username='userjb')
+
+    resp = client.post('/api/journals/diary', json={'content': 'old'})
+    assert resp.status_code == 201
+    entry = resp.get_json()
+    entry_id = entry['id']
+
+    resp = client.post('/update_record_from_blocks', json={
+        'table_name': 'diary',
+        'records': [{'id': entry_id, 'content': 'new'}]
+    })
+    assert resp.status_code == 200
+
+    resp = client.get('/api/journals/diary')
+    updated = next(e for e in resp.get_json() if e['id'] == entry_id)
+    assert updated['data']['content'] == 'new'
+    logout(client)
+
