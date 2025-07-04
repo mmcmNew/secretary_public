@@ -32,6 +32,35 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 
+// Функция транслитерации
+const transliterate = (text) => {
+  const map = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'zh',
+    'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
+    'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'ts',
+    'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+  };
+  return text.toLowerCase().split('').map(char => map[char] || char).join('').replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+};
+
+// Функция для обеспечения уникальности ID
+const makeUniqueIds = (fields) => {
+  const usedIds = new Set();
+  return fields.map(field => {
+    const baseId = transliterate(field.label || '');
+    let uniqueId = baseId;
+    let counter = 1;
+    
+    while (usedIds.has(uniqueId)) {
+      uniqueId = `${baseId}_${counter}`;
+      counter++;
+    }
+    
+    usedIds.add(uniqueId);
+    return uniqueId;
+  });
+};
+
 const FIELD_TYPES = [
   { value: 'text', label: 'Текст' },
   { value: 'textarea', label: 'Многострочный текст' },
@@ -104,11 +133,28 @@ export default function JournalManager() {
   };
 
   const handleSaveSchema = async () => {
+    // Проверяем, что все поля имеют названия
+    const hasEmptyLabels = formData.fields.some(field => !field.label?.trim());
+    if (hasEmptyLabels) {
+      setError('Все поля должны иметь названия');
+      return;
+    }
+    
     try {
+      // Обновляем name для всех полей с проверкой уникальности
+      const uniqueIds = makeUniqueIds(formData.fields);
+      const updatedFormData = {
+        ...formData,
+        fields: formData.fields.map((field, index) => ({
+          ...field,
+          name: uniqueIds[index]
+        }))
+      };
+      
       if (editingSchema) {
-        await axios.put(`/api/journals/schemas/${editingSchema.id}`, formData);
+        await axios.put(`/api/journals/schemas/${editingSchema.id}`, updatedFormData);
       } else {
-        await axios.post('/api/journals/schemas', formData);
+        await axios.post('/api/journals/schemas', updatedFormData);
       }
       setDialogOpen(false);
       fetchSchemas();
@@ -120,12 +166,16 @@ export default function JournalManager() {
   const addField = () => {
     setFormData({
       ...formData,
-      fields: [...formData.fields, { name: '', type: 'text', label: '', required: false }]
+      fields: [...formData.fields, { type: 'text', label: '', required: false }]
     });
   };
 
   const updateField = (index, field) => {
     const newFields = [...formData.fields];
+    // Автогенерация name из label
+    if (field.label) {
+      field.name = transliterate(field.label);
+    }
     newFields[index] = field;
     setFormData({ ...formData, fields: newFields });
   };
@@ -237,17 +287,13 @@ export default function JournalManager() {
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
                   <TextField
                     label="Название поля"
-                    value={field.name}
-                    onChange={(e) => updateField(index, { ...field, name: e.target.value })}
-                    size="small"
-                    sx={{ flex: 1 }}
-                  />
-                  <TextField
-                    label="Отображаемое название"
                     value={field.label}
                     onChange={(e) => updateField(index, { ...field, label: e.target.value })}
                     size="small"
                     sx={{ flex: 1 }}
+                    required
+                    error={!field.label}
+                    helperText={field.label ? `ID: ${makeUniqueIds(formData.fields)[index]}` : 'Обязательное поле'}
                   />
                   <FormControl size="small" sx={{ minWidth: 120 }}>
                     <InputLabel>Тип</InputLabel>
