@@ -2,6 +2,7 @@ from datetime import datetime
 import os
 
 from app import db
+from app.data_paths import APP_USER_DATA_DIR
 
 class JournalSchema(db.Model):
     __bind_key__ = 'content'
@@ -75,10 +76,15 @@ class JournalFile(db.Model):
             'created_at': self.created_at.isoformat() + 'Z'
         }
 
+    @property
+    def absolute_path(self):
+        return os.path.join(APP_USER_DATA_DIR, self.file_path)
+
     def delete_file(self):
         """Удаляет физический файл с диска"""
         try:
-            if os.path.exists(self.file_path):
-                os.remove(self.file_path)
+            abs_path = self.absolute_path
+            if os.path.exists(abs_path):
+                os.remove(abs_path)
         except Exception as e:
             print(f"Ошибка при удалении файла {self.file_path}: {e}")

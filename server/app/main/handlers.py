@@ -43,7 +43,10 @@ def fetch_table_records(table_name, date_str, timezone_offset_ms):
         records = []
         for e in entries:
             data = e.data or {}
-            record = {**data, 'id': e.id, 'created_at': e.created_at.isoformat()}
+            record = {**data,
+                      'id': e.id,
+                      'created_at': e.created_at.isoformat(),
+                      'files': [f.to_dict() for f in e.files]}
             records.append(record)
         columns = sorted({k for r in records for k in r.keys()})
         return records, columns
