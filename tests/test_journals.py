@@ -34,3 +34,19 @@ def test_journal_crud(client):
     assert entry_id not in ids
     logout(client)
 
+
+def test_journal_file_upload(client):
+    register(client, username='fileuser', email='fileuser@example.com')
+    login(client, username='fileuser')
+
+    import io, json as jsonmod
+    data = {
+        'data': jsonmod.dumps({'text': 'with file'}),
+        'file1': (io.BytesIO(b'hello'), 'test.txt')
+    }
+    resp = client.post('/api/journals/diary', data=data, content_type='multipart/form-data')
+    assert resp.status_code == 201
+    entry = resp.get_json()
+    assert 'files' in entry['data'] and entry['data']['files']
+    logout(client)
+

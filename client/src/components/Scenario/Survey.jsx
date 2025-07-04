@@ -9,14 +9,20 @@ import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognitio
 import FilesListComponent from '../Chat/FilesList';
 
 
-async function sendNewRecord(table_name, record_info) {
+async function sendNewRecord(table_name, record_info, files = []) {
     const url = `/api/journals/${table_name}`;
+    let options = { method: 'POST' };
+    if (files && files.length > 0) {
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(record_info));
+        files.forEach((file, idx) => formData.append(`file${idx}`, file));
+        options.body = formData;
+    } else {
+        options.headers = { 'Content-Type': 'application/json' };
+        options.body = JSON.stringify(record_info);
+    }
     try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(record_info),
-        });
+        const response = await fetch(url, options);
         if (!response.ok) {
             throw new Error('Ошибка при отправке новой записи на сервер');
         }
@@ -27,14 +33,20 @@ async function sendNewRecord(table_name, record_info) {
     }
 }
 
-async function updateRecord(table_name, record_info) {
+async function updateRecord(table_name, record_info, files = []) {
     const url = `/api/journals/${table_name}/${record_info.id}`;
+    let options = { method: 'PUT' };
+    if (files && files.length > 0) {
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(record_info));
+        files.forEach((file, idx) => formData.append(`file${idx}`, file));
+        options.body = formData;
+    } else {
+        options.headers = { 'Content-Type': 'application/json' };
+        options.body = JSON.stringify(record_info);
+    }
     try {
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(record_info),
-        });
+        const response = await fetch(url, options);
         if (!response.ok) {
             throw new Error('Ошибка при отправке обновленной записи на сервер');
         }
@@ -189,9 +201,9 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
         let result = null;
         try {
             if (isNew) {
-                result = await sendNewRecord(survey.table_name, updatedParams);
+                result = await sendNewRecord(survey.table_name, updatedParams, files);
             } else {
-                result = await updateRecord(survey.table_name, updatedParams);
+                result = await updateRecord(survey.table_name, updatedParams, files);
             }
             if (!result) {
                 throw new Error('Ошибка при отправке');
@@ -320,16 +332,21 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
             })}
             {isSending ? <CircularProgress size={24} /> :
                 <Box>
+                    <Box
+                        sx={{ border: '2px dashed #ccc', p: 2, textAlign: 'center', mb: 2, cursor: 'pointer' }}
+                        onClick={() => fileInputRef.current.click()}
+                    >
+                        Перетащите файл сюда или нажмите для выбора
+                        <input
+                            type="file"
+                            multiple
+                            ref={fileInputRef}
+                            style={{ display: 'none' }}
+                            onChange={handleAddFiles}
+                        />
+                    </Box>
                     {files && files.length > 0 && <FilesListComponent files={files} setFiles={setFiles} />}
-                    <input
-                        type="file"
-                        multiple
-                        ref={fileInputRef}
-                        style={{ display: 'none' }}
-                        onChange={handleAddFiles}
-                    />
                     <Button onClick={handleSubmit} disabled={isSending}>Записать</Button>
-                    <Button onClick={() => fileInputRef.current.click()} disabled={isSending}>Прикрепить файл</Button>
                 </Box>}
             {inputError && <p style={{ color: 'red' }}>{inputError}</p>}
             {isUpdateSuccess &&

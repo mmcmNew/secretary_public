@@ -1,5 +1,6 @@
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, current_user
+import json
 
 from . import journals
 from .models import JournalEntry, JournalSchema
@@ -26,7 +27,23 @@ def create_journal(journal_type):
     if not schema:
         return jsonify({'error': 'Журнал не найден'}), 404
     
-    data = request.get_json() or {}
+    if request.content_type and request.content_type.startswith('multipart/form-data'):
+        raw_data = request.form.get('data') or request.form.get('record_info')
+        try:
+            data = json.loads(raw_data) if raw_data else {}
+        except json.JSONDecodeError:
+            data = {}
+        files = request.files
+    else:
+        data = request.get_json() or {}
+        files = None
+
+    if files:
+        from app.utilites import upload_files_to_server
+        _, file_names = upload_files_to_server(files, journal_type)
+        if file_names:
+            data['files'] = ';'.join(file_names)
+
     entry = JournalEntry(user_id=current_user.id, journal_type=journal_type, data=data)
     db.session.add(entry)
     db.session.commit()
@@ -42,7 +59,26 @@ def update_journal(journal_type, entry_id):
         return jsonify({'error': 'Журнал не найден'}), 404
     
     entry = JournalEntry.query.filter_by(id=entry_id, user_id=current_user.id, journal_type=journal_type).first_or_404()
-    data = request.get_json() or {}
+
+    if request.content_type and request.content_type.startswith('multipart/form-data'):
+        raw_data = request.form.get('data') or request.form.get('record_info')
+        try:
+            data = json.loads(raw_data) if raw_data else {}
+        except json.JSONDecodeError:
+            data = {}
+        files = request.files
+    else:
+        data = request.get_json() or {}
+        files = None
+
+    if files:
+        from app.utilites import upload_files_to_server
+        _, file_names = upload_files_to_server(files, journal_type)
+        if file_names:
+            existing = entry.data.get('files', '')
+            new_names = ';'.join(file_names)
+            data['files'] = f"{existing};{new_names}" if existing else new_names
+
     entry.data = data
     db.session.commit()
     return jsonify(entry.to_dict())
