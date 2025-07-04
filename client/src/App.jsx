@@ -13,10 +13,13 @@ import TestPage from './TestPage.jsx';
 import MainContainerMobile from './components/MobileMain.jsx';
 import { ErrorProvider } from './contexts/ErrorContext';
 import { AuthProvider } from './contexts/AuthContext.jsx';
+import { AccessControlProvider } from './contexts/AccessControlContext.jsx';
 import SignInPage from './SignInPage.jsx';
 import AccountPage from './AccountPage.jsx';
 import RegisterPage from './RegisterPage.jsx';
 import RequireAuth from './RequireAuth.jsx';
+import AdminPanel from './components/Admin/AdminPanel.jsx';
+import PricingPlans from './components/Subscription/PricingPlans.jsx';
 // import ReactGridLayout from "./components/GridLayout";
 
 // Memoize routes to prevent unnecessary re-renders
@@ -28,6 +31,8 @@ const AppRoutes = memo(() => (
       <Route path="/test" element={<TestPage />} />
       <Route path="/mobile" element={<MainContainerMobile />} />
       <Route path="/account" element={<AccountPage />} />
+      <Route path="/admin" element={<AdminPanel />} />
+      <Route path="/pricing" element={<PricingPlans />} />
     </Route>
     <Route path="/login" element={<SignInPage />} />
     <Route path="/register" element={<RegisterPage />} />
@@ -46,12 +51,13 @@ function App() {
     <div className="App">
       <ErrorProvider>
         <AuthProvider>
-        <UpdateWebSocketProvider>
-          <ContainerProvider>
-            <ListsProvider>
-              <TasksProvider>
-                <CalendarProvider>
-                  <AntiScheduleProvider>
+          <AccessControlProvider>
+            <UpdateWebSocketProvider>
+              <ContainerProvider>
+                <ListsProvider>
+                  <TasksProvider>
+                    <CalendarProvider>
+                      <AntiScheduleProvider>
                     <Router future={{
                   v7_fetcherPersist: true,
                   v7_normalizeFormMethod: true,
@@ -62,12 +68,13 @@ function App() {
                 }}>
                     <AppRoutes />
                     </Router>
-                  </AntiScheduleProvider>
-                </CalendarProvider>
-              </TasksProvider>
-            </ListsProvider>
-          </ContainerProvider>
-        </UpdateWebSocketProvider>
+                      </AntiScheduleProvider>
+                    </CalendarProvider>
+                  </TasksProvider>
+                </ListsProvider>
+              </ContainerProvider>
+            </UpdateWebSocketProvider>
+          </AccessControlProvider>
         </AuthProvider>
       </ErrorProvider>
     </div>

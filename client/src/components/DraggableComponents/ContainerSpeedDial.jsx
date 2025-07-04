@@ -12,6 +12,7 @@ import EditCalendarIcon from "@mui/icons-material/EditCalendar";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import useContainer from "./useContainer";
+import { useAccessControl } from "../../contexts/AccessControlContext";
 
 const actions = [
     // { icon: <TimerIcon />, name: "Timers", type: "timersToolbar" },
@@ -27,7 +28,10 @@ const actions = [
     // { icon: <ChecklistIcon />, name: "ToDo", type: "tasksTree" },
 ];
 function ContainerSpeedDial() {
-    const { addContainer } = useContainer();
+    const { addContainer, containers } = useContainer();
+    const { hasAccess, canAddContainer } = useAccessControl();
+
+    const availableActions = actions.filter(action => hasAccess(action.type));
 
     return (
         <SpeedDial
@@ -35,12 +39,18 @@ function ContainerSpeedDial() {
             sx={{ position: "absolute", bottom: 80, left: 16 }}
             icon={<SpeedDialIcon />}
         >
-            {actions.map((action) => (
+            {availableActions.map((action) => (
                 <SpeedDialAction
                     key={action.name}
                     icon={action.icon}
                     tooltipTitle={action.name}
-                    onClick={() => addContainer(action.type)}
+                    onClick={() => {
+                        if (canAddContainer(containers.length)) {
+                            addContainer(action.type);
+                        } else {
+                            alert('Достигнут лимит контейнеров для вашего тарифа');
+                        }
+                    }}
                 />
             ))}
         </SpeedDial>

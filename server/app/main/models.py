@@ -17,6 +17,7 @@ class User(db.Model):
     avatar_src = Column(Text)
     last_dashboard_id = Column(Integer)
     modules = Column(JSON, default=lambda: ['diary'])
+    access_level_id = Column(Integer, default=1)
 
     @property
     def id(self):

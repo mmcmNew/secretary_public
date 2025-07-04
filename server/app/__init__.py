@@ -66,6 +66,10 @@ def create_app(config_type='work'):
             )
         return response
     with app.app_context():
+        
+        # Добавляем middleware для проверки прав
+        from .auth_middleware import load_user_permissions
+        app.before_request(load_user_permissions)
 
         from .main import main as main_blueprint
         app.register_blueprint(main_blueprint)
@@ -81,6 +85,10 @@ def create_app(config_type='work'):
         app.register_blueprint(ai_blueprint, url_prefix='/api')
         from .messengers import messengers as messenger_blueprint
         app.register_blueprint(messenger_blueprint, url_prefix='/api/messengers')
+        from .admin_routes import admin_bp
+        app.register_blueprint(admin_bp)
+        from .subscription_routes import subscription_bp
+        app.register_blueprint(subscription_bp)
 
         db.create_all()
 

@@ -4,7 +4,6 @@ import os
 import asyncio
 import random
 import time
-import threading
 
 import edge_tts
 from flask import current_app
@@ -34,26 +33,49 @@ def generate_tts(text, record_id=None):
             speed_str = f"{speed}%"
         t0 = time.time()
         
-        # Запускаем TTS в отдельном потоке чтобы избежать конфликтов с Flask
-        def run_tts():
+        # Простой синхронный подход
+        try:
+            # Проверяем, есть ли уже event loop
             try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Если loop уже работает, создаем новый в отдельном потоке
+                    import threading
+                    result = [None]
+                    exception = [None]
+                    
+                    def run_in_thread():
+                        try:
+                            new_loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(new_loop)
+                            communicate = edge_tts.Communicate(tts_text, "-".join(tts_voice.split("-")[:-1]), rate=speed_str)
+                            new_loop.run_until_complete(communicate.save(edge_output_filename))
+                            new_loop.close()
+                        except Exception as e:
+                            exception[0] = e
+                    
+                    thread = threading.Thread(target=run_in_thread)
+                    thread.start()
+                    thread.join(timeout=30)
+                    
+                    if thread.is_alive():
+                        raise TimeoutError("TTS generation timeout")
+                    if exception[0]:
+                        raise exception[0]
+                else:
+                    # Луп не работает, можно использовать его
+                    communicate = edge_tts.Communicate(tts_text, "-".join(tts_voice.split("-")[:-1]), rate=speed_str)
+                    loop.run_until_complete(communicate.save(edge_output_filename))
+            except RuntimeError:
+                # Нет event loop, создаем новый
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                loop.run_until_complete(
-                    edge_tts.Communicate(
-                        tts_text, "-".join(tts_voice.split("-")[:-1]), rate=speed_str
-                    ).save(edge_output_filename)
-                )
-            finally:
+                communicate = edge_tts.Communicate(tts_text, "-".join(tts_voice.split("-")[:-1]), rate=speed_str)
+                loop.run_until_complete(communicate.save(edge_output_filename))
                 loop.close()
-        
-        thread = threading.Thread(target=run_tts)
-        thread.start()
-        thread.join(timeout=30)  # 30 секунд таймаут
-        
-        if thread.is_alive():
-            current_app.logger.error('TTS generation timeout')
-            return 'TTS generation timeout'
+        except Exception as e:
+            current_app.logger.error(f'TTS generation error: {e}')
+            return f'TTS generation error: {e}'
             
         t1 = time.time()
         edge_time = t1 - t0
@@ -83,6 +105,8 @@ def del_all_audio_files():
             # current_app.logger.info(f'Файл {file_path} был успешно удален')
         except OSError as e:
             current_app.logger.error(f'Ошибка при удалении файла {file_path}: {e}')
+
+
 
 
 if __name__ != '__main__':
