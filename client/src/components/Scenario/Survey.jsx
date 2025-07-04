@@ -64,6 +64,7 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
     const [inputError, setInputError] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [isUpdateSuccess, setIsUpdateSuccess] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
     // const [loading, setLoading] = useState(false);
     const [isWaitingSTT, setIsWaitingSTT] = useState(false);
     const [currentFieldId, setCurrentFieldId] = useState(0);
@@ -106,22 +107,49 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
 
     if (!fields) return null;
 
+    function addUniqueFiles(selectedFiles) {
+        setFiles((prevFiles) => {
+            const newFiles = selectedFiles.filter(newFile => {
+                return !prevFiles.some(existingFile =>
+                    existingFile.name === newFile.name && existingFile.lastModified === newFile.lastModified
+                );
+            });
+            return [...prevFiles, ...newFiles];
+        });
+    }
+
     function handleAddFiles(event) {
         const selectedFiles = Array.from(event.target.files);
-
-        setFiles((prevFiles) => {
-        // Проверяем уникальность файла по 'name' и 'lastModified'
-        const newFiles = selectedFiles.filter(newFile => {
-            return !prevFiles.some(existingFile =>
-            existingFile.name === newFile.name && existingFile.lastModified === newFile.lastModified
-            );
-        });
-
-        return [...prevFiles, ...newFiles];
-
-        });
-
+        addUniqueFiles(selectedFiles);
         fileInputRef.current.value = "";
+    }
+
+    function handlePaste(event) {
+        const items = event.clipboardData?.items;
+        if (!items) return;
+        const pastedFiles = [];
+        for (const item of items) {
+            if (item.kind === 'file') {
+                const file = item.getAsFile();
+                if (file) pastedFiles.push(file);
+            }
+        }
+        if (pastedFiles.length) {
+            event.preventDefault();
+            addUniqueFiles(pastedFiles);
+        }
+    }
+
+    function handleDrop(event) {
+        event.preventDefault();
+        const droppedFiles = Array.from(event.dataTransfer.files);
+        if (droppedFiles.length) {
+            addUniqueFiles(droppedFiles);
+        }
+    }
+
+    function handleDragOver(event) {
+        event.preventDefault();
     }
 
     function handleParamChange(key, value) {
@@ -134,25 +162,24 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
     async function handleSubmit(event, updatedParams=null) {
         setInputError(false);
         setIsSending(true);
-        // console.log(updatedParams);
         if (!updatedParams) updatedParams = editedParams;
-        // console.log(updatedParams);
         if (taskId !== null) {
             updatedParams['task_id'] = taskId;
         }
+        const isNew = !updatedParams.id;
         let result = null;
         try {
-            if (updatedParams.id) {
-                result = await updateRecord(survey.table_name, updatedParams);
-            } else {
+            if (isNew) {
                 result = await sendNewRecord(survey.table_name, updatedParams);
+            } else {
+                result = await updateRecord(survey.table_name, updatedParams);
             }
             if (!result) {
                 throw new Error('Ошибка при отправке');
             }
             setFiles([]);
-            // console.log(result);
             setEditedParams(result);
+            setSuccessMessage(isNew ? 'Запись создана' : 'Запись обновлена');
             setIsUpdateSuccess(true);
         } catch (record_edit_error) {
             setInputError(record_edit_error.message || 'An unexpected error occurred');
@@ -205,7 +232,7 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
 
 
     return (
-        <Box>
+        <Box onPaste={handlePaste} onDrop={handleDrop} onDragOver={handleDragOver}>
             <p>Имя таблицы: {survey.table_name}</p>
             <TTSText key={id + survey.table_name} element={{'text': survey.text}}
                 elementId={id + survey.table_name} onExpireFunc={onExpireTTS} currentActionId={actionIdTTS}/>
@@ -238,7 +265,7 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
             {inputError && <p style={{ color: 'red' }}>{inputError}</p>}
             {isUpdateSuccess &&
                 <Alert icon={<CheckIcon fontSize="inherit" />} severity="success">
-                    Запись обновлена
+                    {successMessage}
                 </Alert>}
         </Box>
     )
