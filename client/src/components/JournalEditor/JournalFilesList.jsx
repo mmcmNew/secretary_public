@@ -1,16 +1,22 @@
 import React from 'react';
 import { PropTypes } from 'prop-types';
-import { Box, Button, Typography, List, ListItem, ListItemText, IconButton } from '@mui/material';
+import { Box, Typography, List, ListItem, ListItemText, IconButton } from '@mui/material';
 import { Download, Delete } from '@mui/icons-material';
+import FileRenderer from '../FileRenderer';
 
 export default function JournalFilesList({ files, journalType, entryId, onFileDelete }) {
     if (!files || files.length === 0) {
         return null;
     }
 
+    const fileUrl = (file, raw = true) => {
+        const flag = raw ? '1' : '0';
+        return `/api/journals/${journalType}/${entryId}/files/${file.id}?raw=${flag}`;
+    };
+
     const handleDownload = async (file) => {
         try {
-            const response = await fetch(`/api/journals/${journalType}/${entryId}/files/${file.id}`);
+            const response = await fetch(fileUrl(file, false));
             if (response.ok) {
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -85,6 +91,9 @@ export default function JournalFilesList({ files, journalType, entryId, onFileDe
                             primary={file.original_filename}
                             secondary={`${formatFileSize(file.file_size)} • ${file.field_name}`}
                         />
+                        <Box sx={{ mt: 1 }}>
+                            <FileRenderer url={fileUrl(file, true)} />
+                        </Box>
                     </ListItem>
                 ))}
             </List>

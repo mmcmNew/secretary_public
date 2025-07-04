@@ -164,10 +164,8 @@ def delete_schema(schema_id):
 
 def _get_upload_path(user_id, journal_type):
     """Получаем путь для загрузки файлов журнала"""
-    from app.data_paths import get_user_data_path
-    base_path = get_user_data_path(user_id, 'journals')
-    upload_path = os.path.join(base_path, journal_type, 'files')
-    os.makedirs(upload_path, exist_ok=True)
+    from app.data_paths import get_user_journal_path
+    upload_path = get_user_journal_path(user_id, journal_type)
     return upload_path
 
 
@@ -231,10 +229,12 @@ def download_journal_file(journal_type, entry_id, file_id):
     directory = os.path.dirname(journal_file.file_path)
     filename = os.path.basename(journal_file.file_path)
     
+    # Если передан параметр raw=1, отображаем файл в браузере
+    raw = request.args.get('raw') == '1'
     return send_from_directory(
-        directory, 
-        filename, 
-        as_attachment=True, 
+        directory,
+        filename,
+        as_attachment=not raw,
         download_name=journal_file.original_filename
     )
 

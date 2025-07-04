@@ -174,7 +174,7 @@ def static_files(filename):
 @main.route('/audio/<path:filename>', methods=['GET'])
 @jwt_required()
 def audio_files(filename):
-    from app.data_paths import get_user_data_path
+    from app.data_paths import get_user_journal_path
     
     user_audio_path = get_user_data_path(current_user.id, 'audio')
     if os.path.isfile(os.path.join(user_audio_path, filename)):
@@ -185,7 +185,7 @@ def audio_files(filename):
 @main.route('/static/<path:filename>', methods=['GET'])
 @jwt_required(optional=True)
 def user_static_files(filename):
-    from app.data_paths import get_user_data_path
+    from app.data_paths import get_user_journal_path
     
     if current_user:
         user_static_path = get_user_data_path(current_user.id, 'static')
@@ -731,14 +731,15 @@ def get_days_route():
 @main.route('/journals/file', methods=['GET'])
 @jwt_required()
 def get_journal_file():
-    from app.data_paths import get_user_data_path
+    from app.data_paths import get_user_journal_path
     
     category = request.args.get('category')
     date_folder = request.args.get('date_folder')
     filename = request.args.get('filename')
 
-    user_journals_path = get_user_data_path(current_user.id, 'journals')
-    base_dir = os.path.join(user_journals_path, category or '', date_folder or '')
+    base_dir = get_user_journal_path(current_user.id, category or '')
+    if date_folder:
+        base_dir = os.path.join(base_dir, date_folder)
     
     if os.path.isfile(os.path.join(base_dir, filename)):
         return send_from_directory(base_dir, filename)

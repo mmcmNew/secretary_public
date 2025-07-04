@@ -23,6 +23,8 @@ SYSTEM_PATHS = {
 
 # Пользовательские данные (индивидуальные для каждого пользователя)
 USER_DATA_DIR = os.path.join(DATA_DIR, 'user_data')
+# Дополнительная папка для данных внутри приложения (используется для журналов)
+APP_USER_DATA_DIR = os.path.join(os.path.dirname(__file__), 'user_data')
 
 def get_user_data_path(user_id, data_type):
     """
@@ -98,3 +100,14 @@ def initialize_user_data(user_id):
     get_user_data_path(user_id, 'memory')
     get_user_data_path(user_id, 'uploads')
     get_user_data_path(user_id, 'temp')
+
+    # Создаем базовую папку для журналов внутри приложения
+    os.makedirs(os.path.join(APP_USER_DATA_DIR, f'user_{user_id}'), exist_ok=True)
+
+
+# Пути к файлам журналов
+def get_user_journal_path(user_id, journal_name):
+    """Возвращает путь к папке журнала пользователя."""
+    base = os.path.join(APP_USER_DATA_DIR, 'journals', f'user_{user_id}', journal_name)
+    os.makedirs(base, exist_ok=True)
+    return base
