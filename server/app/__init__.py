@@ -1,7 +1,7 @@
 import os
 import sys
 
-from flask import Flask, send_from_directory, jsonify
+from flask import Flask, send_from_directory, jsonify, abort
 from flask_jwt_extended import JWTManager
 from .config import WorkConfig, TestingConfig
 # from flask_ngrok2 import run_with_ngrok
@@ -119,10 +119,14 @@ def create_app(config_type='work'):
         Interval.add_initial_intervals()
 
 
-        # Отдаем index.html и статику
+        # Отдаем index.html и статику (должно быть в конце, чтобы не перехватывать API маршруты)
         @app.route('/', defaults={'path': ''})
         @app.route('/<path:path>')
         def serve_dist(path):
+            # Исключаем API маршруты и серверные пути
+            if path.startswith(('api/', 'static/', 'avatars/', 'sounds/', 'memory/', 'audio/', 'temp/', 'upload_files/', 'dashboard/', 'tasks/', 'chat/', 'journals/', 'sw.js', 'manifest.webmanifest')):
+                abort(404)
+            
             if path != "" and os.path.exists(os.path.join(dist_folder, path)):
                 return send_from_directory(dist_folder, path)
             else:

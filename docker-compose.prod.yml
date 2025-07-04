@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  secretary-app:
+    image: secretary-app:latest
+    ports:
+      - "80:5100"
+    volumes:
+      - secretary_user_data:/app/app/user_data
+      - secretary_logs:/app/logs
+    environment:
+      - FLASK_ENV=production
+      - PYTHONPATH=/app
+      - CONFIG_TYPE=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5100/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - secretary-app
+    restart: unless-stopped
+
+volumes:
+  secretary_user_data:
+  secretary_logs:

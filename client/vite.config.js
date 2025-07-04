@@ -35,9 +35,22 @@ export default defineConfig({
         modifyURLPrefix: {
             'assets/': '/assets/'
         },
-        // 6. Fallback на корневой index.html
+        // 6. Fallback на корневой index.html для SPA маршрутизации
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/\.[^\/]+$/, /^\/api\//], // Исключаем файлы и API
+        navigateFallbackDenylist: [
+          /\.[^\/]+$/, // файлы с расширениями
+          /^\/api\//,  // API маршруты
+          /^\/static\//,
+          /^\/upload_files\//,
+          /^\/avatars\//,
+          /^\/sounds\//,
+          /^\/dashboard\//,
+          /^\/temp\//,
+          /^\/tasks\//,
+          /^\/chat\//,
+          /^\/memory\//,
+          /^\/journals\//
+        ]
       },
       manifest: {
         name: 'Secretary App',

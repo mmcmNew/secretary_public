@@ -39,9 +39,10 @@ class User(db.Model):
 
         # Проверяем, есть ли пользователи уже в базе данных
         if not User.query.all():  # если база пуста
-            admin = User(user_name="admin", email="admin@example.com", avatar_src="me.png", last_dashboard_id=0, modules=['diary'])
+            admin = User(user_name="admin", email="admin@example.com", avatar_src="me.png", last_dashboard_id=0, modules=[], access_level_id=4)
             admin.set_password("password")
-            secretary = User(user_name="Secretary", avatar_src="secretary.png", last_dashboard_id=0, modules=['diary'])
+            secretary = User(user_name="Secretary", avatar_src="secretary.png", last_dashboard_id=0, modules=[], access_level_id=3)
+            secretary.set_password("password")
             db.session.add(admin)
             db.session.add(secretary)
             db.session.commit()

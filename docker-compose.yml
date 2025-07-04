@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  secretary-app:
+    image: secretary-app
+    ports:
+      - "5100:5100"
+    volumes:
+      - ./data/user_data:/app/app/user_data
+      - ./data/logs:/app/logs
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped
