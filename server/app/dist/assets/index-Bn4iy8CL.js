@@ -1,0 +1,1 @@
+import{c as e}from"./index-CWWusv4C.js";const t=e(["break","delete","emphasis","footnote","footnoteReference","image","imageReference","inlineCode","inlineMath","link","linkReference","mdxJsxTextElement","mdxTextExpression","strong","text","textDirective"]);export{t as p};

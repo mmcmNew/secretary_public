@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  secretary-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-5100}:${PORT:-5100}"
+    volumes:
+      # Монтируем директории для сохранения данных
+      - ${PWD}/server/user_data:/app/user_data
+      - ${PWD}/server/logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - FLASK_APP=${FLASK_APP:-run_docker.py}
+      - PORT=${PORT:-5100}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${PORT:-5100}/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

@@ -1,0 +1,1 @@
+import{v as n}from"./index-CWWusv4C.js";function o(o,t,i,e){let f,r,c;"function"==typeof t?(r=void 0,c=t,f=i):(r=t,c=i,f=e),n(o,r,(function(n,o){const t=o[o.length-1],i=t?t.children.indexOf(n):void 0;return c(n,i,t)}),f)}export{o as v};

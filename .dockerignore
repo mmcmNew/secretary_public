@@ -1,0 +1,54 @@
+# Git
+.git
+.gitignore
+
+# Node modules
+client/node_modules
+client/dist
+
+# Python
+server/__pycache__
+server/*.pyc
+server/*.pyo
+server/*.pyd
+server/.Python
+server/env
+server/venv
+server/.venv
+server/pip-log.txt
+server/pip-delete-this-directory.txt
+
+# Logs
+logs/
+server/logs/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SSL certificates (будут добавлены отдельно если нужно)
+*.pem
+*.key
+*.crt
+
+# Temporary files
+*.tmp
+*.temp
+
+# Database backups
+server/user_data/db/backup_*
+server/migrations/user_data/db/backup_*
+
+# Test files
+tests/
+server/tests/
+
+# Documentation
+*.md
+docs/

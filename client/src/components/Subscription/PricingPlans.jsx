@@ -63,7 +63,7 @@ export default function PricingPlans() {
                 Выберите тариф
             </Typography>
             
-            <Grid container spacing={3} sx={{ mt: 2, display: 'flex', justifyContent: 'center', mt: 5 }}>
+            <Grid container spacing={3} sx={{ mt: 8, display: 'flex', justifyContent: 'center' }}>
                 {plans.map((plan) => (
                     <Grid item xs={12} md={4} key={plan.id}>
                         <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

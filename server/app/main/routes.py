@@ -1,5 +1,5 @@
 import re
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from flask_socketio import emit
 import json
@@ -242,6 +242,16 @@ def api_refresh():
 @main.route('/api/logout', methods=['POST'])
 def api_logout():
     return jsonify({'result': 'OK'})
+
+
+@main.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for Docker"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat(),
+        'version': '1.0.0'
+    }), 200
 
 
 @main.route('/api/user', methods=['GET'])
