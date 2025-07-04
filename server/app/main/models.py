@@ -47,6 +47,31 @@ class User(db.Model):
             db.session.commit()
             current_app.logger.info("Initial users added.")
 
+    def create_default_journal(self):
+        """Создает дефолтный журнал diary для пользователя"""
+        from app.journals.models import JournalSchema
+        
+        # Проверяем, есть ли уже дефолтный журнал
+        existing = JournalSchema.query.filter_by(user_id=self.user_id, name='diary').first()
+        if not existing:
+            # Убираем 'diary' из списка модулей, чтобы избежать дублирования
+            if 'diary' in (self.modules or []):
+                self.modules = [m for m in self.modules if m != 'diary']
+            
+            default_schema = JournalSchema(
+                user_id=self.user_id,
+                name='diary',
+                display_name='Дневник',
+                fields=[
+                    {'name': 'content', 'type': 'textarea', 'label': 'Содержание', 'required': True},
+                    {'name': 'mood', 'type': 'select', 'label': 'Настроение', 'options': ['😊', '😐', '😔', '😡', '😴']},
+                    {'name': 'tags', 'type': 'tags', 'label': 'Теги'}
+                ],
+                is_default=True
+            )
+            db.session.add(default_schema)
+            db.session.commit()
+
     def to_dict(self):
         return {
             'id': self.user_id,

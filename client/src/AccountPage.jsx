@@ -2,15 +2,17 @@ import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from './contexts/AuthContext.jsx';
 import { useAccessControl } from './contexts/AccessControlContext.jsx';
 import { useNavigate } from 'react-router-dom';
-import { Button, Container, Typography, Box, Card, CardContent, Chip } from '@mui/material';
+import { Button, Container, Typography, Box, Card, CardContent, Chip, Tabs, Tab } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import axios from 'axios';
+import JournalManager from './components/JournalManager/JournalManager.jsx';
 
 export default function AccountPage() {
   const { user, fetchCurrentUser, logout } = useContext(AuthContext);
   const { hasAccess } = useAccessControl();
   const navigate = useNavigate();
   const [subscription, setSubscription] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -54,50 +56,67 @@ export default function AccountPage() {
         {user.email}
       </Typography>
       
-      {subscription && (
-        <Card sx={{ mt: 3, mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Текущий тариф
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Chip 
-                label={subscription.plan_name}
-                color={subscription.is_active ? 'primary' : 'default'}
-                variant={subscription.is_active ? 'filled' : 'outlined'}
-              />
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 3 }}>
+        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+          <Tab label="Профиль" />
+          <Tab label="Мои журналы" />
+        </Tabs>
+      </Box>
+      
+      {activeTab === 0 && (
+        <Box sx={{ mt: 3 }}>
+          {subscription && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Текущий тариф
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Chip 
+                    label={subscription.plan_name}
+                    color={subscription.is_active ? 'primary' : 'default'}
+                    variant={subscription.is_active ? 'filled' : 'outlined'}
+                  />
+                  <Button 
+                    variant="text" 
+                    color="primary"
+                    onClick={() => navigate('/pricing')}
+                  >
+                    Изменить тариф
+                  </Button>
+                </Box>
+                {subscription.end_date && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Действует до: {new Date(subscription.end_date).toLocaleDateString('ru-RU')}
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            {hasAccess('admin') && (
               <Button 
-                variant="text" 
+                variant="contained" 
                 color="primary"
-                onClick={() => navigate('/pricing')}
+                onClick={() => navigate('/admin')}
               >
-                Изменить тариф
+                Панель администратора
               </Button>
-            </Box>
-            {subscription.end_date && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Действует до: {new Date(subscription.end_date).toLocaleDateString('ru-RU')}
-              </Typography>
             )}
-          </CardContent>
-        </Card>
+            
+            <Button variant="outlined" onClick={handleLogout}>
+              Logout
+            </Button>
+          </Box>
+        </Box>
       )}
       
-      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-        {hasAccess('admin') && (
-          <Button 
-            variant="contained" 
-            color="primary"
-            onClick={() => navigate('/admin')}
-          >
-            Панель администратора
-          </Button>
-        )}
-        
-        <Button variant="outlined" onClick={handleLogout}>
-          Logout
-        </Button>
-      </Box>
+      {activeTab === 1 && (
+        <Box sx={{ mt: 3 }}>
+          <JournalManager />
+        </Box>
+      )}
     </Container>
   );
 }

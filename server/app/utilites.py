@@ -552,12 +552,32 @@ def get_modules():
     global modules
     try:
         user_modules = getattr(current_user, 'modules', None)
+        user_id = getattr(current_user, 'id', None)
     except Exception:
         user_modules = None
+        user_id = None
 
+    result_modules = modules.copy()
+    
+    # Добавляем пользовательские журналы
+    if user_id:
+        try:
+            from app.journals.models import JournalSchema
+            user_schemas = JournalSchema.query.filter_by(user_id=user_id).all()
+            for schema in user_schemas:
+                result_modules[schema.name] = {
+                    'type': 'journal',
+                    'name': schema.display_name,
+                    'words': [schema.name],
+                    'info': [field['name'] for field in schema.fields],
+                    'user_schema': True
+                }
+        except Exception as e:
+            current_app.logger.error(f'Error loading user schemas: {e}')
+    
     if user_modules:
-        return {name: modules.get(name, {}) for name in user_modules if name in modules}
-    return modules
+        return {name: result_modules.get(name, {}) for name in user_modules if name in result_modules}
+    return result_modules
 
 
 if __name__ != '__main__':

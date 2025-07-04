@@ -213,10 +213,14 @@ def api_register():
         current_app.logger.warning(f'REGISTER: email already registered: {email}')
         return jsonify({'error': 'Email already registered'}), 400
 
-    user = User(user_name=username, email=email, modules=['diary'])
+    user = User(user_name=username, email=email, modules=[])
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
+    
+    # Создаем дефолтный журнал diary
+    user.create_default_journal()
+    
     access_token = create_access_token(identity=str(user.user_id))
     refresh_token = create_refresh_token(identity=str(user.user_id))
     current_app.logger.info(f'REGISTER: user created: {username}, {email}')
@@ -519,8 +523,21 @@ def post_edited_record_api():
 @main.route('/get_tables', methods=['GET'])
 @jwt_required()
 def get_tables_route():
+    from app.journals.models import JournalSchema
+    
+    # Получаем стандартные таблицы
     tables = get_tables()
-    # print(f'get_tables: {tables}')
+    
+    # Добавляем пользовательские журналы
+    user_schemas = JournalSchema.query.filter_by(user_id=current_user.id).all()
+    for schema in user_schemas:
+        tables.append({
+            'label': schema.display_name,
+            'src': schema.name,
+            'type': 'journal',
+            'user_schema': True
+        })
+    
     return jsonify({'tables': tables}), 200
 
 
@@ -528,8 +545,18 @@ def get_table_survey(table_name, conn=None):
     columns_names = get_columns_names()
     modules = get_modules()
 
-    module_cfg = modules.get(table_name, {})
-    columns = module_cfg.get('info', [])
+    # Проверяем пользовательские журналы
+    try:
+        from app.journals.models import JournalSchema
+        user_schema = JournalSchema.query.filter_by(user_id=current_user.id, name=table_name).first()
+        if user_schema:
+            columns = [field['name'] for field in user_schema.fields]
+        else:
+            module_cfg = modules.get(table_name, {})
+            columns = module_cfg.get('info', [])
+    except:
+        module_cfg = modules.get(table_name, {})
+        columns = module_cfg.get('info', [])
 
     # Формируем структуру для JSON-ответа
     action = {
@@ -585,7 +612,11 @@ def get_days_route():
         days = []
         unique_dates_set = set()
 
-        if modules.get(table_name, {}).get('type') == 'journal':
+        # Проверяем, есть ли такой журнал у пользователя
+        from app.journals.models import JournalSchema
+        user_schema = JournalSchema.query.filter_by(user_id=current_user.id, name=table_name).first()
+        
+        if user_schema or modules.get(table_name, {}).get('type') == 'journal':
             entries = (
                 JournalEntry.query
                 .filter(JournalEntry.journal_type == table_name,
@@ -668,7 +699,11 @@ def get_table_data():
             return jsonify({'records': [], 'columns': columns}), 200
 
         modules = get_modules()
-        if modules.get(table_name, {}).get('type') == 'journal':
+        # Проверяем пользовательские журналы
+        from app.journals.models import JournalSchema
+        user_schema = JournalSchema.query.filter_by(user_id=current_user.id, name=table_name).first()
+        
+        if user_schema or modules.get(table_name, {}).get('type') == 'journal':
             result = records
         else:
             result = [dict(r) for r in records]

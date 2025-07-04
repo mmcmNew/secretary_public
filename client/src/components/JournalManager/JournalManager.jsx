@@ -1,0 +1,302 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Chip,
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  FormControlLabel
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Close as CloseIcon
+} from '@mui/icons-material';
+import axios from 'axios';
+
+const FIELD_TYPES = [
+  { value: 'text', label: 'Текст' },
+  { value: 'textarea', label: 'Многострочный текст' },
+  { value: 'number', label: 'Число' },
+  { value: 'date', label: 'Дата' },
+  { value: 'select', label: 'Выбор из списка' },
+  { value: 'tags', label: 'Теги' },
+  { value: 'checkbox', label: 'Флажок' }
+];
+
+export default function JournalManager() {
+  const [schemas, setSchemas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingSchema, setEditingSchema] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    display_name: '',
+    fields: []
+  });
+
+  useEffect(() => {
+    fetchSchemas();
+  }, []);
+
+  const fetchSchemas = async () => {
+    try {
+      const response = await axios.get('/api/journals/schemas');
+      setSchemas(response.data);
+    } catch (err) {
+      setError('Ошибка загрузки журналов');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateSchema = () => {
+    setEditingSchema(null);
+    setFormData({
+      name: '',
+      display_name: '',
+      fields: [{ name: 'content', type: 'textarea', label: 'Содержание', required: true }]
+    });
+    setDialogOpen(true);
+  };
+
+  const handleEditSchema = (schema) => {
+    setEditingSchema(schema);
+    setFormData({
+      name: schema.name,
+      display_name: schema.display_name,
+      fields: schema.fields
+    });
+    setDialogOpen(true);
+  };
+
+  const handleDeleteSchema = async (schemaId) => {
+    if (!window.confirm('Вы уверены, что хотите удалить этот журнал? Все записи будут удалены.')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`/api/journals/schemas/${schemaId}`);
+      fetchSchemas();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Ошибка удаления журнала');
+    }
+  };
+
+  const handleSaveSchema = async () => {
+    try {
+      if (editingSchema) {
+        await axios.put(`/api/journals/schemas/${editingSchema.id}`, formData);
+      } else {
+        await axios.post('/api/journals/schemas', formData);
+      }
+      setDialogOpen(false);
+      fetchSchemas();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Ошибка сохранения журнала');
+    }
+  };
+
+  const addField = () => {
+    setFormData({
+      ...formData,
+      fields: [...formData.fields, { name: '', type: 'text', label: '', required: false }]
+    });
+  };
+
+  const updateField = (index, field) => {
+    const newFields = [...formData.fields];
+    newFields[index] = field;
+    setFormData({ ...formData, fields: newFields });
+  };
+
+  const removeField = (index) => {
+    const newFields = formData.fields.filter((_, i) => i !== index);
+    setFormData({ ...formData, fields: newFields });
+  };
+
+  if (loading) return <Typography>Загрузка...</Typography>;
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5">Мои журналы</Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={handleCreateSchema}
+        >
+          Создать журнал
+        </Button>
+      </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+          {error}
+        </Alert>
+      )}
+
+      <List>
+        {schemas.map((schema) => (
+          <ListItem key={schema.id} sx={{ p: 0, mb: 2 }}>
+            <Card sx={{ width: '100%' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography variant="h6">
+                      {schema.display_name}
+                      {schema.is_default && (
+                        <Chip label="Системный" size="small" sx={{ ml: 1 }} />
+                      )}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Поля: {schema.fields.map(f => f.label).join(', ')}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    {!schema.is_default && (
+                      <>
+                        <IconButton onClick={() => handleEditSchema(schema)}>
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton onClick={() => handleDeleteSchema(schema.id)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </>
+                    )}
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </ListItem>
+        ))}
+      </List>
+
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingSchema ? 'Редактировать журнал' : 'Создать журнал'}
+          <IconButton
+            onClick={() => setDialogOpen(false)}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            {!editingSchema && (
+              <TextField
+                label="Системное имя"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                helperText="Используется в URL, только латинские буквы и подчеркивания"
+                required
+              />
+            )}
+            <TextField
+              label="Отображаемое название"
+              value={formData.display_name}
+              onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+              required
+            />
+
+            <Typography variant="h6" sx={{ mt: 2 }}>Поля журнала</Typography>
+            
+            {formData.fields.map((field, index) => (
+              <Card key={index} variant="outlined" sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                  <TextField
+                    label="Название поля"
+                    value={field.name}
+                    onChange={(e) => updateField(index, { ...field, name: e.target.value })}
+                    size="small"
+                    sx={{ flex: 1 }}
+                  />
+                  <TextField
+                    label="Отображаемое название"
+                    value={field.label}
+                    onChange={(e) => updateField(index, { ...field, label: e.target.value })}
+                    size="small"
+                    sx={{ flex: 1 }}
+                  />
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel>Тип</InputLabel>
+                    <Select
+                      value={field.type}
+                      onChange={(e) => updateField(index, { ...field, type: e.target.value })}
+                    >
+                      {FIELD_TYPES.map((type) => (
+                        <MenuItem key={type.value} value={type.value}>
+                          {type.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={field.required || false}
+                        onChange={(e) => updateField(index, { ...field, required: e.target.checked })}
+                      />
+                    }
+                    label="Обязательное"
+                  />
+                  <IconButton onClick={() => removeField(index)} color="error">
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+                
+                {field.type === 'select' && (
+                  <TextField
+                    label="Варианты (через запятую)"
+                    value={field.options?.join(', ') || ''}
+                    onChange={(e) => updateField(index, { 
+                      ...field, 
+                      options: e.target.value.split(',').map(s => s.trim()).filter(s => s) 
+                    })}
+                    fullWidth
+                    sx={{ mt: 1 }}
+                    size="small"
+                  />
+                )}
+              </Card>
+            ))}
+
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={addField}
+            >
+              Добавить поле
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Отмена</Button>
+          <Button onClick={handleSaveSchema} variant="contained">
+            {editingSchema ? 'Сохранить' : 'Создать'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}
