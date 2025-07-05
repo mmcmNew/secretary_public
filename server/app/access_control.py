@@ -1,8 +1,10 @@
 from functools import wraps
 from flask import jsonify, g
+import json
 
-# Базовые уровни доступа
-ACCESS_LEVELS = {
+# Базовые уровни доступа по умолчанию, используются если данные из БД
+# недоступны
+DEFAULT_ACCESS_LEVELS = {
     1: {  # Free
         'name': 'Free',
         'max_containers': 2,
@@ -30,7 +32,9 @@ def check_access(feature_name):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             user_level = getattr(g, 'user_access_level', 1)
-            user_features = ACCESS_LEVELS.get(user_level, {}).get('features', [])
+            user_id = getattr(g, 'user_id', None)
+            permissions = get_user_permissions(user_level, user_id)
+            user_features = permissions.get('features', [])
             
             if '*' not in user_features and feature_name not in user_features:
                 return jsonify({'error': 'Access denied'}), 403
@@ -39,5 +43,37 @@ def check_access(feature_name):
         return decorated_function
     return decorator
 
-def get_user_permissions(user_access_level):
-    return ACCESS_LEVELS.get(user_access_level, ACCESS_LEVELS[1])
+def get_user_permissions(user_access_level, user_id=None):
+    """Возвращает разрешения пользователя в виде словаря
+    {'name': str, 'max_containers': int, 'features': list}
+    Данные берутся из таблицы access_levels. Если таблица недоступна,
+    используются значения по умолчанию из DEFAULT_ACCESS_LEVELS.
+    Если указан user_id, к списку features добавляются modules пользователя."""
+
+    try:
+        from .subscription_models import AccessLevel
+        from .main.models import User
+
+        level = AccessLevel.query.get(user_access_level)
+        if level:
+            features = level.features
+            if isinstance(features, str):
+                features = json.loads(features) if features else []
+            permissions = {
+                'name': level.name,
+                'max_containers': level.max_containers,
+                'features': features or []
+            }
+        else:
+            permissions = DEFAULT_ACCESS_LEVELS.get(user_access_level, DEFAULT_ACCESS_LEVELS[1])
+
+        if user_id:
+            user = User.query.get(user_id)
+            if user and user.modules:
+                permissions['features'] = list(set(permissions['features'] + user.modules))
+
+        return permissions
+
+    except Exception:
+        permissions = DEFAULT_ACCESS_LEVELS.get(user_access_level, DEFAULT_ACCESS_LEVELS[1])
+        return permissions
