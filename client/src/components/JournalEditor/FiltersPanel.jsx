@@ -24,6 +24,12 @@ const FiltersPanel = ({
 }) => {
   if (!showFilters || !filtersConfig) return null;
 
+  const isEmpty = Object.values(filters).every(
+    (v) =>
+      (Array.isArray(v) && v.length === 0) ||
+      (!Array.isArray(v) && (v === '' || v === undefined || v === null))
+  );
+
   return (
     <Box sx={{ marginBottom: 2, padding: 2, border: '1px solid #ccc', borderRadius: 2 }}>
       <Typography variant="subtitle1" gutterBottom>
@@ -118,10 +124,10 @@ const FiltersPanel = ({
 
       {/* Buttons */}
       <Box sx={{ display: 'flex', gap: 2, marginTop: 2 }}>
-        <Button variant="outlined" onClick={resetFilters} disabled={loadingFilteredRecords}>
+        <Button variant="outlined" onClick={resetFilters} disabled={loadingFilteredRecords || isEmpty}>
           Сбросить фильтры
         </Button>
-        <Button variant="contained" onClick={applyFilters} disabled={loadingFilteredRecords}>
+        <Button variant="contained" onClick={applyFilters} disabled={loadingFilteredRecords || isEmpty}>
           Загрузить
         </Button>
       </Box>
