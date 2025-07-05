@@ -189,8 +189,8 @@ export default function ListsList({
 
   async function handleAction(targetId) {
     // Закрываем все меню после выполнения действия
-    setGroupMenuAnchorEl(null);
-    setProjectMenuAnchorEl(null);
+    handleCloseGroupMenu();
+    handleCloseProjectMenu();
     closeMenu();
     setActionType(null);
     handleCloseMenu();
