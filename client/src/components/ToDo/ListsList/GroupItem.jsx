@@ -7,13 +7,15 @@ import {
   Collapse,
   TextField,
   LinearProgress,
-  Box
+  Box,
+  IconButton
 } from '@mui/material';
 import {
   AccountTree as AccountTreeIcon,
   ExpandLess,
   ExpandMore,
-  FormatListBulleted
+  FormatListBulleted,
+  MoreVert as MoreVertIcon
 } from '@mui/icons-material';
 import FilterNoneIcon from '@mui/icons-material/FilterNone';
 import CheckIcon from '@mui/icons-material/Check';
@@ -71,6 +73,17 @@ export default function GroupItem({
           <ListItemText primary={item.title} />
         )}
         {progress === 100 ? <CheckIcon fontSize="small" style={{ color: 'green' }} /> : null}
+        {onContextMenu && (
+          <IconButton
+            edge="end"
+            onClick={(e) => {
+              e.stopPropagation();
+              onContextMenu(e);
+            }}
+          >
+            <MoreVertIcon />
+          </IconButton>
+        )}
         {isOpen ? <ExpandLess /> : <ExpandMore />}
       </ListItemButton>
       {showProgress && progress !== 100 && item.tasks_count !== 0 &&(

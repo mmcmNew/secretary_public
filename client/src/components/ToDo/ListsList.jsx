@@ -13,6 +13,7 @@ import ContextMenu from './ListsList/ContextMenu';
 import useTasks from './hooks/useTasks';
 import useLists from './hooks/useLists';
 import useCalendar from './hooks/useCalendar';
+import useContextMenu from '../hooks/useContextMenu';
 
 export default function ListsList({
   listsList = [],
@@ -36,7 +37,7 @@ export default function ListsList({
   setSelectedList = null,
 }) {
   const [openGroups, setOpenGroups] = useState({});
-  const [anchorEl, setAnchorEl] = useState(null);
+  const { anchorEl, openMenu, closeMenu } = useContextMenu();
   const [editingItemId, setEditingItemId] = useState(null);
   const [targetItemId, setTargetItemId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
@@ -83,22 +84,21 @@ export default function ListsList({
 
   function handleContextMenu(event, item, groupId) {
     console.log(item, groupId)
-    event.preventDefault();
+    openMenu(event);
     setEditingItemId(null);
-    setAnchorEl(event.currentTarget);
     setTargetGroupId(groupId);
     setTargetItemId(item.id);
     setEditingTitle(item.title);
   }
 
   function handleCloseMenu() {
-    setAnchorEl(null);
+    closeMenu();
     setTargetGroupId(null);
   }
 
   function handleEditClick(itemId) {
     setEditingItemId(itemId);
-    setAnchorEl(null);
+    closeMenu();
   }
 
   useEffect(() => {
@@ -112,14 +112,14 @@ export default function ListsList({
   }
 
   function handleDeleteFromChildes(elementId, groupId) {
-    setAnchorEl(null);
+    closeMenu();
     if (typeof deleteFromChildes === 'function') {
       deleteFromChildes({source_id: elementId, group_id: groupId});
     }
   }
 
   async function handleChangeChildesOrder(elementId, direction, groupId) {
-    setAnchorEl(null);
+    closeMenu();
     // Если targetGroupId не передан, работаем с listsList
     if (!groupId || String(elementId).startsWith('project_')) {
       console.log(elementId, direction);
@@ -191,7 +191,7 @@ export default function ListsList({
     // Закрываем все меню после выполнения действия
     setGroupMenuAnchorEl(null);
     setProjectMenuAnchorEl(null);
-    setAnchorEl(null);
+    closeMenu();
     setActionType(null);
     handleCloseMenu();
     if (actionType === 'move') {
@@ -246,7 +246,7 @@ export default function ListsList({
 
   function handleAddToGeneralList(itemId) {
     updateList({listId: itemId, inGeneralList: 1});
-    setAnchorEl(null);
+    closeMenu();
   }
 
   function findParentId(id) {
