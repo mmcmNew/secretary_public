@@ -1,0 +1,401 @@
+diff --git a/server/.gitignore b/server/.gitignore
+index 5749fb8124f88d7393f2ed3b30a999c1c5d29f74..b491867f4bec84b66f7effe7c223722d6c30f0c7 100644
+--- a/server/.gitignore
++++ b/server/.gitignore
+@@ -1,20 +1,23 @@
+ /.venv
+ /.idea
+ /migrations
+ /app/logs
+ /create_structure.bat
+ /app/backups/
+ /app/temp/
+ /docs/
+ /logs/
+ /migrations/
+-/app/static/
++/app/static/*
++/app/static/**
++!/app/static/default_settings/
++!/app/static/default_settings/**
+ /venv/
+ /app/__pycache__/
+ *__pycache__
+ *.db
+ *.log
+ *journals/
+ !app/journals/
+ !app/journals/**
+ **/__pycache__/
+diff --git a/server/app/config.py b/server/app/config.py
+index 213378e3911cc25e9dc323e5ae5975f4176fd4de..e19678e50cd10d6ea7ef87fc93be6c3875287542 100644
+--- a/server/app/config.py
++++ b/server/app/config.py
+@@ -1,75 +1,78 @@
+ import logging
+ import os
+ from datetime import datetime, timedelta
+ from logging.handlers import RotatingFileHandler
+ 
+ 
+ app_dir = os.path.abspath(os.path.dirname(__file__))
+ 
+ 
+ class BaseConfig:
+     SECRET_KEY = os.environ.get('SECRET_KEY', 'my_secret')
+     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', SECRET_KEY)
+     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+     # Параметры логирования
+     LOGGING_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+ 
+     # Формируем пути к файлам логов с текущей датой
+ 
+     current_date = datetime.now().strftime('%Y-%m-%d')
+     DEBUG_LOGGING_LOCATION = os.path.join('logs', f'debug_{current_date}.log')
+     ERROR_LOGGING_LOCATION = os.path.join('logs', f'error_{current_date}.log')
+ 
+     app_dir_name = os.path.dirname(__file__)
+-    USERS_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'users.db')
+-    PRODUCTIVITY_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'productivity.db')
+-    CONTENT_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'content.db')
+-    WORKSPACE_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'workspace.db')
+-    COMMUNICATION_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'communication.db')
++    server_root = os.path.dirname(app_dir_name)
++    user_db_dir = os.path.join(server_root, 'user_data', 'db')
++    USERS_DB_PATH = os.path.join(user_db_dir, 'users.db')
++    PRODUCTIVITY_DB_PATH = os.path.join(user_db_dir, 'productivity.db')
++    CONTENT_DB_PATH = os.path.join(user_db_dir, 'content.db')
++    WORKSPACE_DB_PATH = os.path.join(user_db_dir, 'workspace.db')
++    COMMUNICATION_DB_PATH = os.path.join(user_db_dir, 'communication.db')
+     MAIN_DB_PATH = CONTENT_DB_PATH  # Backwards compatibility
+ 
+     SQLALCHEMY_DATABASE_URI = f"sqlite:///{PRODUCTIVITY_DB_PATH}"
+     SQLALCHEMY_BINDS = {
+         'users': f"sqlite:///{USERS_DB_PATH}",
+         'content': f"sqlite:///{CONTENT_DB_PATH}",
+         'workspace': f"sqlite:///{WORKSPACE_DB_PATH}",
+         'communication': f"sqlite:///{COMMUNICATION_DB_PATH}",
+     }
+     SQLALCHEMY_TRACK_MODIFICATIONS = False
+     SQLALCHEMY_ENGINE_OPTIONS = {
+         'connect_args': {'detect_types': 1}
+     }
+ 
+     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "True") == "True"
+     SESSION_COOKIE_HTTPONLY = os.environ.get("SESSION_COOKIE_HTTPONLY", "True") == "True"
+     PERMANENT_SESSION_LIFETIME = int(os.environ.get("PERMANENT_SESSION_LIFETIME", 3600))
+ 
+     @staticmethod
+     def init_app(app):
+-        os.makedirs(os.path.join(BaseConfig.app_dir_name, 'user_data', 'db'), exist_ok=True)
++        user_db_dir = os.path.join(os.path.dirname(BaseConfig.app_dir_name), 'user_data', 'db')
++        os.makedirs(user_db_dir, exist_ok=True)
+         os.makedirs(os.path.dirname(BaseConfig.DEBUG_LOGGING_LOCATION), exist_ok=True)
+         os.makedirs(os.path.dirname(BaseConfig.ERROR_LOGGING_LOCATION), exist_ok=True)
+ 
+         logging.basicConfig(level=logging.DEBUG,
+                             format=BaseConfig.LOGGING_FORMAT,
+                             datefmt='%Y-%m-%d %H:%M:%S')
+         formatter = logging.Formatter(BaseConfig.LOGGING_FORMAT)
+ 
+         debug_handler = RotatingFileHandler(BaseConfig.DEBUG_LOGGING_LOCATION)
+         debug_handler.setLevel(logging.DEBUG)
+         debug_handler.setFormatter(formatter)
+ 
+         error_handler = RotatingFileHandler(BaseConfig.ERROR_LOGGING_LOCATION)
+         error_handler.setLevel(logging.ERROR)
+         error_handler.setFormatter(formatter)
+ 
+         app.logger.addHandler(debug_handler)
+         app.logger.addHandler(error_handler)
+         app.logger.setLevel(logging.DEBUG)
+         app.logger.info('Application startup')
+ 
+ class TestingConfig(BaseConfig):
+     DEBUG = True
+     DATABASE_URI = os.environ.get('DATABASE_URL', 'demo_base.db')
+     WTF_CSRF_ENABLED = False
+diff --git a/server/app/data_paths.py b/server/app/data_paths.py
+index e57d6317789e934ad5b70d13ba546ce6e0d83346..3ad717da7fffd24154d0f5891899364edb15a467 100644
+--- a/server/app/data_paths.py
++++ b/server/app/data_paths.py
+@@ -1,70 +1,65 @@
+ """
+ Конфигурация путей к системным и пользовательским данным
+ """
+ import os
+ 
+-# Базовые пути
+-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+-DATA_DIR = os.path.join(BASE_DIR, 'data')
++# Корневая папка сервера
++SERVER_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ 
+-# Системные данные (общие для всех пользователей)
+-SYSTEM_DATA_DIR = os.path.join(DATA_DIR, 'system')
+-SYSTEM_DEFAULTS_DIR = os.path.join(SYSTEM_DATA_DIR, 'defaults')
+-SYSTEM_ASSETS_DIR = os.path.join(SYSTEM_DATA_DIR, 'assets')
++# Папка со стандартными данными
++DEFAULTS_DIR = os.path.join(SERVER_DIR, 'app', 'static', 'default_settings')
+ 
+ # Пути к системным файлам по умолчанию
+ SYSTEM_PATHS = {
+-    'scenarios': os.path.join(SYSTEM_DEFAULTS_DIR, 'scenarios'),
+-    'settings': os.path.join(SYSTEM_DEFAULTS_DIR, 'settings'),
+-    'memory_images': os.path.join(SYSTEM_ASSETS_DIR, 'memory'),
+-    'sounds': os.path.join(SYSTEM_ASSETS_DIR, 'sounds'),
+-    'avatars': os.path.join(SYSTEM_ASSETS_DIR, 'avatars'),
++    'scenarios': os.path.join(DEFAULTS_DIR, 'scenarios'),
++    'settings': os.path.join(DEFAULTS_DIR, 'settings'),
++    'memory_images': os.path.join(DEFAULTS_DIR, 'memory'),
++    'sounds': os.path.join(DEFAULTS_DIR, 'static', 'sounds'),
++    'avatars': os.path.join(DEFAULTS_DIR, 'static', 'avatars'),
+ }
+ 
+-# Пользовательские данные (индивидуальные для каждого пользователя)
+-USER_DATA_DIR = os.path.join(DATA_DIR, 'user_data')
+-# Дополнительная папка для данных внутри приложения (используется для журналов)
+-APP_USER_DATA_DIR = os.path.join(os.path.dirname(__file__), 'user_data')
++# Пользовательские данные
++USER_DATA_DIR = os.path.join(SERVER_DIR, 'user_data')
++APP_USER_DATA_DIR = USER_DATA_DIR
+ 
+ def get_user_data_path(user_id, data_type):
+     """
+     Возвращает путь к пользовательским данным
+     
+     Args:
+         user_id (int): ID пользователя
+         data_type (str): Тип данных ('scenarios', 'settings', 'memory', 'uploads', etc.)
+     
+     Returns:
+         str: Путь к пользовательским данным
+     """
+     user_dir = os.path.join(USER_DATA_DIR, f'user_{user_id}')
+-    
++
+     # Создаем папку пользователя если её нет
+-    if not os.path.exists(user_dir):
+-        os.makedirs(user_dir, exist_ok=True)
+-    
++    os.makedirs(user_dir, exist_ok=True)
++
+     data_path = os.path.join(user_dir, data_type)
+     
+     # Создаем папку для типа данных если её нет
+     if not os.path.exists(data_path):
+         os.makedirs(data_path, exist_ok=True)
+     
+     return data_path
+ 
+ def get_system_data_path(data_type):
+     """
+     Возвращает путь к системным данным
+     
+     Args:
+         data_type (str): Тип данных ('scenarios', 'settings', 'memory_images', 'sounds', 'avatars')
+     
+     Returns:
+         str: Путь к системным данным
+     """
+     return SYSTEM_PATHS.get(data_type)
+ 
+ def copy_system_defaults_to_user(user_id, data_type):
+     """
+     Копирует системные файлы по умолчанию в папку пользователя
+     
+     Args:
+@@ -79,35 +74,36 @@ def copy_system_defaults_to_user(user_id, data_type):
+     if system_path and os.path.exists(system_path):
+         # Копируем все файлы из системной папки в пользовательскую
+         for filename in os.listdir(system_path):
+             src_file = os.path.join(system_path, filename)
+             dst_file = os.path.join(user_path, filename)
+             
+             if os.path.isfile(src_file) and not os.path.exists(dst_file):
+                 shutil.copy2(src_file, dst_file)
+ 
+ def initialize_user_data(user_id):
+     """
+     Инициализирует данные для нового пользователя, копируя системные файлы по умолчанию
+     
+     Args:
+         user_id (int): ID пользователя
+     """
+     # Копируем системные файлы по умолчанию
+     copy_system_defaults_to_user(user_id, 'scenarios')
+     copy_system_defaults_to_user(user_id, 'settings')
+     
+     # Создаем остальные необходимые папки
+     get_user_data_path(user_id, 'memory')
+     get_user_data_path(user_id, 'uploads')
+     get_user_data_path(user_id, 'temp')
+ 
+-    # Создаем базовую папку для журналов внутри приложения
+-    os.makedirs(os.path.join(APP_USER_DATA_DIR, f'user_{user_id}'), exist_ok=True)
++    # Создаем базовую структуру папок пользователя
++    os.makedirs(os.path.join(USER_DATA_DIR, f'user_{user_id}', 'journals'), exist_ok=True)
++    os.makedirs(os.path.join(USER_DATA_DIR, f'user_{user_id}', 'static'), exist_ok=True)
+ 
+ 
+ # Пути к файлам журналов
+ def get_user_journal_path(user_id, journal_name):
+     """Возвращает путь к папке журнала пользователя."""
+-    base = os.path.join(APP_USER_DATA_DIR, 'journals', f'user_{user_id}', journal_name)
++    base = os.path.join(USER_DATA_DIR, f'user_{user_id}', 'journals', journal_name)
+     os.makedirs(base, exist_ok=True)
+     return base
+diff --git a/server/app/static/default_settings/memory/.gitkeep b/server/app/static/default_settings/memory/.gitkeep
+new file mode 100644
+--- a/server/app/user_data_manager.py
++++ b/server/app/user_data_manager.py
+@@ -121,35 +121,36 @@ class UserDataManager:
+         user_memory_path = get_user_data_path(user_id, 'memory')
+         user_image_path = os.path.join(user_memory_path, image_name)
+         
+         if os.path.exists(user_image_path):
+             return user_image_path
+         
+         # Если не найдено, ищем в системной папке
+         system_memory_path = get_system_data_path('memory_images')
+         system_image_path = os.path.join(system_memory_path, image_name)
+         
+         if os.path.exists(system_image_path):
+             return system_image_path
+         
+         return None
+     
+     @staticmethod
+     def cleanup_user_data(user_id):
+         """
+         Очищает данные пользователя (при удалении аккаунта)
+         
+         Args:
+             user_id (int): ID пользователя
+         """
+         import shutil
+         
++        from .data_paths import USER_DATA_DIR
+         try:
+-            user_dir = os.path.join(get_user_data_path(user_id, '..'))
++            user_dir = os.path.join(USER_DATA_DIR, f'user_{user_id}')
+             if os.path.exists(user_dir):
+                 shutil.rmtree(user_dir)
+                 print(f"Данные пользователя {user_id} удалены")
+                 return True
+         except Exception as e:
+             print(f"Ошибка при удалении данных пользователя {user_id}: {e}")
+             
+         return False
+\ No newline at end of file
+diff --git a/server/app/utilites.py b/server/app/utilites.py
+index df3d6588c815e35749940d2ef24a88b132df116b..2c006a5413176abe939c9cd3a5a4525816950e3a 100644
+--- a/server/app/utilites.py
++++ b/server/app/utilites.py
+@@ -1,41 +1,47 @@
+ import os
+ import json
+ import re
+ import sqlite3
+ from datetime import datetime, timezone, timedelta
+ 
+ from flask import current_app
+ from flask_jwt_extended import current_user
+ from werkzeug.utils import secure_filename
+ 
+ from app import db
+ from app.journals.models import JournalEntry
+ 
+ 
+ def load_json(filename):
+-    filename = os.path.join(current_app.root_path, 'user_data', 'settings', filename)
++    filename = os.path.join(
++        current_app.root_path,
++        'static',
++        'default_settings',
++        'settings',
++        filename,
++    )
+     with open(filename, 'r', encoding='utf-8') as f:
+         return json.load(f)
+ 
+ 
+ modules = load_json('modules.json')
+ 
+ commands_list = load_json('commands_list.json')
+ 
+ command_information = load_json('command_information.json')
+ 
+ command_num_information = load_json('command_num_information.json')
+ 
+ columns_names = {
+             'reason': 'Причина', 'score': 'Оценка', 'lessons': 'Урок', 'comment': 'Комментарий',
+             'bias': 'Настроение', 'news': 'Новости', 'session': 'Сессия', 'trading_day': 'Торговый день',
+             'model': 'Модель', 'result': 'Результат', 'project_name': 'Название проекта', 'step': 'Этап',
+             'name': 'Название', 'author': 'Автор', 'problems': 'Проблемы', 'facts': 'Факты', 'genre': 'Жанр',
+             'features': 'Особенности изложения', 'new_info': 'Новая информация', 'type': 'Тип',
+             'files': 'Список вложений', 'instrument': 'Инструмент', 'sum': 'Сумма', 'body': 'Тело поста',
+             'records_ids': 'id Записей используемых в посте', 'publish_date': 'Дата публикации',
+             'channels': 'Каналы', 'title': 'Заголовок', 'date': 'Дата', 'posts_src': 'Ссылки на пост',
+             'task_id': 'id связанных задач', 'country': 'Страна', 'year': 'Год', 'time': 'Время', 'id': 'Номер записи'
+         }
+ 
+ 
+@@ -464,51 +470,55 @@ def update_record(table_name, record_dict):
+ 
+             cursor.execute(update_query + f" WHERE {primary_key} = ?", update_values + (record_id,))
+             connection.commit()
+ 
+             # Получаем обновлённую запись
+             cursor.execute(f"SELECT * FROM {table_name} WHERE id = ?", (record_id,))
+             updated_record = cursor.fetchone()
+             updated_record_dict = dict(updated_record)
+             updated_record_dict['table_name'] = table_name
+ 
+         return {'text': 'Запись обновлена', 'params': updated_record_dict}
+     except Exception as e:
+         current_app.logger.error(f'Ошибка при обновлении записи: {e}')
+         return {'text': 'Ошибка при обновлении записи', 'error': str(e)}
+ 
+ 
+ 
+ def upload_files_to_server(files_list, dir_name):
+     files_names = []
+     try:
+         print(f'upload_files_to_server: files_list: {files_list}, dir_name: {dir_name}')
+         if files_list is None or dir_name is None:
+             return 'Не получены файлы для загрузки'
+         if files_list:
+             current_month = datetime.now().strftime('%Y-%m')
+-            save_path = str(os.path.join(os.path.dirname(__file__), 'user_data', 'journals', dir_name, current_month))
++            from app.data_paths import get_user_journal_path
++            save_path = os.path.join(
++                get_user_journal_path(current_user.id, dir_name),
++                current_month,
++            )
+             os.makedirs(save_path, exist_ok=True)
+             current_date = datetime.now().strftime("%Y-%m-%d")
+             i = 0
+             for file_key in files_list:
+                 file = files_list[file_key]
+                 file_name = secure_filename(file.filename)
+                 # print(f'file.filename: {file.filename}, secure_filename: {file_name}')
+                 if not file or not file_name:
+                     continue
+                 file_extension = os.path.splitext(file.filename)[1]
+                 save_file_name = f'{current_date}[{i}]{file_extension}'
+                 while os.path.exists(os.path.join(save_path, save_file_name)):
+                     i += 1
+                     save_file_name = f'{current_date}[{i}]{file_extension}'
+ 
+                 file.save(os.path.join(save_path, save_file_name))
+                 files_names.append(os.path.join(dir_name, current_month, save_file_name))
+                 i += 1
+         print(f'upload_files_to_server: files_names: {files_names}')
+         result = 'Файлы загружены. '
+         return result, files_names
+     except Exception as e:
+         result = f'Файлы не загружены: {e}. '
+         return result, files_names
+ 

@@ -143,8 +143,9 @@ class UserDataManager:
         """
         import shutil
         
+        from .data_paths import USER_DATA_DIR
         try:
-            user_dir = os.path.join(get_user_data_path(user_id, '..'))
+            user_dir = os.path.join(USER_DATA_DIR, f'user_{user_id}')
             if os.path.exists(user_dir):
                 shutil.rmtree(user_dir)
                 print(f"Данные пользователя {user_id} удалены")

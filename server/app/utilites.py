@@ -13,7 +13,13 @@ from app.journals.models import JournalEntry
 
 
 def load_json(filename):
-    filename = os.path.join(current_app.root_path, 'user_data', 'settings', filename)
+    filename = os.path.join(
+        current_app.root_path,
+        'static',
+        'default_settings',
+        'settings',
+        filename,
+    )
     with open(filename, 'r', encoding='utf-8') as f:
         return json.load(f)
 
@@ -486,7 +492,11 @@ def upload_files_to_server(files_list, dir_name):
             return 'Не получены файлы для загрузки'
         if files_list:
             current_month = datetime.now().strftime('%Y-%m')
-            save_path = str(os.path.join(os.path.dirname(__file__), 'user_data', 'journals', dir_name, current_month))
+            from app.data_paths import get_user_journal_path
+            save_path = os.path.join(
+                get_user_journal_path(current_user.id, dir_name),
+                current_month,
+            )
             os.makedirs(save_path, exist_ok=True)
             current_date = datetime.now().strftime("%Y-%m-%d")
             i = 0

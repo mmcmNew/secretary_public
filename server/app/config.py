@@ -22,11 +22,13 @@ class BaseConfig:
     ERROR_LOGGING_LOCATION = os.path.join('logs', f'error_{current_date}.log')
 
     app_dir_name = os.path.dirname(__file__)
-    USERS_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'users.db')
-    PRODUCTIVITY_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'productivity.db')
-    CONTENT_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'content.db')
-    WORKSPACE_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'workspace.db')
-    COMMUNICATION_DB_PATH = os.path.join(app_dir_name, 'user_data', 'db', 'communication.db')
+    server_root = os.path.dirname(app_dir_name)
+    user_db_dir = os.path.join(server_root, 'user_data', 'db')
+    USERS_DB_PATH = os.path.join(user_db_dir, 'users.db')
+    PRODUCTIVITY_DB_PATH = os.path.join(user_db_dir, 'productivity.db')
+    CONTENT_DB_PATH = os.path.join(user_db_dir, 'content.db')
+    WORKSPACE_DB_PATH = os.path.join(user_db_dir, 'workspace.db')
+    COMMUNICATION_DB_PATH = os.path.join(user_db_dir, 'communication.db')
     MAIN_DB_PATH = CONTENT_DB_PATH  # Backwards compatibility
 
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{PRODUCTIVITY_DB_PATH}"
@@ -47,7 +49,8 @@ class BaseConfig:
 
     @staticmethod
     def init_app(app):
-        os.makedirs(os.path.join(BaseConfig.app_dir_name, 'user_data', 'db'), exist_ok=True)
+        user_db_dir = os.path.join(os.path.dirname(BaseConfig.app_dir_name), 'user_data', 'db')
+        os.makedirs(user_db_dir, exist_ok=True)
         os.makedirs(os.path.dirname(BaseConfig.DEBUG_LOGGING_LOCATION), exist_ok=True)
         os.makedirs(os.path.dirname(BaseConfig.ERROR_LOGGING_LOCATION), exist_ok=True)
 
@@ -73,8 +76,9 @@ class TestingConfig(BaseConfig):
     DEBUG = True
     DATABASE_URI = os.environ.get('DATABASE_URL', 'demo_base.db')
     WTF_CSRF_ENABLED = False
-    SECRET_KEY = BaseConfig.SECRET_KEY or "test"
+
 
 class WorkConfig(BaseConfig):
-    DATABASE_URI = os.environ.get('DATABASE_URL', 'database.db')
-    DEBUG = True
+    DEBUG = False
+    DATABASE_URI = os.environ.get('DATABASE_URL', 'base.db')
+    WTF_CSRF_ENABLED = True

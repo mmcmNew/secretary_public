@@ -3,28 +3,24 @@
 """
 import os
 
-# Базовые пути
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DATA_DIR = os.path.join(BASE_DIR, 'data')
+# Корневая папка сервера
+SERVER_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Системные данные (общие для всех пользователей)
-SYSTEM_DATA_DIR = os.path.join(DATA_DIR, 'system')
-SYSTEM_DEFAULTS_DIR = os.path.join(SYSTEM_DATA_DIR, 'defaults')
-SYSTEM_ASSETS_DIR = os.path.join(SYSTEM_DATA_DIR, 'assets')
+# Папка со стандартными данными
+DEFAULTS_DIR = os.path.join(SERVER_DIR, 'app', 'static', 'default_settings')
 
 # Пути к системным файлам по умолчанию
 SYSTEM_PATHS = {
-    'scenarios': os.path.join(SYSTEM_DEFAULTS_DIR, 'scenarios'),
-    'settings': os.path.join(SYSTEM_DEFAULTS_DIR, 'settings'),
-    'memory_images': os.path.join(SYSTEM_ASSETS_DIR, 'memory'),
-    'sounds': os.path.join(SYSTEM_ASSETS_DIR, 'sounds'),
-    'avatars': os.path.join(SYSTEM_ASSETS_DIR, 'avatars'),
+    'scenarios': os.path.join(DEFAULTS_DIR, 'scenarios'),
+    'settings': os.path.join(DEFAULTS_DIR, 'settings'),
+    'memory_images': os.path.join(DEFAULTS_DIR, 'memory'),
+    'sounds': os.path.join(DEFAULTS_DIR, 'static', 'sounds'),
+    'avatars': os.path.join(DEFAULTS_DIR, 'static', 'avatars'),
 }
 
-# Пользовательские данные (индивидуальные для каждого пользователя)
-USER_DATA_DIR = os.path.join(DATA_DIR, 'user_data')
-# Дополнительная папка для данных внутри приложения (используется для журналов)
-APP_USER_DATA_DIR = os.path.join(os.path.dirname(__file__), 'user_data')
+# Пользовательские данные
+USER_DATA_DIR = os.path.join(SERVER_DIR, 'user_data')
+APP_USER_DATA_DIR = USER_DATA_DIR
 
 def get_user_data_path(user_id, data_type):
     """
@@ -40,8 +36,7 @@ def get_user_data_path(user_id, data_type):
     user_dir = os.path.join(USER_DATA_DIR, f'user_{user_id}')
     
     # Создаем папку пользователя если её нет
-    if not os.path.exists(user_dir):
-        os.makedirs(user_dir, exist_ok=True)
+    os.makedirs(user_dir, exist_ok=True)
     
     data_path = os.path.join(user_dir, data_type)
     
@@ -101,13 +96,14 @@ def initialize_user_data(user_id):
     get_user_data_path(user_id, 'uploads')
     get_user_data_path(user_id, 'temp')
 
-    # Создаем базовую папку для журналов внутри приложения
-    os.makedirs(os.path.join(APP_USER_DATA_DIR, f'user_{user_id}'), exist_ok=True)
+    # Создаем базовую структуру папок пользователя
+    os.makedirs(os.path.join(USER_DATA_DIR, f'user_{user_id}', 'journals'), exist_ok=True)
+    os.makedirs(os.path.join(USER_DATA_DIR, f'user_{user_id}', 'static'), exist_ok=True)
 
 
 # Пути к файлам журналов
 def get_user_journal_path(user_id, journal_name):
     """Возвращает путь к папке журнала пользователя."""
-    base = os.path.join(APP_USER_DATA_DIR, 'journals', f'user_{user_id}', journal_name)
+    base = os.path.join(USER_DATA_DIR, f'user_{user_id}', 'journals', journal_name)
     os.makedirs(base, exist_ok=True)
     return base

@@ -8,7 +8,10 @@
 /docs/
 /logs/
 /migrations/
-/app/static/
+/app/static/*
+/app/static/**
+!/app/static/default_settings/
+!/app/static/default_settings/**
 /venv/
 /app/__pycache__/
 *__pycache__
