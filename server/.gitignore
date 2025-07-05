@@ -25,3 +25,8 @@ server/app/dist/
 *.pem
 /user_data/
 /app/user_data/static/
+**/dist
+app/modules/generate_memory_db_numbers.py
+app/modules/generate_memory_numbers.py
+app/modules/yandex_tts_free.py
+app/modules/youtube_downloader.py

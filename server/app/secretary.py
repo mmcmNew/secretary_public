@@ -178,4 +178,4 @@ def get_best_matching_task_id(task_name, list_id='all'):
 
 
 if __name__ != '__main__':
-    print('start run.py')
+    print('start manage.py')
