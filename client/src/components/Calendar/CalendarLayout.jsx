@@ -49,13 +49,6 @@ export default function CalendarLayout({
     if (calendarEvents.error && onError) onError(calendarEvents.error);
   }, [calendarEvents.error, onError]);
 
-  // сохранение настроек в контейнере
-  // useEffect(() => {
-  //   console.log(containerId, calendarSettings)
-  //   if (handleUpdateContent && containerId) {
-  //     handleUpdateContent(containerId, { calendarSettingsProp: calendarSettings });
-  //   }
-  // }, [calendarSettings, handleUpdateContent, containerId]);
 
   const handleSaveCalendarSettings = (settings) => {
     try {

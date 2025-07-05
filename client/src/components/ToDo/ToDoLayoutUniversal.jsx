@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useContext } from 'react';
+import { useCallback, useEffect, useContext } from 'react';
 import { useMediaQuery, Box, Grid, Typography } from '@mui/material';
 import ToDoListsPanel from './ToDoListsPanel';
 import ToDoTasksPanel from './ToDoTasksPanel';
@@ -6,6 +6,8 @@ import ToDoTaskEditorPanel from './ToDoTaskEditorPanel';
 import useTasks from './hooks/useTasks';
 import useLists from './hooks/useLists';
 import { ErrorContext } from '../../contexts/ErrorContext';
+import useNewTaskInput from './hooks/useNewTaskInput';
+import PropTypes from 'prop-types';
 
 function ToDoLayoutUniversal() {
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -25,9 +27,7 @@ function ToDoLayoutUniversal() {
   } = useLists();
   const listsLoading = lists.loading;
   const { setError, setSuccess } = useContext(ErrorContext);
-
-  // Состояния для ввода
-  const [newTask, setNewTask] = useState('');
+  const { submitTask } = useNewTaskInput();
   const showEditor = Boolean(selectedTaskId);
   const loading = tasksLoading || listsLoading;
 
@@ -53,30 +53,6 @@ function ToDoLayoutUniversal() {
     }
   }, [updateTask, selectedListId, setError, setSuccess]);
 
-  const handleKeyDown = useCallback(async (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      if (newTask.trim() === '') return;
-      try {
-        await addTask({ title: newTask });
-        setSuccess('Задача добавлена');
-        setNewTask('');
-      } catch (err) {
-        setError(err);
-      }
-    }
-  }, [newTask, addTask, setError, setSuccess]);
-
-  const handleAddTask = useCallback(async () => {
-    if (newTask.trim() === '') return;
-    try {
-      await addTask({ title: newTask });
-      setSuccess('Задача добавлена');
-      setNewTask('');
-    } catch (err) {
-      setError(err);
-    }
-  }, [newTask, addTask, setError, setSuccess]);
 
   const content = isMobile ? (
     <Box sx={{ height: '100%', width: '100%' }}>
@@ -154,3 +130,5 @@ function ToDoLayoutUniversal() {
 }
 
 export default ToDoLayoutUniversal;
+
+ToDoLayoutUniversal.propTypes = {};

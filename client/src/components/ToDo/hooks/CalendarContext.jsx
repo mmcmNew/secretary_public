@@ -1,20 +1,10 @@
 import { createContext, useState, useCallback, useMemo, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
+import api from '../../../utils/api';
 
 const CalendarContext = createContext();
 
-// API Helper
-const api = async (url, method = 'GET', body = null) => {
-  const token = localStorage.getItem('access_token');
-  const headers = { "Content-Type": "application/json" };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-  const response = await fetch(url, options);
-  if (!response.ok) throw new Error(`Failed to fetch ${url}, status ${response.status}`);
-  return response.json();
-};
 
 export const CalendarProvider = ({ children }) => {
   const [calendarEvents, setCalendarEvents] = useState({ data: [], loading: false, error: null });
