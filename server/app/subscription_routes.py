@@ -30,7 +30,8 @@ def get_subscription_plans():
 @subscription_bp.route('/user/permissions', methods=['GET'])
 def get_user_permissions_route():
     user_level = getattr(g, 'user_access_level', 1)
-    permissions = get_user_permissions(user_level)
+    user_id = getattr(g, 'user_id', None)
+    permissions = get_user_permissions(user_level, user_id)
     return jsonify(permissions)
 
 @subscription_bp.route('/user/subscription', methods=['GET'])

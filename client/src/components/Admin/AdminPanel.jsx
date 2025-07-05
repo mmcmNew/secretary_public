@@ -3,6 +3,7 @@ import {
     Box, Paper, Typography, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Select, MenuItem, Button, Chip
 } from '@mui/material';
+import Swal from 'sweetalert2';
 import { useAccessControl } from '../../contexts/AccessControlContext';
 import axios from 'axios';
 
@@ -57,6 +58,29 @@ export default function AdminPanel() {
         }
     };
 
+    const updateUserModules = async (userId, modules) => {
+        try {
+            await axios.post(`/api/admin/users/${userId}/modules`, { modules });
+            fetchUsers();
+        } catch (error) {
+            console.error('Failed to update modules:', error);
+        }
+    };
+
+    const handleEditModules = async (user) => {
+        const { value } = await Swal.fire({
+            title: 'Модули пользователя',
+            input: 'text',
+            inputLabel: 'Список модулей через запятую',
+            inputValue: (user.modules || []).join(', '),
+            showCancelButton: true
+        });
+        if (value !== undefined) {
+            const modules = value.split(',').map(m => m.trim()).filter(Boolean);
+            updateUserModules(user.id, modules);
+        }
+    };
+
     if (loading) return <Typography>Загрузка...</Typography>;
 
     return (
@@ -74,6 +98,7 @@ export default function AdminPanel() {
                                 <TableCell>Имя пользователя</TableCell>
                                 <TableCell>Email</TableCell>
                                 <TableCell>Уровень доступа</TableCell>
+                                <TableCell>Модули</TableCell>
                                 <TableCell>Действия</TableCell>
                             </TableRow>
                         </TableHead>
@@ -89,19 +114,25 @@ export default function AdminPanel() {
                                             color={ACCESS_LEVELS[user.access_level_id]?.color || 'default'}
                                         />
                                     </TableCell>
-                                    <TableCell>
-                                        <Select
-                                            value={user.access_level_id || 1}
-                                            onChange={(e) => updateUserAccessLevel(user.id, e.target.value)}
-                                            size="small"
-                                        >
-                                            {Object.entries(ACCESS_LEVELS).map(([level, data]) => (
-                                                <MenuItem key={level} value={parseInt(level)}>
-                                                    {data.name}
-                                                </MenuItem>
-                                            ))}
-                                        </Select>
-                                    </TableCell>
+                                <TableCell>
+                                    <Select
+                                        value={user.access_level_id || 1}
+                                        onChange={(e) => updateUserAccessLevel(user.id, e.target.value)}
+                                        size="small"
+                                    >
+                                        {Object.entries(ACCESS_LEVELS).map(([level, data]) => (
+                                            <MenuItem key={level} value={parseInt(level)}>
+                                                {data.name}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </TableCell>
+                                <TableCell>
+                                    {(user.modules || []).map(m => (
+                                        <Chip key={m} label={m} size="small" sx={{ mr: 0.5 }} />
+                                    ))}
+                                    <Button size="small" onClick={() => handleEditModules(user)}>Edit</Button>
+                                </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
