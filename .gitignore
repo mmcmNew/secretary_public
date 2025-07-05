@@ -2,3 +2,5 @@
 *journals/
 **/__pycache__/
 **/test*.py
+server/app/dist/index.html
+**/dist
