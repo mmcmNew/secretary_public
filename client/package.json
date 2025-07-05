@@ -49,6 +49,7 @@
     "react-virtuoso": "^4.12.7",
     "regenerator-runtime": "^0.14.1",
     "socket.io-client": "^4.8.1",
+    "sweetalert2": "^11.22.2",
     "swiper": "^11.2.6",
     "workbox-cacheable-response": "^7.3.0",
     "workbox-core": "^7.3.0",
