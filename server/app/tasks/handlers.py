@@ -477,7 +477,7 @@ def edit_anti_task(data):
 
 
 def del_task(data):
-    task_id = data.get('task_id')
+    task_id = data.get('taskId')
     task = Task.query.get(task_id)
 
     if not task:
