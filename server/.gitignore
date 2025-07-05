@@ -21,3 +21,5 @@
 !app/journals/
 !app/journals/**
 **/__pycache__/
+server/app/dist/
+*.pem

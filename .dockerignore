@@ -65,3 +65,5 @@ build.bat
 Makefile
 start.sh
 server/start.bat
+
+server/app/dist/

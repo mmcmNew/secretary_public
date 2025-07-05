@@ -4,3 +4,4 @@
 **/test*.py
 server/app/dist/index.html
 **/dist
+*.pem
