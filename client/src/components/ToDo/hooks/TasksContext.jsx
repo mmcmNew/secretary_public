@@ -27,28 +27,34 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const fetching = useRef(false);
 
   // Получить задачи для списка
-  const fetchTasks = useCallback(async (listId) => {
+  const fetchTasks = useCallback(async (listId, { silent = false } = {}) => {
     if (!listId) return;
     // Если уже есть выполняющийся запрос, дожидаемся его завершения
     while (fetching.current) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
-    if (setLoading) setLoading(true);
+    if (!silent && setLoading) setLoading(true);
     fetching.current = true;
-    setTasks(prev => ({ ...prev, loading: true, error: null }));
+    if (!silent) setTasks(prev => ({ ...prev, loading: true, error: null }));
     try {
       // console.log('fetchTasks: start', listId);
       const data = await api(`/tasks/get_tasks?list_id=${listId}&time_zone=${new Date().getTimezoneOffset()}`);
       // console.log('fetchTasks: data', data);
-      setTasks({ data: data.tasks || [], version: data.tasksVersion, loading: false, error: null });
-      if (setLoading) setLoading(false);
+      setTasks(prev => ({
+        ...prev,
+        data: data.tasks || [],
+        version: data.tasksVersion,
+        loading: silent ? prev.loading : false,
+        error: null,
+      }));
+      if (!silent && setLoading) setLoading(false);
       fetching.current = false;
       // console.log('fetchTasks: success');
       return data;
     } catch (err) {
       if (onError) onError(err);
-      setTasks(prev => ({ ...prev, loading: false, error: err }));
-      if (setLoading) setLoading(false);
+      setTasks(prev => ({ ...prev, loading: silent ? prev.loading : false, error: err }));
+      if (!silent && setLoading) setLoading(false);
       fetching.current = false;
       console.log('fetchTasks: error', err);
     }
@@ -57,7 +63,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   // CRUD операции
   const addTask = useCallback(async (params) => {
     const res = await api("/tasks/add_task", "POST", params);
-    await fetchLists();
+    await fetchLists({ silent: true });
     // Локальное обновление вместо полной перезагрузки
     if (res.task && (params.listId === listsSelectedListId ||
         (listsSelectedListId === 'tasks' && !params.listId) ||
@@ -74,7 +80,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
 
   const updateTask = useCallback(async (params) => {
     const res = await api("/tasks/edit_task", "PUT", params);
-    if (fetchLists) await fetchLists();
+    if (fetchLists) await fetchLists({ silent: true });
     // Локальное обновление задачи
     if (res.task && (params.listId === listsSelectedListId || !params.listId)) {
       setTasks(prev => ({
@@ -89,7 +95,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
 
   const changeTaskStatus = useCallback(async (params) => {
     const res = await api("/tasks/change_status", "PUT", params);
-    if (fetchLists) await fetchLists();
+    if (fetchLists) await fetchLists({ silent: true });
     // Локальное обновление статуса
     if (params.listId === listsSelectedListId) {
       setTasks(prev => ({
@@ -104,7 +110,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
 
   const addSubTask = useCallback(async (params) => {
     const res = await api("/tasks/add_subtask", "POST", params);
-    if (fetchLists) await fetchLists();
+    if (fetchLists) await fetchLists({ silent: true });
     // Локальное обновление подзадачи
     if (res.subtask && params.listId === listsSelectedListId) {
       setTasks(prev => ({
@@ -121,7 +127,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
 
   const deleteTask = useCallback(async (params) => {
     const res = await api("/tasks/del_task", "DELETE", params);
-    if (fetchLists) await fetchLists();
+    if (fetchLists) await fetchLists({ silent: true });
     // Локальное удаление задачи
     if (params.listId === listsSelectedListId) {
       setTasks(prev => ({
@@ -134,10 +140,10 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   
   const linkTaskList = useCallback(async (params) => {
     const res = await api("/tasks/link_task", "PUT", params);
-    if (fetchLists) await fetchLists();
+    if (fetchLists) await fetchLists({ silent: true });
     // При перемещении задачи нужна полная перезагрузка только текущего списка
     if (listsSelectedListId && listsSelectedListId === params.fromListId) {
-      await fetchTasks(listsSelectedListId);
+      await fetchTasks(listsSelectedListId, { silent: true });
     }
     return res;
   }, [fetchLists, fetchTasks, listsSelectedListId]);

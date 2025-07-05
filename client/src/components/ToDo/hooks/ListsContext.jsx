@@ -25,31 +25,32 @@ export const ListsProvider = ({ children, onError, setLoading }) => {
   const fetching = useRef(false);
 
   // Получить все списки
-  const fetchLists = useCallback(async () => {
+  const fetchLists = useCallback(async ({ silent = false } = {}) => {
     if (fetching.current) return;
-    if (setLoading) setLoading(true);
+    if (!silent && setLoading) setLoading(true);
     fetching.current = true;
-    setLists(prev => ({ ...prev, loading: true, error: null }));
+    if (!silent) setLists(prev => ({ ...prev, loading: true, error: null }));
     try {
       // console.log('fetchLists: start');
       const data = await api(`/tasks/get_lists?time_zone=${new Date().getTimezoneOffset()}`);
       // console.log('fetchLists: data', data);
-      setLists({
+      setLists(prev => ({
+        ...prev,
         lists: data.lists,
         default_lists: data.default_lists,
         projects: data.projects,
         version: data.tasksVersion,
-        loading: false,
+        loading: silent ? prev.loading : false,
         error: null,
-      });
-      if (setLoading) setLoading(false);
+      }));
+      if (!silent && setLoading) setLoading(false);
       fetching.current = false;
       // console.log('fetchLists: success');
       return data;
     } catch (err) {
       if (onError) onError(err);
-      setLists(prev => ({ ...prev, loading: false, error: err }));
-      if (setLoading) setLoading(false);
+      setLists(prev => ({ ...prev, loading: silent ? prev.loading : false, error: err }));
+      if (!silent && setLoading) setLoading(false);
       fetching.current = false;
       console.log('fetchLists: error', err);
     }
