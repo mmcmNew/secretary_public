@@ -33,9 +33,22 @@ export default function FileRenderer({ url }) {
     return <MDNotionEditor readOnly initialMarkdown={content} />;
   }
 
+
   if (/(png|jpe?g|gif|webp)$/i.test(extension)) {
     if (!blobUrl) return <CircularProgress size={20} />;
     const markdown = `![file](${blobUrl})`;
+    return <MDNotionEditor readOnly initialMarkdown={markdown} />;
+  }
+
+  if (/(mp4|webm|ogg|mov|m4v|avi|mkv)$/i.test(extension)) {
+    if (!blobUrl) return <CircularProgress size={20} />;
+    const markdown = `<video src="${blobUrl}"></video>`;
+    return <MDNotionEditor readOnly initialMarkdown={markdown} />;
+  }
+
+  if (/(mp3|wav|ogg|m4a|flac|aac)$/i.test(extension)) {
+    if (!blobUrl) return <CircularProgress size={20} />;
+    const markdown = `<audio src="${blobUrl}"></audio>`;
     return <MDNotionEditor readOnly initialMarkdown={markdown} />;
   }
 
