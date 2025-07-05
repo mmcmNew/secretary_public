@@ -5,6 +5,11 @@ import { AuthContext } from "../../contexts/AuthContext.jsx";
 
 const ContainerContext = createContext();
 
+function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : null;
+}
+
 const ContainerProvider = ({ children }) => {
     const [dashboardData, setDashboardData] = useState({ id: 0, name: "dashboard 1" });
     const [containers, setContainers] = useState([]);
@@ -143,7 +148,7 @@ const ContainerProvider = ({ children }) => {
         console.log("ContainerProvider: старт загрузки dashboard");
         const fetchDashboard = async () => {
             try {
-                const token = localStorage.getItem('access_token');
+                const token = getCookie('access_token');
                 const response = await fetch(`/dashboard/last`, {
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
@@ -180,7 +185,7 @@ const ContainerProvider = ({ children }) => {
         const sendingContainers = containers.filter((container) => container.type !== "timersToolbar");
         // console.log('[ContainerContext] Containers to send:', sendingContainers);
         try {
-            const token = localStorage.getItem('access_token');
+            const token = getCookie('access_token');
             const response = await fetch("/dashboard", {
                 method: "POST",
                 headers: {
@@ -287,7 +292,7 @@ const ContainerProvider = ({ children }) => {
 
     function sendTimersToServer(updatedTimers) {
         // отправляем таймеры на сервер
-        const token = localStorage.getItem('access_token');
+        const token = getCookie('access_token');
         fetch("/post_timers", {
             method: "POST",
             headers: {

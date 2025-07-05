@@ -1,5 +1,10 @@
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 export default async function api(url, method = 'GET', body = null) {
-  const token = localStorage.getItem('access_token');
+  const token = getCookie('access_token');
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   const options = { method, headers };
