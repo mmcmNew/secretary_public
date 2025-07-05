@@ -73,6 +73,7 @@ export default function GroupItem({
           <ListItemText primary={item.title} />
         )}
         {progress === 100 ? <CheckIcon fontSize="small" style={{ color: 'green' }} /> : null}
+        {isOpen ? <ExpandLess /> : <ExpandMore />}
         {onContextMenu && (
           <IconButton
             edge="end"
@@ -84,7 +85,6 @@ export default function GroupItem({
             <MoreVertIcon />
           </IconButton>
         )}
-        {isOpen ? <ExpandLess /> : <ExpandMore />}
       </ListItemButton>
       {showProgress && progress !== 100 && item.tasks_count !== 0 &&(
         <LinearProgress

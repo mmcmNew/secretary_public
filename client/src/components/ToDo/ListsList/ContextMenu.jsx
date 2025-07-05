@@ -21,8 +21,8 @@ export default function ContextMenu({
   const isProject = item?.type === 'project';
 
   const handleAction = (action) => {
-    action();
     onClose();
+    action();
   };
 
   const renderCommonItems = () => [
