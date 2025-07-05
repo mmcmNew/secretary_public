@@ -43,6 +43,15 @@ class BaseConfig:
         'connect_args': {'detect_types': 1}
     }
 
+    AI_WEBHOOK_URL = os.environ.get(
+        "AI_WEBHOOK_URL",
+        "https://n8n.ndomen.online/webhook/4999da23-b30e-494b-9435-9948be5ab8d4",
+    )
+    AI_IMAGE_WEBHOOK_URL = os.environ.get(
+        "AI_IMAGE_WEBHOOK_URL",
+        "https://n8n.ndomen.online/webhook/2da3e25d-1ff6-41f9-94e8-d55d43c1247b",
+    )
+
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "True") == "True"
     SESSION_COOKIE_HTTPONLY = os.environ.get("SESSION_COOKIE_HTTPONLY", "True") == "True"
     PERMANENT_SESSION_LIFETIME = int(os.environ.get("PERMANENT_SESSION_LIFETIME", 3600))

@@ -44,8 +44,12 @@ def ai_record_fix_route():
     final_prompt = f"{prompt}\nВот запись:\n{record}"
 
     # current_app.logger.info(final_prompt)
-    ai_response = requests.post(
+    ai_webhook_url = current_app.config.get(
+        "AI_WEBHOOK_URL",
         "https://n8n.ndomen.online/webhook/4999da23-b30e-494b-9435-9948be5ab8d4",
+    )
+    ai_response = requests.post(
+        ai_webhook_url,
         json={"user_message": final_prompt}
     )
 
@@ -91,8 +95,12 @@ def ai_post_generate_route():
     final_prompt = f"{prompt}\nВот записи:\n{records}"
 
     # current_app.logger.info(final_prompt)
-    ai_response = requests.post(
+    ai_webhook_url = current_app.config.get(
+        "AI_WEBHOOK_URL",
         "https://n8n.ndomen.online/webhook/4999da23-b30e-494b-9435-9948be5ab8d4",
+    )
+    ai_response = requests.post(
+        ai_webhook_url,
         json={"user_message": final_prompt}
     )
 
@@ -131,7 +139,10 @@ def generate_image():
         return jsonify(success=False, message="Нет текста")
 
     # Отправляем на внешний вебхук
-    webhook_url = "https://n8n.ndomen.online/webhook/2da3e25d-1ff6-41f9-94e8-d55d43c1247b"
+    webhook_url = current_app.config.get(
+        "AI_IMAGE_WEBHOOK_URL",
+        "https://n8n.ndomen.online/webhook/2da3e25d-1ff6-41f9-94e8-d55d43c1247b",
+    )
     try:
         webhook_resp = requests.post(webhook_url, json={"text": text})
         webhook_resp.raise_for_status()
