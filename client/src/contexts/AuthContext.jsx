@@ -89,7 +89,13 @@ export function AuthProvider({ children }) {
       setUser(data.user);
       return null;
     } catch (err) {
-      const errorMsg = err?.response?.data?.error || 'Login failed';
+      const status = err?.response?.status;
+      let errorMsg = 'Login failed';
+      if (status === 401) {
+        errorMsg = 'Invalid username or password';
+      } else if (err?.response?.data?.error) {
+        errorMsg = err.response.data.error;
+      }
       console.log('LOGIN: error', errorMsg);
       return errorMsg;
     }
