@@ -1,8 +1,10 @@
 from flask import Blueprint, request, jsonify, g
 from .access_control import check_access, get_user_permissions, DEFAULT_ACCESS_LEVELS
 import json
+import re
 from .main.models import User, db
 from .subscription_models import AccessLevel, SubscriptionPlan, UserSubscription
+from .command_utils import modules as available_modules
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -41,8 +43,20 @@ def update_user_access_level(user_id):
 def update_user_modules(user_id):
     data = request.get_json()
     modules = data.get('modules')
+
     if not isinstance(modules, list):
         return jsonify({'error': 'Invalid modules'}), 400
+
+    # Deduplicate while preserving order
+    modules = list(dict.fromkeys(modules))
+
+    name_pattern = re.compile(r'^[A-Za-z0-9_-]+$')
+    allowed_names = set(available_modules.keys())
+
+    for name in modules:
+        if name not in allowed_names and not name_pattern.match(name):
+            return jsonify({'error': f'Invalid module name: {name}'}), 400
+
     user = User.query.get_or_404(user_id)
     user.modules = modules
     db.session.commit()
