@@ -188,24 +188,29 @@ export default function ListsList({
   }
 
   async function handleAction(targetId) {
-    // Закрываем все меню после выполнения действия
+    // Сохраняем группу источника, так как handleCloseMenu обнуляет targetGroupId
+    const sourceGroupId = targetGroupId;
+
+    // Закрываем открытые подменю
     handleCloseGroupMenu();
     handleCloseProjectMenu();
     closeMenu();
     setActionType(null);
-    handleCloseMenu();
+
     if (actionType === 'move') {
       if (typeof linkListGroup === 'function') {
-        await linkListGroup({source_id: targetItemId, target_id: targetId});
+        await linkListGroup({ source_id: targetItemId, target_id: targetId });
       }
       if (typeof deleteFromChildes === 'function') {
-        await deleteFromChildes({source_id: targetItemId, group_id: targetGroupId})
+        await deleteFromChildes({ source_id: targetItemId, group_id: sourceGroupId });
       }
-      console.log(`Перемещаем элемент с id ${targetItemId} в ${targetId} и удаляем из ${targetGroupId}`);
+      handleCloseMenu();
+      console.log(`Перемещаем элемент с id ${targetItemId} в ${targetId} и удаляем из ${sourceGroupId}`);
     } else if (actionType === 'link') {
-      if (typeof linkListGroup === 'function'){
-        linkListGroup({source_id: targetItemId, target_id: targetId});
+      if (typeof linkListGroup === 'function') {
+        await linkListGroup({ source_id: targetItemId, target_id: targetId });
       }
+      handleCloseMenu();
       console.log(`Связываем элемент с id ${targetItemId} с ${targetId}`);
     }
   }
