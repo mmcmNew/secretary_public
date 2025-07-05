@@ -13,12 +13,13 @@ import {
     MenuItem,
     Divider,
 } from "@mui/material";
-import { ExpandLess, ExpandMore } from "@mui/icons-material";
+import { ExpandLess, ExpandMore, MoreVert as MoreVertIcon } from "@mui/icons-material";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import StarIcon from "@mui/icons-material/Star";
 import dayjs from "dayjs";
 import PropTypes from "prop-types";
 import { Draggable } from "@fullcalendar/interaction";
+import useContextMenu from "../../hooks/useContextMenu";
 
 export default function TasksList({
     containerId,
@@ -40,7 +41,7 @@ export default function TasksList({
 }) {
     const [open, setOpen] = useState({});
     const [completedOpen, setCompletedOpen] = useState(true);
-    const [anchorEl, setAnchorEl] = useState(null);
+    const { anchorEl, openMenu, closeMenu } = useContextMenu();
     const [listsMenuAnchorEl, setListsMenuAnchorEl] = useState(null);
     const [actionType, setActionType] = useState(null);
     const [targetItemId, setTargetItemId] = useState(null);
@@ -112,14 +113,13 @@ export default function TasksList({
     }
 
     function handleContextMenu(event, item) {
-        event.preventDefault();
-        setAnchorEl(event.currentTarget);
+        openMenu(event);
         setTargetItemId(item.id);
     }
 
     function handleCloseMenu() {
         setListsMenuAnchorEl(null);
-        setAnchorEl(null);
+        closeMenu();
         setActionType(null);
     }
 
@@ -295,6 +295,18 @@ export default function TasksList({
                             >
                                 {additionalButton ? React.createElement(additionalButton) : task.priority_id === 3 ? <StarIcon /> : <StarBorderIcon />}
                             </IconButton>
+                            {isNeedContextMenu && (
+                                <IconButton
+                                    edge="end"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        openMenu(event);
+                                        setTargetItemId(task.id);
+                                    }}
+                                >
+                                    <MoreVertIcon />
+                                </IconButton>
+                            )}
                         </ListItemButton>
                     </Paper>
                 </ListItem>

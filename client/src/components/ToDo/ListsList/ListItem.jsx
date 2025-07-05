@@ -6,9 +6,11 @@ import {
   Badge,
   TextField,
   LinearProgress,
+  IconButton,
 } from '@mui/material';
 import {
-  FormatListBulleted
+  FormatListBulleted,
+  MoreVert as MoreVertIcon
 } from '@mui/icons-material';
 import CheckIcon from '@mui/icons-material/Check';
 import PropTypes from 'prop-types';
@@ -73,6 +75,17 @@ export default function ListItem({
           ) : (
             <CheckIcon fontSize="small" style={{ color: 'green' }} />
           )
+        )}
+        {onContextMenu && (
+          <IconButton
+            edge="end"
+            onClick={(e) => {
+              e.stopPropagation();
+              onContextMenu(e);
+            }}
+          >
+            <MoreVertIcon />
+          </IconButton>
         )}
       </ListItemButton>
       {showProgress && item.unfinished_tasks_count !== 0 && (
