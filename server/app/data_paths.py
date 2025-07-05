@@ -16,6 +16,7 @@ SYSTEM_PATHS = {
     'memory_images': os.path.join(DEFAULTS_DIR, 'memory'),
     'sounds': os.path.join(DEFAULTS_DIR, 'static', 'sounds'),
     'avatars': os.path.join(DEFAULTS_DIR, 'static', 'avatars'),
+    'audio': os.path.join(DEFAULTS_DIR, 'static', 'audio'),
 }
 
 # Пользовательские данные
@@ -28,7 +29,7 @@ def get_user_data_path(user_id, data_type):
     
     Args:
         user_id (int): ID пользователя
-        data_type (str): Тип данных ('scenarios', 'settings', 'memory', 'uploads', etc.)
+        data_type (str): Тип данных ('scenarios', 'settings', 'memory', 'uploads', 'audio', etc.)
     
     Returns:
         str: Путь к пользовательским данным
@@ -51,7 +52,7 @@ def get_system_data_path(data_type):
     Возвращает путь к системным данным
     
     Args:
-        data_type (str): Тип данных ('scenarios', 'settings', 'memory_images', 'sounds', 'avatars')
+        data_type (str): Тип данных ('scenarios', 'settings', 'memory_images', 'sounds', 'avatars', 'audio')
     
     Returns:
         str: Путь к системным данным
@@ -90,6 +91,9 @@ def initialize_user_data(user_id):
     # Копируем системные файлы по умолчанию
     copy_system_defaults_to_user(user_id, 'scenarios')
     copy_system_defaults_to_user(user_id, 'settings')
+    copy_system_defaults_to_user(user_id, 'avatars')
+    copy_system_defaults_to_user(user_id, 'sounds')
+    copy_system_defaults_to_user(user_id, 'audio')
     
     # Создаем остальные необходимые папки
     get_user_data_path(user_id, 'memory')

@@ -23,3 +23,5 @@
 **/__pycache__/
 server/app/dist/
 *.pem
+/user_data/
+/app/user_data/static/
