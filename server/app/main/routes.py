@@ -25,11 +25,13 @@ from ..access_control import get_user_permissions
 from app import db
 
 from app.secretary import answer_from_secretary
-from app.utilites import (
+from app.db_utils import (
     update_record,
     save_to_base,
-    get_tables,
     save_to_base_modules,
+)
+from app.command_utils import (
+    get_tables,
     get_columns_names,
     get_modules,
 )

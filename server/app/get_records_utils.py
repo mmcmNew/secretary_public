@@ -1,6 +1,6 @@
 from flask import current_app, jsonify
 from flask_jwt_extended import current_user
-from app.utilites import get_modules
+from app.command_utils import get_modules
 from app.journals.models import JournalEntry
 from app import db
 

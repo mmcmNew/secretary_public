@@ -5,7 +5,7 @@ from flask import current_app
 
 import requests
 from flask import request, jsonify
-from ..utilites import save_to_base_modules
+from ..db_utils import save_to_base_modules
 
 from ..get_records_utils import get_records_by_ids  # или где ты там сохранишь
 
