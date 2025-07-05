@@ -121,12 +121,21 @@ export default function useJournalEditor() {
     }));
   };
 
-  const resetFilters = () => {
+  const resetFilters = useCallback(() => {
     setFilters({});
-  };
+    if (tableName) {
+      handleDateChange(calendarDate.toDate());
+    }
+  }, [tableName, calendarDate, handleDateChange]);
 
   const applyFilters = async () => {
     if (!tableName) return;
+    const hasFilters = Object.values(filters).some(
+      (v) =>
+        (Array.isArray(v) && v.length) ||
+        (!Array.isArray(v) && v !== undefined && v !== null && v !== '')
+    );
+    if (!hasFilters) return;
     dispatchEditors({ type: 'SET_EDITORS', payload: [] });
     setRecords([]);
 
