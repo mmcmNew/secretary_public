@@ -15,4 +15,4 @@ ENV PYTHONPATH=/app
 
 EXPOSE 5100
 
-CMD ["python", "run_docker.py"]
+CMD ["python", "manage.py", "--mode", "docker"]
