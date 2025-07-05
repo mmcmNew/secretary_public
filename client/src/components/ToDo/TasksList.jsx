@@ -19,7 +19,7 @@ import StarIcon from "@mui/icons-material/Star";
 import dayjs from "dayjs";
 import PropTypes from "prop-types";
 import { Draggable } from "@fullcalendar/interaction";
-import useContextMenu from "../../hooks/useContextMenu";
+import useContextMenu from "./hooks/useContextMenu";
 
 export default function TasksList({
     containerId,

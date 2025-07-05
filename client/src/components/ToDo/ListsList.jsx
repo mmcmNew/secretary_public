@@ -13,7 +13,7 @@ import ContextMenu from './ListsList/ContextMenu';
 import useTasks from './hooks/useTasks';
 import useLists from './hooks/useLists';
 import useCalendar from './hooks/useCalendar';
-import useContextMenu from '../hooks/useContextMenu';
+import useContextMenu from './hooks/useContextMenu'
 
 export default function ListsList({
   listsList = [],
