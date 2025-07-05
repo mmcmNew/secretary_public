@@ -18,7 +18,7 @@ def generate_tts(text, record_id=None):
     command-line tool in a subprocess with a reasonable timeout.
     """
 
-    save_path = os.path.join(os.getcwd(), 'app', 'temp')
+    save_path = os.path.join(current_app.root_path, 'temp')
     os.makedirs(save_path, exist_ok=True)
     if not record_id:
         current_time = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -72,7 +72,7 @@ def generate_tts(text, record_id=None):
 
 
 def del_all_audio_files():
-    save_path = os.path.join(os.getcwd(), 'app', 'temp')
+    save_path = os.path.join(current_app.root_path, 'temp')
     for file_path in glob.glob(os.path.join(save_path, 'edge_audio_*.mp3')):
         try:
             os.remove(file_path)

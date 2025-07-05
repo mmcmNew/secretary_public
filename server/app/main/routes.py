@@ -344,7 +344,7 @@ def api_current_user():
 
 @main.route("/temp/<path:filename>", methods=["GET"])
 def get_temp_files(filename):
-    base_dir = os.path.join(current_app.root_path, "app", "temp")
+    base_dir = os.path.join(current_app.root_path, "temp")
     file_path = os.path.join(base_dir, filename)
     if not os.path.exists(file_path):
         if filename.startswith("edge_audio_"):
