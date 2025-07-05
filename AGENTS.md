@@ -2,7 +2,13 @@
 
 The application will be available at `https://localhost:5100`.
 
-To work on the React client in development mode:
+To start the backend in development mode run:
+
+```bash
+python server/manage.py --mode development
+```
+
+To work on the React client:
 
 ```bash
 cd client
