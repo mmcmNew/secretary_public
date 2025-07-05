@@ -3,20 +3,10 @@ import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 import useLists from './useLists';
 import { AuthContext } from '../../../contexts/AuthContext';
+import api from '../../../utils/api';
 
 const TasksContext = createContext();
 
-// API Helper
-const api = async (url, method = 'GET', body = null) => {
-  const token = localStorage.getItem('access_token');
-  const headers = { "Content-Type": "application/json" };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-  const response = await fetch(url, options);
-  if (!response.ok) throw new Error(`Failed to fetch ${url}, status ${response.status}`);
-  return response.json();
-};
 
 export const TasksProvider = ({ children, onError, setLoading }) => {
   const [tasks, setTasks] = useState({ data: [], loading: false, error: null });

@@ -1,0 +1,17 @@
+export default async function api(url, method = 'GET', body = null) {
+  const token = localStorage.getItem('access_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${url}, status ${response.status}`);
+  }
+  return response.json();
+}
+
+export const apiGet = (url) => api(url);
+export const apiPost = (url, body) => api(url, 'POST', body);
+export const apiPut = (url, body) => api(url, 'PUT', body);
+export const apiDelete = (url, body) => api(url, 'DELETE', body);
