@@ -133,7 +133,13 @@ const ContainerProvider = ({ children }) => {
 
     // загрузка списка dashboard'ов и выбор последнего
     useEffect(() => {
-        if (!user) return;
+        if (!user) {
+            setDashboardData({ id: 0, name: "dashboard 1" });
+            setContainers([]);
+            setTimers([]);
+            setThemeMode("light");
+            return;
+        }
         console.log("ContainerProvider: старт загрузки dashboard");
         const fetchDashboard = async () => {
             try {
@@ -158,7 +164,7 @@ const ContainerProvider = ({ children }) => {
                     setThemeMode(data.themeMode || "light");
                 } catch (error) {
                     console.log("Ошибка загрузки dashboard, используем интерфейс по умолчанию:", error.message);
-                    setDashboardData({ id: dashboardId, name: "dashboard 1" });
+                    setDashboardData({ id: 0, name: "dashboard 1" });
                     setContainers([]);
                     setTimers([]);
                     setThemeMode("light");

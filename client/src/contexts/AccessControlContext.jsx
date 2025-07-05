@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { AuthContext } from './AuthContext.jsx';
 
 const AccessControlContext = createContext();
 
@@ -14,10 +15,17 @@ export const useAccessControl = () => {
 export const AccessControlProvider = ({ children }) => {
     const [userPermissions, setUserPermissions] = useState(null);
     const [loading, setLoading] = useState(true);
+    const { user } = useContext(AuthContext);
 
     useEffect(() => {
+        if (!user) {
+            setUserPermissions(null);
+            setLoading(false);
+            return;
+        }
+        setLoading(true);
         fetchUserPermissions();
-    }, []);
+    }, [user]);
 
     const fetchUserPermissions = async () => {
         try {
