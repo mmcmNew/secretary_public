@@ -4,7 +4,7 @@ from flask import current_app
 from flask_jwt_extended import current_user
 
 from app.journals.models import JournalEntry
-from app.utilites import get_modules
+from app.command_utils import get_modules
 
 
 def fetch_table_records(table_name, date_str, timezone_offset_ms):

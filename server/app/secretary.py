@@ -1,5 +1,5 @@
-from app.utilites import (find_target_module, save_to_base, save_to_base_modules, find_info,
-                          find_command_type)
+from app.command_utils import find_target_module, find_info, find_command_type
+from app.db_utils import save_to_base, save_to_base_modules
 
 from app.modules.MetaAIAPI import get_eden_ai_response
 

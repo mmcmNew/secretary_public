@@ -5,6 +5,8 @@
 server/app/dist/index.html
 **/dist
 *.pem
+server/user_data/
+server/app/user_data/static/
 server/app/modules/generate_memory_db_numbers.py
 server/app/modules/generate_memory_numbers.py
 server/app/modules/yandex_tts_free.py

@@ -41,8 +41,8 @@ export default function ListsList({
   const [targetItemId, setTargetItemId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [targetGroupId, setTargetGroupId] = useState(null); // Хранит id группы в которой находится список для которого вызвано контекстное меню
-  const [groupMenuAnchorEl, setGroupMenuAnchorEl] = useState(null);
-  const [projectMenuAnchorEl, setProjectMenuAnchorEl] = useState(null);
+  const [groupMenuPosition, setGroupMenuPosition] = useState(null);
+  const [projectMenuPosition, setProjectMenuPosition] = useState(null);
   const [actionType, setActionType] = useState(null); // Хранит текущее действие: "move" или "link"
   const [dropMenuAnchorEl, setDropMenuAnchorEl] = useState(null);
   const [droppedTask, setDroppedTask] = useState(null);
@@ -212,20 +212,20 @@ export default function ListsList({
 
   function handleOpenGroupMenu(event, actionType) {
     setActionType(actionType);
-    setGroupMenuAnchorEl(event.currentTarget);
+    setGroupMenuPosition({ top: event.clientY, left: event.clientX });
   }
 
   function handleCloseGroupMenu() {
-    setGroupMenuAnchorEl(null);
+    setGroupMenuPosition(null);
   }
 
   function handleOpenProjectMenu(event, actionType) {
     setActionType(actionType);
-    setProjectMenuAnchorEl(event.currentTarget);
+    setProjectMenuPosition({ top: event.clientY, left: event.clientX });
   }
 
   function handleCloseProjectMenu() {
-    setProjectMenuAnchorEl(null);
+    setProjectMenuPosition(null);
   }
 
   function handleKeyDown(event) {
@@ -411,8 +411,9 @@ export default function ListsList({
 
       {/* Submenu for groups */}
       <Menu
-        anchorEl={groupMenuAnchorEl}
-        open={Boolean(groupMenuAnchorEl)}
+        anchorReference="anchorPosition"
+        anchorPosition={groupMenuPosition}
+        open={Boolean(groupMenuPosition)}
         onClose={handleCloseGroupMenu}
       >
         {listsList && listsList
@@ -426,8 +427,9 @@ export default function ListsList({
 
       {/* Submenu for projects */}
       <Menu
-        anchorEl={projectMenuAnchorEl}
-        open={Boolean(projectMenuAnchorEl)}
+        anchorReference="anchorPosition"
+        anchorPosition={projectMenuPosition}
+        open={Boolean(projectMenuPosition)}
         onClose={handleCloseProjectMenu}
       >
         {projects?.map(project => (
