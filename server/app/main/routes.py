@@ -220,13 +220,11 @@ def api_login():
         return jsonify({"error": "Username and password are required"}), 400
 
     user = User.query.filter_by(user_name=username).first()
-    if not user:
-        current_app.logger.warning(f"LOGIN: user not found: {username}")
-        return jsonify({"error": "User not found"}), 404
-
-    if not user.check_password(password):
-        current_app.logger.warning(f"LOGIN: incorrect password for user: {username}")
-        return jsonify({"error": "Incorrect password"}), 401
+    if not user or not user.check_password(password):
+        current_app.logger.warning(
+            f"LOGIN: authentication failed for username: {username}"
+        )
+        return jsonify({"error": "Invalid username or password"}), 401
 
     # Проверяем активную подписку и обновляем уровень доступа при необходимости
     active_sub = UserSubscription.query.filter_by(
