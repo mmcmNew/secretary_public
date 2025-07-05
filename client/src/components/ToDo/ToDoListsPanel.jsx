@@ -5,9 +5,10 @@ import { AccountTree } from '@mui/icons-material';
 import useLists from './hooks/useLists';
 import useTasks from './hooks/useTasks';
 
-export default function ToDoListsPanel({ mobile = false, setSelectedListId }) {
+export default function ToDoListsPanel({ mobile = false }) {
   const {
     lists,
+    selectedListId,
     setSelectedListId: setListId,
     deleteFromChildes,
     linkListGroup,
@@ -36,6 +37,7 @@ export default function ToDoListsPanel({ mobile = false, setSelectedListId }) {
           defaultLists={lists.default_lists}
           projects={lists.projects}
           isNeedContextMenu={true}
+          selectedListId={selectedListId}
           setSelectedListId={setListId}
           deleteFromChildes={deleteFromChildes}
           setSelectedTaskId={setSelectedTaskId}
