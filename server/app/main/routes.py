@@ -240,7 +240,7 @@ def api_login():
     access_token = create_access_token(identity=str(user.user_id))
     refresh_token = create_refresh_token(identity=str(user.user_id))
     current_app.logger.info(f"LOGIN: success for user: {username}")
-    return (
+    response = make_response(
         jsonify(
             {
                 "user": user.to_dict(),
@@ -251,6 +251,19 @@ def api_login():
         ),
         200,
     )
+    response.set_cookie(
+        "access_token",
+        access_token,
+        secure=True,
+        samesite="Lax",
+    )
+    response.set_cookie(
+        "refresh_token",
+        refresh_token,
+        secure=True,
+        samesite="Lax",
+    )
+    return response
 
 
 @main.route("/api/register", methods=["POST"])
@@ -296,7 +309,7 @@ def api_register():
     access_token = create_access_token(identity=str(user.user_id))
     refresh_token = create_refresh_token(identity=str(user.user_id))
     current_app.logger.info(f"REGISTER: user created: {username}, {email}")
-    return (
+    response = make_response(
         jsonify(
             {
                 "user": user.to_dict(),
@@ -306,6 +319,19 @@ def api_register():
         ),
         201,
     )
+    response.set_cookie(
+        "access_token",
+        access_token,
+        secure=True,
+        samesite="Lax",
+    )
+    response.set_cookie(
+        "refresh_token",
+        refresh_token,
+        secure=True,
+        samesite="Lax",
+    )
+    return response
 
 
 @main.route("/api/refresh", methods=["POST"])
@@ -313,12 +339,25 @@ def api_register():
 def api_refresh():
     current_user_id = get_jwt_identity()
     new_access_token = create_access_token(identity=current_user_id)
-    return jsonify({"access_token": new_access_token}), 200
+    response = make_response(
+        jsonify({"access_token": new_access_token}),
+        200,
+    )
+    response.set_cookie(
+        "access_token",
+        new_access_token,
+        secure=True,
+        samesite="Lax",
+    )
+    return response
 
 
 @main.route("/api/logout", methods=["POST"])
 def api_logout():
-    return jsonify({"result": "OK"})
+    response = make_response(jsonify({"result": "OK"}))
+    response.set_cookie("access_token", "", expires=0)
+    response.set_cookie("refresh_token", "", expires=0)
+    return response
 
 
 @main.route("/api/health", methods=["GET"])

@@ -1,14 +1,14 @@
 import React, { createContext, useCallback, useState, useEffect } from 'react';
 import axios from 'axios';
 
-const storedToken = localStorage.getItem('access_token');
-if (storedToken) {
-  axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-}
-
 function getCookie(name) {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   return match ? decodeURIComponent(match[2]) : null;
+}
+
+const storedToken = getCookie('access_token');
+if (storedToken) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
 }
 
 export const AuthContext = createContext({
@@ -24,26 +24,27 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshToken = useCallback(async () => {
-    const refresh = localStorage.getItem('refresh_token');
+    const refresh = getCookie('refresh_token');
     if (!refresh) return false;
     
     try {
       const { data } = await axios.post('/api/refresh', {}, {
         headers: { 'Authorization': `Bearer ${refresh}` }
       });
-      localStorage.setItem('access_token', data.access_token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
+      const newToken = getCookie('access_token');
+      if (newToken) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      }
       return true;
     } catch (err) {
       console.log('Token refresh failed:', err.message);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      delete axios.defaults.headers.common['Authorization'];
       return false;
     }
   }, []);
 
   const fetchCurrentUser = useCallback(async () => {
-    const token = localStorage.getItem('access_token');
+    const token = getCookie('access_token');
     if (!token) {
       setIsLoading(false);
       setUser(null);
@@ -83,9 +84,10 @@ export function AuthProvider({ children }) {
         },
       );
       console.log('LOGIN: response', data);
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
+      const token = getCookie('access_token');
+      if (token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
       setUser(data.user);
       return null;
     } catch (err) {
@@ -112,9 +114,10 @@ export function AuthProvider({ children }) {
         },
       );
       console.log('REGISTER: response', data);
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
+      const token = getCookie('access_token');
+      if (token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
       setUser(data.user);
       return null;
     } catch (err) {
@@ -128,8 +131,6 @@ export function AuthProvider({ children }) {
     try {
       await axios.post('/api/logout');
     } finally {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
       delete axios.defaults.headers.common['Authorization'];
       setUser(null);
     }
