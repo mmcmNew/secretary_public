@@ -20,6 +20,7 @@ import dayjs from "dayjs";
 import PropTypes from "prop-types";
 import { Draggable } from "@fullcalendar/interaction";
 import useContextMenu from "./hooks/useContextMenu";
+import useCalendar from "./hooks/useCalendar";
 
 export default function TasksList({
     containerId,
@@ -45,6 +46,7 @@ export default function TasksList({
     const [listsMenuAnchorEl, setListsMenuAnchorEl] = useState(null);
     const [actionType, setActionType] = useState(null);
     const [targetItemId, setTargetItemId] = useState(null);
+    const { fetchCalendarEvents } = useCalendar();
 
     // useEffect(() => {
     //     console.log('TasksList received props:', {
@@ -86,7 +88,7 @@ export default function TasksList({
         return null;
     }
 
-    function handleToggle(task_id, checked) {
+    async function handleToggle(task_id, checked) {
         const status_id = checked ? 2 : 1;
         if (status_id == 2) {
             const audio = new Audio("/sounds/isComplited.wav");
@@ -96,7 +98,9 @@ export default function TasksList({
         if (status_id == 2) {
             updatedFields.completed_at = dayjs().toISOString();
         }
-        if (typeof changeTaskStatus === "function") changeTaskStatus({ taskId: task_id, ...updatedFields, listId: selectedList.id });
+        if (typeof changeTaskStatus === "function")
+            await changeTaskStatus({ taskId: task_id, ...updatedFields, listId: selectedList.id });
+        if (fetchCalendarEvents) await fetchCalendarEvents();
     }
 
     // const isDefaultList = (listId) => defaultLists.some(list => list.id === listId);
@@ -236,6 +240,7 @@ export default function TasksList({
                     start: today.toISOString(),
                     end: end.toISOString(),
                 });
+                if (fetchCalendarEvents) await fetchCalendarEvents();
                 if (onSuccess) onSuccess('Добавлено в "Мой день"');
             } catch (err) {
                 if (onError) onError(err);
