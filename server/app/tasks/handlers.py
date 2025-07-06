@@ -4,6 +4,18 @@ from flask import current_app, jsonify
 from .models import *
 from flask_jwt_extended import current_user
 from datetime import datetime, timezone, timedelta
+
+# Helper to parse ISO datetime strings that may contain timezone information.
+# All datetimes are converted to naive UTC before storing in the database so
+# that `to_dict` produces values like ``YYYY-MM-DDTHH:MM:SSZ`` which the client
+# expects.
+def _parse_iso_datetime(value):
+    if not value:
+        return None
+    dt = datetime.fromisoformat(value)
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
 from collections import defaultdict
 # from dateutil.relativedelta import relativedelta
 
@@ -195,9 +207,9 @@ def add_task(data):
     # current_app.logger.info(f'add_task: data: {data}')
     is_background = False
     if end:
-        end = datetime.fromisoformat(end)
+        end = _parse_iso_datetime(end)
     if start:
-        start = datetime.fromisoformat(start)
+        start = _parse_iso_datetime(start)
     if list_id == 'my_day':
         end = datetime.now(timezone.utc) + timedelta(hours=2)
         start = datetime.now(timezone.utc) + timedelta(hours=1)
@@ -258,7 +270,7 @@ def edit_list(data):
         # print(f'key: {key}, value: {value}')
         if hasattr(updated_list, key):
             if key in ['end', 'completed_at'] and value:
-                value = datetime.fromisoformat(value)
+                value = _parse_iso_datetime(value)
             setattr(updated_list, key, value)
 
     db.session.add(updated_list)
@@ -317,7 +329,7 @@ def edit_task(data):
         if hasattr(task, key):
             if key in ['end', 'completed_at', 'start'] and value:
                 # print(f'key: {key}, value: {value}')
-                value = datetime.fromisoformat(value)
+                value = _parse_iso_datetime(value)
             setattr(task, key, value)
 
     db.session.add(task)
@@ -339,7 +351,7 @@ def change_task_status(data):
         task.status_id = 2
         completed_at = data.get('completed_at')
         if completed_at:
-            task.completed_at = datetime.fromisoformat(completed_at)
+            task.completed_at = _parse_iso_datetime(completed_at)
         else:
             task.completed_at = datetime.now(timezone.utc)
         set_subtask_status(task, status, completed_at)
@@ -359,7 +371,7 @@ def set_subtask_status(task, status, completed_at=None):
     for subtask in all_subtasks:
         subtask.status = status
         if completed_at:
-            subtask.completed_at = datetime.fromisoformat(completed_at)
+            subtask.completed_at = _parse_iso_datetime(completed_at)
         else:
             subtask.completed_at = datetime.now(timezone.utc)
     db.session.add_all(all_subtasks)
@@ -391,8 +403,8 @@ def add_anti_task(data):
                                                                                'end', 'title', 'type']}
 
     if start and end and title:
-        start = datetime.fromisoformat(start)
-        end = datetime.fromisoformat(end)
+        start = _parse_iso_datetime(start)
+        end = _parse_iso_datetime(end)
         anti_task = AntiTask(title=title, start=start, end=end, user_id=current_user.id)
         for key, value in updated_fields.items():
             if hasattr(anti_task, key):
@@ -429,7 +441,7 @@ def edit_anti_task(data):
     for key, value in updated_fields.items():
         if hasattr(anti_task, key):
             if key in ['end', 'start'] and value:
-                value = datetime.fromisoformat(value)
+                value = _parse_iso_datetime(value)
             setattr(anti_task, key, value)
 
     db.session.add(anti_task)
