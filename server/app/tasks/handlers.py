@@ -10,9 +10,32 @@ from collections import defaultdict
 
 def get_lists_and_groups_data(client_timezone=0):
     user_id = current_user.id
-    groups_list = Group.query.filter_by(user_id=user_id).all()
-    lists_list = List.query.filter_by(user_id=user_id).all()
-    projects_list = Project.query.filter_by(user_id=user_id).all()
+    groups_list = (
+        Group.query.options(
+            db.subqueryload(Group.lists),
+            db.subqueryload(Group.projects)
+        )
+        .filter_by(user_id=user_id)
+        .all()
+    )
+
+    lists_list = (
+        List.query.options(
+            db.subqueryload(List.groups),
+            db.subqueryload(List.projects)
+        )
+        .filter_by(user_id=user_id)
+        .all()
+    )
+
+    projects_list = (
+        Project.query.options(
+            db.subqueryload(Project.lists),
+            db.subqueryload(Project.groups).subqueryload(Group.lists)
+        )
+        .filter_by(user_id=user_id)
+        .all()
+    )
 
     tasks = Task.query.options(db.joinedload(Task.lists)).filter_by(user_id=user_id).all()
     tasks_map = {task.id: task for task in tasks}

@@ -247,12 +247,12 @@ class Group(db.Model):
         return unfinished_tasks_count
 
     def tasks_count(self):
-        tasks_count = 0
-        for list_id in self.childes_order:
-            list = List.query.get(list_id)
-            if list:
-                tasks_count += len(list.childes_order)
-        return tasks_count
+        lists_map = {lst.id: lst for lst in self.lists}
+        return sum(
+            len(lists_map[list_id].childes_order)
+            for list_id in self.childes_order
+            if list_id in lists_map
+        )
 
     def to_dict(self):
         return {
