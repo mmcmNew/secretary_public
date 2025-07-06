@@ -10,6 +10,8 @@ const TasksContext = createContext();
 
 export const TasksProvider = ({ children, onError, setLoading }) => {
   const [tasks, setTasks] = useState({ data: [], loading: false, error: null });
+  const [myDayTasks, setMyDayTasks] = useState({ data: [], loading: false, error: null });
+  const [myDayList, setMyDayList] = useState(null);
   const [lists, setLists] = useState({ lists: [], projects: [], default_lists: [], loading: false, error: null });
   const [selectedListId, setSelectedListId] = useState(null);
   const [selectedList, setSelectedList] = useState(null);
@@ -28,30 +30,53 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     }
     if (!silent && setLoading) setLoading(true);
     fetching.current = true;
-    if (!silent) setTasks(prev => ({ ...prev, loading: true, error: null }));
+    if (!silent) {
+      if (listId === 'my_day') {
+        setMyDayTasks(prev => ({ ...prev, loading: true, error: null }));
+      } else {
+        setTasks(prev => ({ ...prev, loading: true, error: null }));
+      }
+    }
     try {
       // console.log('fetchTasks: start', listId);
       const data = await api(`/tasks/get_tasks?list_id=${listId}&time_zone=${new Date().getTimezoneOffset()}`);
       // console.log('fetchTasks: data', data);
-      setTasks(prev => ({
-        ...prev,
+      const update = {
         data: data.tasks || [],
         version: data.tasksVersion,
-        loading: silent ? prev.loading : false,
+        loading: false,
         error: null,
-      }));
+      };
+      if (listId === 'my_day') {
+        setMyDayTasks(prev => ({
+          ...prev,
+          ...update,
+          loading: silent ? prev.loading : update.loading,
+        }));
+      } else {
+        setTasks(prev => ({
+          ...prev,
+          ...update,
+          loading: silent ? prev.loading : update.loading,
+        }));
+      }
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
       // console.log('fetchTasks: success');
       return data;
     } catch (err) {
       if (onError) onError(err);
-      setTasks(prev => ({ ...prev, loading: silent ? prev.loading : false, error: err }));
+      if (listId === 'my_day') {
+        setMyDayTasks(prev => ({ ...prev, loading: silent ? prev.loading : false, error: err }));
+      } else {
+        setTasks(prev => ({ ...prev, loading: silent ? prev.loading : false, error: err }));
+      }
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
       console.log('fetchTasks: error', err);
     }
   }, [onError, setLoading]);
+
 
   // Получить все списки
   const fetchLists = useCallback(async ({ silent = false } = {}) => {
@@ -70,6 +95,8 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
         loading: silent ? prev.loading : false,
         error: null,
       }));
+      const myDay = data.default_lists?.find(l => l.id === 'my_day');
+      setMyDayList(myDay || null);
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
       return data;
@@ -131,11 +158,17 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     const res = await api("/tasks/add_task", "POST", params);
     await fetchLists({ silent: true });
     // Локальное обновление вместо полной перезагрузки
-    if (res.task && (params.listId === selectedListId ||
+    if (res.task && params.listId === 'my_day') {
+      setMyDayTasks(prev => ({
+        ...prev,
+        data: [res.task, ...prev.data]
+      }));
+    } else if (res.task && (
+        params.listId === selectedListId ||
         (selectedListId === 'tasks' && !params.listId) ||
-        (selectedListId === 'my_day' && params.listId === 'my_day') ||
         (selectedListId === 'important' && params.listId === 'important') ||
-        (selectedListId === 'background' && params.listId === 'background'))) {
+        (selectedListId === 'background' && params.listId === 'background')
+      )) {
       setTasks(prev => ({
         ...prev,
         data: [res.task, ...prev.data]
@@ -148,7 +181,14 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     const res = await api("/tasks/edit_task", "PUT", params);
     if (fetchLists) await fetchLists({ silent: true });
     // Локальное обновление задачи
-    if (res.task && (params.listId === selectedListId || !params.listId)) {
+    if (res.task && params.listId === 'my_day') {
+      setMyDayTasks(prev => ({
+        ...prev,
+        data: prev.data.map(task =>
+          task.id == params.taskId ? { ...task, ...res.task } : task
+        )
+      }));
+    } else if (res.task && (params.listId === selectedListId || !params.listId)) {
       setTasks(prev => ({
         ...prev,
         data: prev.data.map(task =>
@@ -163,7 +203,14 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     const res = await api("/tasks/change_status", "PUT", params);
     if (fetchLists) await fetchLists({ silent: true });
     // Локальное обновление статуса
-    if (params.listId === selectedListId) {
+    if (params.listId === 'my_day') {
+      setMyDayTasks(prev => ({
+        ...prev,
+        data: prev.data.map(task =>
+          task.id === params.taskId ? { ...task, status: params.status } : task
+        )
+      }));
+    } else if (params.listId === selectedListId) {
       setTasks(prev => ({
         ...prev,
         data: prev.data.map(task =>
@@ -178,7 +225,16 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     const res = await api("/tasks/add_subtask", "POST", params);
     if (fetchLists) await fetchLists({ silent: true });
     // Локальное обновление подзадачи
-    if (res.subtask && params.listId === selectedListId) {
+    if (res.subtask && params.listId === 'my_day') {
+      setMyDayTasks(prev => ({
+        ...prev,
+        data: prev.data.map(task =>
+          task.id === params.parentTaskId
+            ? { ...task, subtasks: [...(task.subtasks || []), res.subtask] }
+            : task
+        )
+      }));
+    } else if (res.subtask && params.listId === selectedListId) {
       setTasks(prev => ({
         ...prev,
         data: prev.data.map(task =>
@@ -195,7 +251,12 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     const res = await api("/tasks/del_task", "DELETE", params);
     if (fetchLists) await fetchLists({ silent: true });
     // Локальное удаление задачи
-    if (params.listId === selectedListId) {
+    if (params.listId === 'my_day') {
+      setMyDayTasks(prev => ({
+        ...prev,
+        data: prev.data.filter(task => task.id !== params.taskId)
+      }));
+    } else if (params.listId === selectedListId) {
       setTasks(prev => ({
         ...prev,
         data: prev.data.filter(task => task.id !== params.taskId)
@@ -207,8 +268,10 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const linkTaskList = useCallback(async (params) => {
     const res = await api("/tasks/link_task", "PUT", params);
     if (fetchLists) await fetchLists({ silent: true });
-    // При перемещении задачи нужна полная перезагрузка только текущего списка
-    if (selectedListId && selectedListId === params.fromListId) {
+    // При перемещении задачи нужна перезагрузка соответствующего списка
+    if (params.fromListId === 'my_day' || params.listId === 'my_day') {
+      await fetchTasks('my_day', { silent: true });
+    } else if (selectedListId && selectedListId === params.fromListId) {
       await fetchTasks(selectedListId, { silent: true });
     }
     return res;
@@ -246,30 +309,31 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   // Обработка детальных изменений задач через WebSocket
   useEffect(() => {
     if (draggingContainer) return;
-    if (taskChange && taskChange.listId === selectedListId) {
+    if (taskChange && (taskChange.listId === selectedListId || taskChange.listId === 'my_day')) {
       const { action, task } = taskChange;
-      
+      const targetSetter = taskChange.listId === 'my_day' ? setMyDayTasks : setTasks;
+
       switch (action) {
         case 'added':
-          setTasks(prev => ({
+          targetSetter(prev => ({
             ...prev,
             data: [...prev.data, task]
           }));
           break;
         case 'updated':
-          setTasks(prev => ({
+          targetSetter(prev => ({
             ...prev,
             data: prev.data.map(t => t.id === task.id ? { ...t, ...task } : t)
           }));
           break;
         case 'deleted':
-          setTasks(prev => ({
+          targetSetter(prev => ({
             ...prev,
             data: prev.data.filter(t => t.id !== task.id)
           }));
           break;
         case 'status_changed':
-          setTasks(prev => ({
+          targetSetter(prev => ({
             ...prev,
             data: prev.data.map(t => t.id === task.id ? { ...t, status: task.status } : t)
           }));
@@ -282,10 +346,11 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   useEffect(() => {
     if (draggingContainer) return;
     if (wsVersion && wsVersion !== version) {
-      // Обновляем список задач выбранного списка
+      // Обновляем список задач выбранного списка и список "Мой день"
       if (selectedListId) {
         fetchTasks(selectedListId, { silent: true });
       }
+      fetchTasks('my_day', { silent: true });
       fetchLists({ silent: true });
       fetchCalendarEvents();
       setVersion(wsVersion);
@@ -294,6 +359,8 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
 
   const contextValue = useMemo(() => ({
     tasks,
+    myDayTasks,
+    myDayList,
     taskFields,
     lists,
     selectedListId,
@@ -325,7 +392,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     version,
     setVersion,
     loading: tasks.loading,
-  }), [tasks, taskFields, lists, selectedListId, selectedList, calendarEvents, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, version]);
+  }), [tasks, myDayTasks, myDayList, taskFields, lists, selectedListId, selectedList, calendarEvents, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, version]);
 
   return <TasksContext.Provider value={contextValue}>{children}</TasksContext.Provider>;
 };
