@@ -199,12 +199,16 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     }
   }, [taskChange, listsSelectedListId]);
 
-  // Обновление версии без полной перезагрузки
+  // Обновление версии и синхронизация задач
   useEffect(() => {
     if (wsVersion && wsVersion !== version) {
+      // Обновляем список задач выбранного списка
+      if (listsSelectedListId) {
+        fetchTasks(listsSelectedListId, { silent: true });
+      }
       setVersion(wsVersion);
     }
-  }, [wsVersion, version]);
+  }, [wsVersion, version, listsSelectedListId, fetchTasks]);
 
   const contextValue = useMemo(() => ({
     tasks,
