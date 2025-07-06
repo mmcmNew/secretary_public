@@ -1,3 +1,4 @@
+import React from 'react';
 import PropTypes from 'prop-types';
 import { Rnd } from 'react-rnd';
 import { Box, IconButton, Paper, Typography } from '@mui/material';
@@ -7,6 +8,25 @@ import LockOpenIcon from '@mui/icons-material/LockOpen';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import useContainer from './useContainer';
 import { useEffect } from 'react';
+
+// Shallow comparison helper used for memoization
+const shallowEqual = (objA, objB) => {
+  if (objA === objB) return true;
+  if (!objA || !objB) return false;
+  const keysA = Object.keys(objA);
+  const keysB = Object.keys(objB);
+  if (keysA.length !== keysB.length) return false;
+  for (const key of keysA) {
+    if (objA[key] !== objB[key]) return false;
+  }
+  return true;
+};
+
+const DraggableContent = React.memo(
+  ({ Component, componentProps, content }) =>
+    Component ? <Component {...componentProps} /> : content,
+  (prev, next) => shallowEqual(prev.componentProps, next.componentProps)
+);
 
 function DraggableContainer({ containerData }) {
   const {
@@ -108,7 +128,11 @@ function DraggableContainer({ containerData }) {
             borderBottomRightRadius: 8,
           }}
         >
-          {Component ? <Component {...componentProps} /> : content}
+          <DraggableContent
+            Component={Component}
+            componentProps={componentProps}
+            content={content}
+          />
         </Box>
       </Paper>
     </Rnd>
