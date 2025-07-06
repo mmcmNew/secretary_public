@@ -15,6 +15,13 @@ import timezone from "dayjs/plugin/timezone";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+// Helper that applies a time offset in hours and returns an ISO string
+function applyOffset(date, offset = 0) {
+  const newDate = new Date(date);
+  newDate.setHours(newDate.getHours() + offset);
+  return newDate.toISOString();
+}
+
 export default function AntiScheduleLayout({
   containerId,
   antiScheduleSettingsProp = null,
@@ -334,19 +341,12 @@ export default function AntiScheduleLayout({
     let updatedEvents = calendarEvents?.map((event) => {
       const updatedEvent = { ...event };
 
-      // Применяем смещение времени
-      const applyOffset = (date) => {
-        const newDate = new Date(date);
-        newDate.setHours(newDate.getHours() - timeOffset);
-        return newDate;
-      };
-
       if (event.start) {
-        updatedEvent.start = applyOffset(event.start).toISOString();
+        updatedEvent.start = applyOffset(event.start, -timeOffset);
       }
 
       if (event.end) {
-        updatedEvent.end = applyOffset(event.end).toISOString();
+        updatedEvent.end = applyOffset(event.end, -timeOffset);
       }
 
       const color =
@@ -401,12 +401,6 @@ export default function AntiScheduleLayout({
     handleAddAntiTask(taskParams);
   }
 
-  // Применяем смещение времени
-  const applyOffset = (date, offset) => {
-    const newDate = new Date(date);
-    newDate.setHours(newDate.getHours() + offset);
-    return newDate.toISOString();
-  };
 
   async function handleEventChange(eventInfo) {
     // console.log('handleEventChange: eventInfo:', eventInfo);
