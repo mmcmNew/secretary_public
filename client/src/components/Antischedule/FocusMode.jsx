@@ -14,6 +14,15 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import TasksList from "../ToDo/TasksList";
 import React, { useEffect, useState, useMemo } from "react";
 import useFocusTimer from "./hooks/useFocusTimer";
+import useFocusTasks from "./hooks/useFocusTasks";
+import {
+    divideTaskWithBreaks,
+    findNextInterval,
+    calculateRemainingTime,
+    checkIsTaskStart,
+    findNextTask,
+    isTaskInPast,
+} from "./hooks/focusUtils";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -28,7 +37,6 @@ const MemoizedTaskList = React.memo(TasksList);
 
 const FocusModeComponent = ({
     containerId,
-    tasks = [],
     selectedList,
     updateTask,
     changeTaskStatus,
@@ -45,8 +53,13 @@ const FocusModeComponent = ({
         isBackgroundTasks: true,
     });
     const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
-    const [skippedTasks, setSkippedTasks] = useState([]);
-    const [currentTask, setCurrentTask] = useState(null);
+    const {
+        mainTasks,
+        currentTask,
+        skippedTasks,
+        setSkippedTasks,
+        setCurrentTask,
+    } = useFocusTasks(modeSettings);
     const {
         timerState,
         progress,
@@ -72,7 +85,7 @@ const FocusModeComponent = ({
             const nextInterval = findNextInterval(intervals)
             let newCurrentTask = null
             if (!nextInterval) {
-                const nextTask = findNextTask(tasks, skippedTasks)
+            const nextTask = findNextTask(mainTasks, skippedTasks)
                 if (nextTask) {
                     newCurrentTask = {...nextTask, status: 'started'}
                 }
@@ -89,7 +102,7 @@ const FocusModeComponent = ({
                 startTimer(newTimerParams.currentIntervalEndDate)
             }
         }
-    }, [timerState, currentTaskParams, tasks, skippedTasks])
+    }, [timerState, currentTaskParams, mainTasks, skippedTasks])
 
     useEffect(() => {
         const {taskParams, timerParams} = findTaskAndTimerParams(currentTask, modeSettings)
@@ -185,49 +198,7 @@ const FocusModeComponent = ({
         }
     }
 
-    function calculateRemainingTime(checkedTime, timezone) {
-        if (timezone == null) timezone = dayjs.tz.guess();
-        const taskStartTime = dayjs(checkedTime).tz(timezone);
-        const currentTime = dayjs().tz(timezone);
-
-        const taskStartSeconds = taskStartTime.hour() * 3600 + taskStartTime.minute() * 60 + taskStartTime.second();
-        const currentSeconds = currentTime.hour() * 3600 + currentTime.minute() * 60 + currentTime.second();
-        const remainingTime = Math.abs(currentSeconds - taskStartSeconds);
-        return remainingTime;
-    }
-
-    function findNextInterval(intervals, timezone = null) {
-        if (timezone == null) timezone = dayjs.tz.guess();
-        let foundInterval = null;
-        let intervalEndTime = null
-        let nowTime = dayjs().tz(timezone)
-        intervals.some((interval) => {
-            intervalEndTime = dayjs(interval.end).tz(timezone)
-            if (intervalEndTime.isAfter(nowTime)) {
-                foundInterval = interval;
-                return true;
-            }
-            return false;
-        });
-        return foundInterval;
-    }
-
-    const findNextTask = (tasksList, skipedTasksList) => {
-        const filtredTasks = tasksList?.filter((task) => !skipedTasksList.includes(task.id));
-        const nextTask = filtredTasks?.find((task) => !isTaskInPast(task)) || null;
-        return nextTask;
-    }
-
-    function checkIsTaskStart(task, timezone = null) {
-        if (timezone == null) timezone = dayjs.tz.guess();
-        const taskStartTime = dayjs(task.start).tz(timezone);
-        const currentTime = dayjs().tz(timezone);
-
-        const taskStartSeconds = taskStartTime.hour() * 3600 + taskStartTime.minute() * 60 + taskStartTime.second();
-        const currentSeconds = currentTime.hour() * 3600 + currentTime.minute() * 60 + currentTime.second();
-
-        return currentSeconds >= taskStartSeconds;
-    }
+    
 
     const playCheckedAudio = () => {
         let playAudioPromise = Promise.resolve();
@@ -244,158 +215,6 @@ const FocusModeComponent = ({
         return playAudioPromise;
     };
 
-    const calculateTaskDuration = (task) => {
-        const startTime = dayjs(task.start);
-        const endTime = dayjs(task.deadline);
-
-        const startInSeconds = startTime.hour() * 3600 + startTime.minute() * 60 + startTime.second();
-        const endInSeconds = endTime.hour() * 3600 + endTime.minute() * 60 + endTime.second();
-
-        let durationInSeconds = endInSeconds - startInSeconds;
-
-        if (durationInSeconds < 0) {
-            durationInSeconds += 24 * 3600;
-        }
-
-        return durationInSeconds;
-    };
-
-    const divideTaskWithBreaks = (task, modeSettings) => {
-        let intervalDuration = modeSettings?.workIntervalDuration
-        let breakDuration = modeSettings?.breakDuration
-        let additionalBreakDuration = modeSettings?.additionalBreakDuration
-        const intervals = [];
-        let remainingTime = calculateTaskDuration(task);
-        let taskStartTime = dayjs(task.start);
-        let currentTime = dayjs();
-        currentTime = currentTime.hour(taskStartTime.hour()).minute(taskStartTime.minute()).second(taskStartTime.second());
-
-        let currentIntervalId = -1;
-        let breakId = 0;
-        let intervalType = "work";
-        let currentBreakDuration = breakDuration;
-        let newIntervalDuration = 0;
-        while (remainingTime > 0) {
-            currentIntervalId++;
-            let intervalStartTime = currentTime;
-            switch (intervalType) {
-                case "work":
-                    if (remainingTime >= intervalDuration) {
-                        newIntervalDuration = intervalDuration;
-                        remainingTime -= intervalDuration;
-                    } else {
-                        newIntervalDuration = remainingTime;
-                        remainingTime = 0;
-                    }
-                    currentTime = currentTime.add(newIntervalDuration, 'second');
-                    intervals.push({
-                        id: currentIntervalId,
-                        duration: newIntervalDuration,
-                        type: "work",
-                        isOnBreak: false,
-                        start: intervalStartTime.toISOString(),
-                        end: currentTime.toISOString(),
-                    });
-                    intervalType = "break";
-                    continue;
-                case "break":
-                    if (remainingTime < currentBreakDuration) {
-                        if (intervals && intervals.length > 0 && intervals[intervals.length - 1].type == "work") {
-                            let lastIntervalId = intervals.length - 1;
-                            intervals[lastIntervalId].duration = intervals[lastIntervalId].duration + remainingTime;
-                            intervals[lastIntervalId].end = currentTime.add(remainingTime, 'second').toISOString();
-                            remainingTime = 0;
-                        } else {
-                            currentTime = currentTime.add(remainingTime, 'second');
-                            intervals.push({
-                                id: currentIntervalId,
-                                duration: remainingTime,
-                                type: "work",
-                                isOnBreak: false,
-                                start: intervalStartTime.toISOString(),
-                                end: currentTime.toISOString(),
-                            });
-                            remainingTime = 0;
-                        }
-                        intervalType = "work";
-                        continue;
-                    }
-                    if (breakId == 2 && remainingTime > additionalBreakDuration + 5) {
-                        currentBreakDuration = additionalBreakDuration;
-                        breakId = 0;
-                    }
-                    breakId++;
-                    currentTime = currentTime.add(currentBreakDuration, 'second');
-                    intervals.push({
-                        id: currentIntervalId,
-                        duration: currentBreakDuration,
-                        type: "break",
-                        isOnBreak: true,
-                        start: intervalStartTime.toISOString(),
-                        end: currentTime.toISOString(),
-                    });
-                    remainingTime -= currentBreakDuration;
-                    currentBreakDuration = breakDuration;
-                    intervalType = "work";
-                    continue;
-            }
-        }
-
-        if (intervals && intervals.length > 0 && intervals[intervals.length - 1].type == "break") {
-            let lastBreakDuration = intervals[intervals.length - 1].duration;
-            let lastBreakEndTime = dayjs(intervals[intervals.length - 1].end);
-            let lastBreakStartTime = dayjs(intervals[intervals.length - 1].start);
-            intervals.pop();
-
-            if (lastBreakDuration == breakDuration) {
-                intervals[intervals.length - 1].duration += breakDuration;
-                intervals[intervals.length - 1].end = lastBreakEndTime
-            } else {
-                let newBreakEndTime = lastBreakStartTime.add(breakDuration, 'second');
-                intervals.push({
-                    id: currentIntervalId,
-                    duration: breakDuration,
-                    type: "break",
-                    isOnBreak: true,
-                    start: lastBreakStartTime.toISOString(),
-                    end: newBreakEndTime.toISOString(),
-                });
-                let lastWorkDuration = lastBreakDuration - breakDuration;
-                let lastWorkEndTime = newBreakEndTime.add(lastWorkDuration, 'second');
-                intervals.push({
-                    id: currentIntervalId + 1,
-                    duration: lastWorkDuration,
-                    type: "work",
-                    isOnBreak: false,
-                    start: newBreakEndTime.toISOString(),
-                    end: lastWorkEndTime.toISOString(),
-                });
-            }
-        }
-
-        if (intervals && intervals.length > 0 && intervals[intervals.length - 1].duration < 1) intervals.pop();
-
-        return intervals;
-    };
-
-    const isTaskInPast = (task, timezone = null) => {
-        if (timezone == null) timezone = dayjs.tz.guess();
-        if (!task || !task.deadline) return false;
-        const currentTime = dayjs().tz(timezone);
-        const taskEndTime = dayjs(task.deadline).tz(timezone);
-
-        const currentHours = currentTime.hour();
-        const currentMinutes = currentTime.minute();
-        const taskEndHours = taskEndTime.hour();
-        const taskEndMinutes = taskEndTime.minute()-1;
-
-        const taskEndMin = taskEndHours * 60 + taskEndMinutes;
-        const currentTimeMin = currentHours * 60 + currentMinutes;
-        if (taskEndMin <= currentTimeMin) {
-            return true;
-        }
-        return false;
-    };
 
     function handleChangeTaskStatus(taskId, updatedFields) {
         if (typeof changeTaskStatus === "function") {
@@ -442,9 +261,9 @@ const FocusModeComponent = ({
     const filteredTasks = useMemo(
         () =>
             modeSettings?.isBackgroundTasks
-                ? tasks
-                : tasks.filter((task) => !task.is_background),
-        [tasks, modeSettings.isBackgroundTasks]
+                ? mainTasks
+                : mainTasks.filter((task) => !task.is_background),
+        [mainTasks, modeSettings.isBackgroundTasks]
     );
 
 
@@ -469,7 +288,7 @@ const FocusModeComponent = ({
                         <Typography variant="h6" component="div">
                             {currentTaskParams.taskName}
                         </Typography>
-                        {tasks?.length > 0 && (
+                        {mainTasks?.length > 0 && (
                             <Typography variant="subtitle1" component="div" color="text.secondary">
                                 {currentTaskParams.taskRange}
                             </Typography>
@@ -572,7 +391,6 @@ export default FocusModeComponent;
 
 FocusModeComponent.propTypes = {
     containerId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    tasks: PropTypes.array,
     selectedList: PropTypes.object,
     updateTask: PropTypes.func,
     changeTaskStatus: PropTypes.func,
