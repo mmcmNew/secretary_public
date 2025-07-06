@@ -78,6 +78,23 @@ export default function CalendarLayout({
     [updateTask, setUpdates, onSuccess, onError]
   );
 
+  const handleCreateTask = useCallback(
+    async (taskData) => {
+      try {
+        await addTask(taskData);
+        if (fetchCalendarEvents && typeof fetchCalendarEvents === 'function') {
+          await fetchCalendarEvents();
+        }
+        setUpdates((prevUpdates) => [...prevUpdates, 'todo', 'calendar']);
+        if (onSuccess) onSuccess('Событие добавлено');
+      } catch (err) {
+        console.error('Error creating task:', err);
+        if (onError) onError(err);
+      }
+    },
+    [addTask, fetchCalendarEvents, setUpdates, onSuccess, onError]
+  );
+
   const handleDialogOpen = useCallback(
     (scrollType) => {
       setTaskDialogOpen(true);
@@ -187,7 +204,7 @@ export default function CalendarLayout({
         handleEventClick={handleEventClick}
         handleEventChange={handleEventChange}
         eventReceive={handleEventChange}
-        addTask={addTask}
+        onCreateTask={handleCreateTask}
         fetchTasks={fetchTasks}
         fetchEvents={fetchCalendarEvents}
         datesSet={handleDatesSet}
