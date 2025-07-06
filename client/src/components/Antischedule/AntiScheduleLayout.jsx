@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Box, useMediaQuery } from "@mui/system";
+import { Box } from "@mui/material";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import AntischeduleComponent from "./AntischeduleComponent";
 import useContainer from "../DraggableComponents/useContainer";
 import useLists from "../ToDo/hooks/useLists";
