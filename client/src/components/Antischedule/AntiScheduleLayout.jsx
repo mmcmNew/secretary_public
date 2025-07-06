@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { Box } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import AntischeduleComponent from "./AntischeduleComponent";
@@ -514,11 +514,13 @@ export default function AntiScheduleLayout({
     setSelectedDayTasks(newSelectedDayTasks)
   }
 
+  const memoizedCalendarEvents = useMemo(
+    () => updateEventsForCalendar(calendarEvents, newSettings?.timeOffset),
+    [calendarEvents, newSettings?.timeOffset]
+  );
+
   useEffect(() => {
-    let updatedEvents = updateEventsForCalendar(
-      calendarEvents,
-      newSettings?.timeOffset
-    );
+    let updatedEvents = memoizedCalendarEvents;
     if (newSettings && newSettings.isToggledBGTasksEdit) {
       updatedEvents = updatedEvents?.filter(
         (event) => event.display == "background"
@@ -538,7 +540,7 @@ export default function AntiScheduleLayout({
       setSelectedDayTasks(newSelectedDayTasks);
       // console.log('[DEBUG] useEffect: setSelectedDayTasks', newSelectedDayTasks);
     }
-  }, [newSettings, calendarEvents, myDayTasks, selectedDate]);
+  }, [memoizedCalendarEvents, newSettings?.isToggledBGTasksEdit, selectedDate]);
 
   // Добавляем инициализацию при монтировании
   useEffect(() => {
