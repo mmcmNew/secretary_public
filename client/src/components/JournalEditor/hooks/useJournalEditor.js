@@ -121,6 +121,30 @@ export default function useJournalEditor() {
     }));
   };
 
+  const handleDateChange = useCallback(
+    async (newValue) => {
+      dispatchEditors({ type: 'SET_EDITORS', payload: [] });
+      const utcDate = dayjs(newValue).utc().startOf('day');
+      setCalendarDate(utcDate);
+      setFilters({});
+
+      if (!tableName) return;
+
+      const data = await fetchTableData(tableName, utcDate.toISOString());
+      setRecords(data.records || []);
+
+      const formattedDate = utcDate.format('YYYY-MM-DD');
+      const pageIndex = allRecordDates.findIndex(
+        (date) => dayjs(date).format('YYYY-MM-DD') === formattedDate
+      );
+
+      if (pageIndex !== -1) {
+        setCurrentPage(pageIndex + 1);
+      }
+    },
+    [tableName, allRecordDates]
+  );
+
   const resetFilters = useCallback(() => {
     setFilters({});
     if (tableName) {
@@ -161,30 +185,6 @@ export default function useJournalEditor() {
     const formattedDates = dates.map((date) => dayjs(date).format('YYYY-MM-DD'));
     return formattedDates;
   }
-
-  const handleDateChange = useCallback(
-    async (newValue) => {
-      dispatchEditors({ type: 'SET_EDITORS', payload: [] });
-      const utcDate = dayjs(newValue).utc().startOf('day');
-      setCalendarDate(utcDate);
-      setFilters({});
-
-      if (!tableName) return;
-
-      const data = await fetchTableData(tableName, utcDate.toISOString());
-      setRecords(data.records || []);
-
-      const formattedDate = utcDate.format('YYYY-MM-DD');
-      const pageIndex = allRecordDates.findIndex(
-        (date) => dayjs(date).format('YYYY-MM-DD') === formattedDate
-      );
-
-      if (pageIndex !== -1) {
-        setCurrentPage(pageIndex + 1);
-      }
-    },
-    [tableName, allRecordDates]
-  );
 
   const handlePaginationDateChange = useCallback(
     async (event, page) => {
