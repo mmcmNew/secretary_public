@@ -379,23 +379,6 @@ class Task(db.Model):
     end = db.Column('Deadline', db.DateTime)
     is_background = db.Column('IsBackground', db.Boolean, default=False)
     completed_at = db.Column('EndDate', db.DateTime)
-
-    # Temporary aliases for backward compatibility
-    @property
-    def deadline(self):
-        return self.end
-
-    @deadline.setter
-    def deadline(self, value):
-        self.end = value
-
-    @property
-    def end_date(self):
-        return self.completed_at
-
-    @end_date.setter
-    def end_date(self, value):
-        self.completed_at = value
     attachments = db.Column('Attachments', db.String(255))
     note = db.Column('Note', db.Text)
     childes_order = db.Column('ChildesOrder', db.JSON, default=[])
