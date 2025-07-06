@@ -6,6 +6,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import useContainer from './useContainer';
+import { useEffect } from 'react';
 
 function DraggableContainer({ containerData }) {
   const {
@@ -17,6 +18,7 @@ function DraggableContainer({ containerData }) {
     handleContainerPosition,
     themeMode,
     windowOrder,
+    setDraggingContainer,
   } = useContainer();
 
   const {
@@ -26,12 +28,18 @@ function DraggableContainer({ containerData }) {
     componentType: Component, componentProps
   } = containerData;
 
+  useEffect(() => () => setDraggingContainer((prev) => (prev === id ? null : prev)), [id, setDraggingContainer]);
+
   return (
     <Rnd
       id={id} // добавляем ID для контейнера
       size={{ width: size.width, height: size.height }}
       position={{ x: position.x, y: position.y }}
-      onDragStop={(e, d) => handleContainerPosition(id, { x: d.x, y: d.y })}
+      onDragStart={() => setDraggingContainer(id)}
+      onDragStop={(e, d) => {
+        handleContainerPosition(id, { x: d.x, y: d.y });
+        setDraggingContainer(null);
+      }}
       onResizeStop={(e, direction, ref, delta, position) => {
         handleContainerResize(id, { width: ref.offsetWidth, height: ref.offsetHeight }, position);
       }}

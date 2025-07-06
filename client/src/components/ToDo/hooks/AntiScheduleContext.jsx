@@ -2,6 +2,7 @@ import { createContext, useState, useCallback, useMemo, useRef, useEffect } from
 import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 import api from '../../../utils/api';
+import useContainer from '../../DraggableComponents/useContainer';
 
 const AntiScheduleContext = createContext();
 
@@ -10,6 +11,7 @@ export const AntiScheduleProvider = ({ children, onError, setLoading }) => {
   const [antiSchedule, setAntiSchedule] = useState({ data: [], loading: false, error: null });
   const [version, setVersion] = useState(null);
   const fetching = useRef(false);
+  const { draggingContainer } = useContainer();
 
   const fetchAntiSchedule = useCallback(async () => {
     if (fetching.current) return;
@@ -68,11 +70,12 @@ export const AntiScheduleProvider = ({ children, onError, setLoading }) => {
   const { tasksVersion: wsVersion } = useUpdateWebSocket();
 
   useEffect(() => {
+    if (draggingContainer) return;
     if (wsVersion) {
       fetchAntiSchedule();
       setVersion(wsVersion);
     }
-  }, [wsVersion, fetchAntiSchedule]);
+  }, [wsVersion, fetchAntiSchedule, draggingContainer]);
 
   const contextValue = useMemo(() => ({
     antiSchedule,

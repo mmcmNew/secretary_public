@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 import api from '../../../utils/api';
 import { AuthContext } from '../../../contexts/AuthContext.jsx';
+import useContainer from '../../DraggableComponents/useContainer';
 
 const CalendarContext = createContext();
 
@@ -11,6 +12,7 @@ export const CalendarProvider = ({ children }) => {
   const [calendarEvents, setCalendarEvents] = useState({ data: [], loading: false, error: null });
   const [version, setVersion] = useState(null);
   const fetching = useRef(false);
+  const { draggingContainer } = useContainer();
 
   // Получить события календаря
   const fetchCalendarEvents = useCallback(async () => {
@@ -34,11 +36,12 @@ export const CalendarProvider = ({ children }) => {
   const { user, isLoading } = useContext(AuthContext);
 
   useEffect(() => {
+    if (draggingContainer) return;
     if (wsVersion && wsVersion !== version) {
       fetchCalendarEvents();
       setVersion(wsVersion);
     }
-  }, [wsVersion, version, fetchCalendarEvents]);
+  }, [wsVersion, version, fetchCalendarEvents, draggingContainer]);
 
   // Начальная загрузка
   useEffect(() => {
