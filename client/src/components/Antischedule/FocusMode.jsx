@@ -75,34 +75,30 @@ const FocusModeComponent = ({
         };
     }, []);
 
-    useEffect(() => {
-        const currentTime = dayjs().tz();
-        const {currentIntervalEndDate} = timerState;
-        if (dayjs(currentIntervalEndDate).isBefore(currentTime)) {
-            stopTimer();
-            playCheckedAudio();
-            const {intervals} = currentTaskParams;
-            const nextInterval = findNextInterval(intervals)
-            let newCurrentTask = null
-            if (!nextInterval) {
-            const nextTask = findNextTask(mainTasks, skippedTasks)
-                if (nextTask) {
-                    newCurrentTask = {...nextTask, status: 'started'}
-                }
-                setCurrentTask(newCurrentTask)
-            } else {
-                const newTimerParams = {
-                    currentIntervalIndex: nextInterval.id,
-                    currentIntervalEndDate: nextInterval.end,
-                    currentIntervalDuration: nextInterval.duration,
-                    remainingTime: nextInterval.duration,
-                    isOnBreak: nextInterval.isOnBreak,
-                }
-                updateTimerState(newTimerParams)
-                startTimer(newTimerParams.currentIntervalEndDate)
+
+    const handleIntervalEnd = () => {
+        playCheckedAudio();
+        const {intervals} = currentTaskParams;
+        const nextInterval = findNextInterval(intervals);
+        let newCurrentTask = null;
+        if (!nextInterval) {
+            const nextTask = findNextTask(mainTasks, skippedTasks);
+            if (nextTask) {
+                newCurrentTask = { ...nextTask, status: 'started' };
             }
+            setCurrentTask(newCurrentTask);
+        } else {
+            const newTimerParams = {
+                currentIntervalIndex: nextInterval.id,
+                currentIntervalEndDate: nextInterval.end,
+                currentIntervalDuration: nextInterval.duration,
+                remainingTime: nextInterval.duration,
+                isOnBreak: nextInterval.isOnBreak,
+            };
+            updateTimerState(newTimerParams);
+            startTimer(newTimerParams.currentIntervalEndDate, undefined, handleIntervalEnd);
         }
-    }, [timerState, currentTaskParams, mainTasks, skippedTasks])
+    };
 
     useEffect(() => {
         const {taskParams, timerParams} = findTaskAndTimerParams(currentTask, modeSettings)
@@ -110,7 +106,7 @@ const FocusModeComponent = ({
         updateTimerState(timerParams)
         updateCurrentTaskParams(taskParams)
         if (currentTask) {
-            startTimer(timerParams.currentIntervalEndDate);
+            startTimer(timerParams.currentIntervalEndDate, undefined, handleIntervalEnd);
         } else {
             stopTimer();
         }

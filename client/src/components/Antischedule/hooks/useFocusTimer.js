@@ -16,6 +16,7 @@ export default function useFocusTimer(initialState = {}) {
   });
 
   const timerRef = useRef(null);
+  const callbackRef = useRef(null);
 
   const updateTimerState = (updates) => {
     setTimerState((prev) => ({ ...prev, ...updates }));
@@ -31,17 +32,35 @@ export default function useFocusTimer(initialState = {}) {
     return Math.abs(nowSec - targetSec);
   };
 
-  const startTimer = (endDate, tz) => {
+  const startTimer = (endDate, tz, onFinish) => {
     if (!endDate) return;
     if (!tz) tz = dayjs.tz.guess();
-    timerRef.current = setInterval(() => {
-      updateTimerState({ remainingTime: calculateRemainingTime(endDate, tz) });
-    }, 500);
+
+    stopTimer();
+    callbackRef.current = onFinish;
+
+    const tick = () => {
+      const remaining = calculateRemainingTime(endDate, tz);
+      updateTimerState({ remainingTime: remaining });
+
+      const isFinished = dayjs().tz(tz).isAfter(dayjs(endDate).tz(tz));
+      if (isFinished) {
+        stopTimer();
+        if (typeof callbackRef.current === 'function') {
+          callbackRef.current();
+        }
+        return;
+      }
+
+      timerRef.current = requestAnimationFrame(tick);
+    };
+
+    timerRef.current = requestAnimationFrame(tick);
   };
 
   const stopTimer = () => {
     if (timerRef.current) {
-      clearInterval(timerRef.current);
+      cancelAnimationFrame(timerRef.current);
       timerRef.current = null;
     }
   };
