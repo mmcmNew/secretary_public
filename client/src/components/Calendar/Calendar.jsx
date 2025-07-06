@@ -288,6 +288,7 @@ export default function Calendar() {
 
     async function handleDelDateClick(taskId) {
         await updateTask(taskId, { start: null, end: null });
+        if (fetchCalendarEvents) await fetchCalendarEvents();
         setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
     }
 

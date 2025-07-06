@@ -70,6 +70,8 @@ export default function CalendarLayout({
     async (taskId) => {
       try {
         await updateTask({ taskId, start: null, end: null });
+        if (fetchCalendarEvents && typeof fetchCalendarEvents === "function")
+          await fetchCalendarEvents();
         setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
         if (onSuccess) onSuccess('Дата удалена');
       } catch (err) {
