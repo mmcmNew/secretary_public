@@ -1,5 +1,5 @@
 import { PropTypes } from 'prop-types';
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState } from "react";
 import useTasks from "../ToDo/hooks/useTasks";
 import useLists from "../ToDo/hooks/useLists";
 import useCalendar from "../ToDo/hooks/useCalendar";
@@ -15,7 +15,7 @@ export default function CalendarLayout({
   onError = null,
 }) {
   const { updateTask, addTask, fetchTasks, tasks, taskFields, addSubTask, changeTaskStatus, deleteTask } = useTasks();
-  const { lists, selectedListId, selectedList } = useLists();
+  const { lists, } = useLists();
   const { calendarEvents, fetchCalendarEvents } = useCalendar();
   const { setUpdates, handleUpdateContent } = useContainer();
   const calendarRef = useRef(null);
@@ -53,14 +53,11 @@ export default function CalendarLayout({
   const handleSaveCalendarSettings = (settings) => {
     try {
       setCalendarSettings(settings);
-      console.log(containerId, settings);
       if (handleUpdateContent && containerId) {
-        console.log("Saving settings:", settings);
         handleUpdateContent(containerId, { calendarSettingsProp: settings });
       }
       if (onSuccess) onSuccess('Настройки сохранены');
     } catch (err) {
-      console.error('Error saving calendar settings:', err);
       if (onError) onError(err);
     }
   };
