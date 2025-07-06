@@ -189,17 +189,17 @@ def add_object(data):
 def add_task(data):
     task_title = data.get('title', '')
     start = data.get('start', None)
-    deadline = data.get('end', None)
+    end = data.get('end', None)
     list_id = data.get('listId', 'tasks')
     priority_id = 1
     # current_app.logger.info(f'add_task: data: {data}')
     is_background = False
-    if deadline:
-        deadline = datetime.fromisoformat(deadline)
+    if end:
+        end = datetime.fromisoformat(end)
     if start:
         start = datetime.fromisoformat(start)
     if list_id == 'my_day':
-        deadline = datetime.now(timezone.utc) + timedelta(hours=2)
+        end = datetime.now(timezone.utc) + timedelta(hours=2)
         start = datetime.now(timezone.utc) + timedelta(hours=1)
     if list_id == 'important':
         priority_id = 3
@@ -209,7 +209,7 @@ def add_task(data):
     task_list_dict = {}
 
     if list_id:
-        new_task = Task(title=task_title, deadline=deadline, start=start, priority_id=priority_id,
+        new_task = Task(title=task_title, end=end, start=start, priority_id=priority_id,
                         is_background=is_background, user_id=current_user.id)
         task_list = List.query.filter_by(id=list_id, user_id=current_user.id).first()
 
@@ -257,7 +257,7 @@ def edit_list(data):
     for key, value in updated_fields.items():
         # print(f'key: {key}, value: {value}')
         if hasattr(updated_list, key):
-            if key in ['deadline', 'end_date'] and value:
+            if key in ['end', 'completed_at'] and value:
                 value = datetime.fromisoformat(value)
             setattr(updated_list, key, value)
 
@@ -315,7 +315,7 @@ def edit_task(data):
 
     for key, value in updated_fields.items():
         if hasattr(task, key):
-            if key in ['deadline', 'end_date', 'start'] and value:
+            if key in ['end', 'completed_at', 'start'] and value:
                 # print(f'key: {key}, value: {value}')
                 value = datetime.fromisoformat(value)
             setattr(task, key, value)
@@ -337,16 +337,16 @@ def change_task_status(data):
 
     if status_id == 2:
         task.status_id = 2
-        end_date = data.get('end_date')
-        if end_date:
-            task.end_date = datetime.fromisoformat(end_date)
+        completed_at = data.get('completed_at')
+        if completed_at:
+            task.completed_at = datetime.fromisoformat(completed_at)
         else:
-            task.end_date = datetime.now(timezone.utc)
-        set_subtask_status(task, status, end_date)
+            task.completed_at = datetime.now(timezone.utc)
+        set_subtask_status(task, status, completed_at)
         result = {'success': True, 'task': 'all'}
     else:
         task.status_id = status_id
-        task.end_date = None
+        task.completed_at = None
         result = {'success': True, 'task': task.to_dict()}
 
     db.session.add(task)
@@ -354,14 +354,14 @@ def change_task_status(data):
     return result, 200
 
 
-def set_subtask_status(task, status, end_date=None):
+def set_subtask_status(task, status, completed_at=None):
     all_subtasks = collect_all_subtasks(task)
     for subtask in all_subtasks:
         subtask.status = status
-        if end_date:
-            subtask.end_date = datetime.fromisoformat(end_date)
+        if completed_at:
+            subtask.completed_at = datetime.fromisoformat(completed_at)
         else:
-            subtask.end_date = datetime.now(timezone.utc)
+            subtask.completed_at = datetime.now(timezone.utc)
     db.session.add_all(all_subtasks)
 
 
@@ -683,11 +683,11 @@ def create_daily_scenario():
     for task in tasks:
         # Установка времени начала, если оно отсутствует
         if not task.start:
-            task.start = task.deadline - timedelta(minutes=30)
+            task.start = task.end - timedelta(minutes=30)
 
         # Применяем к сегодняшней дате время начала и окончания задачи
         start_today = datetime.combine(today.date(), task.start.time())
-        deadline_today = datetime.combine(today.date(), task.deadline.time())
+        deadline_today = datetime.combine(today.date(), task.end.time())
 
         # Создание таймера для времени начала задачи
         actions.append({

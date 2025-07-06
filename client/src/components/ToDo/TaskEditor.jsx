@@ -117,7 +117,7 @@ function TaskDetails({
         }
         const payload = { taskId, status_id, listId };
         if (status_id === 2) {
-            payload.end_date = dayjs().toISOString();
+            payload.completed_at = dayjs().toISOString();
             const audio = new Audio("/sounds/isComplited.wav");
             audio.play();
         }
@@ -257,7 +257,7 @@ function TaskDetails({
             </Paper>
             {taskStatus === 2 && (
                 <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
-                    Завершено: {task.end_date ? dayjs(task.end_date).format('DD/MM/YYYY HH:mm') : ''}
+                    Завершено: {task.completed_at ? dayjs(task.completed_at).format('DD/MM/YYYY HH:mm') : ''}
                 </Typography>
             )}
             <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexDirection: 'column', gap: 1.5, paddingY: 2 }}>

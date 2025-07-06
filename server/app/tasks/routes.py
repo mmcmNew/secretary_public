@@ -198,7 +198,8 @@ def get_fields_config():
     # Заглушка полей задач
     fields = {
         "start": {"id": 1, "type": "datetime", "name": "Дата начала"},
-        "deadline": {"id": 2, "type": "datetime", "name": "Дата завершения"},
+        "end": {"id": 2, "type": "datetime", "name": "Дата завершения"},
+        "completed_at": {"id": 17, "type": "datetime", "name": "Дата выполнения"},
         "divider1": {"id": 3, "type": "divider"},
         "is_background": {"id": 4, "type": "toggle", "name": "Фоновая задача"},
         "color": {"id": 5, "type": "color", "name": "Цвет на календаре"},
