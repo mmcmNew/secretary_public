@@ -370,12 +370,12 @@ export default function AntiScheduleLayout({
   async function handleAddAntiTask(taskParams){
     try {
       taskParams.is_background = 0;
-      let newAntiTask = {};
-      if (addAntiTask && typeof addAntiTask === "function")
-        newAntiTask = await addAntiTask(taskParams);
-      if (newAntiTask) {
-        setCalendarEvents((prevEvents) => [...prevEvents, newAntiTask]);
-        if (onSuccess) onSuccess('Событие добавлено');
+      if (addAntiTask && typeof addAntiTask === "function"){
+        let result = await addAntiTask(taskParams);
+        if (result?.task){
+          setCalendarEvents(prev => [...prev, result.task]);
+          if (onSuccess) onSuccess('Событие добавлено');
+        }
       }
     } catch (err) {
       if (onError) onError(err);
