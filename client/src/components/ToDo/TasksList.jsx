@@ -146,7 +146,7 @@ export default function TasksList({
             ];
         }
 
-        setAnchorEl(null);
+        handleCloseMenu();
         // Сохраняем изменения в childes_order
         if (typeof updateList === "function") {
             try {
@@ -161,13 +161,16 @@ export default function TasksList({
     async function handleDeleteFromChildes(elementId) {
         if (typeof deleteFromChildes === "function") {
             try {
-                await deleteFromChildes(`task_${elementId}`, selectedList.id);
+                await deleteFromChildes({
+                    source_id: `task_${elementId}`,
+                    group_id: selectedList.id,
+                });
                 if (onSuccess) onSuccess('Задача удалена из списка');
             } catch (err) {
                 if (onError) onError(err);
             }
         }
-        setAnchorEl(null);
+        handleCloseMenu();
     }
 
     async function handleToListAction(targetId, actionTypeName = null) {
