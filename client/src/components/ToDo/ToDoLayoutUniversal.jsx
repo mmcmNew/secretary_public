@@ -4,7 +4,6 @@ import ToDoListsPanel from './ToDoListsPanel';
 import ToDoTasksPanel from './ToDoTasksPanel';
 import ToDoTaskEditorPanel from './ToDoTaskEditorPanel';
 import useTasks from './hooks/useTasks';
-import useLists from './hooks/useLists';
 import { ErrorContext } from '../../contexts/ErrorContext';
 import useNewTaskInput from './hooks/useNewTaskInput';
 import PropTypes from 'prop-types';
@@ -18,13 +17,11 @@ function ToDoLayoutUniversal() {
     fetchTasks,
     selectedTaskId,
     tasks,
-  } = useTasks();
-  const tasksLoading = tasks.loading;
-  const {
     selectedListId,
     fetchLists,
     lists,
-  } = useLists();
+  } = useTasks();
+  const tasksLoading = tasks.loading;
   const listsLoading = lists.loading;
   const { setError, setSuccess } = useContext(ErrorContext);
   const { submitTask } = useNewTaskInput();

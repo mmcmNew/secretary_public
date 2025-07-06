@@ -1,8 +1,6 @@
 import { PropTypes } from 'prop-types';
 import { useEffect, useRef, useState, useCallback } from "react";
 import useTasks from "../ToDo/hooks/useTasks";
-import useLists from "../ToDo/hooks/useLists";
-import useCalendar from "../ToDo/hooks/useCalendar";
 import useContainer from "../DraggableComponents/useContainer";
 import TaskDialog from "./TaskDialog";
 import CalendarComponent from "./CalendarComponent";
@@ -23,9 +21,7 @@ export default function CalendarLayout({
   onSuccess = null,
   onError = null,
 }) {
-  const { updateTask, addTask, fetchTasks, tasks, taskFields, addSubTask, changeTaskStatus, deleteTask } = useTasks();
-  const { lists, } = useLists();
-  const { calendarEvents, fetchCalendarEvents } = useCalendar();
+  const { updateTask, addTask, fetchTasks, tasks, taskFields, addSubTask, changeTaskStatus, deleteTask, lists, calendarEvents, fetchCalendarEvents } = useTasks();
   const { setUpdates, handleUpdateContent } = useContainer();
   const calendarRef = useRef(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);

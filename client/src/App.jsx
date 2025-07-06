@@ -5,8 +5,6 @@ import HomePage from './HomePage.jsx';
 import SecondPage from './SecondPage.jsx';
 import { ContainerProvider } from './components/DraggableComponents/ContainerContext';
 import { TasksProvider } from './components/ToDo/hooks/TasksContext';
-import { ListsProvider } from './components/ToDo/hooks/ListsContext';
-import { CalendarProvider } from './components/ToDo/hooks/CalendarContext';
 import { AntiScheduleProvider } from './components/ToDo/hooks/AntiScheduleContext';
 import UpdateWebSocketProvider from './components/DraggableComponents/UpdateWebSocketContext';
 import TestPage from './TestPage.jsx';
@@ -54,10 +52,8 @@ function App() {
           <AccessControlProvider>
             <UpdateWebSocketProvider>
               <ContainerProvider>
-                <ListsProvider>
-                  <TasksProvider>
-                    <CalendarProvider>
-                      <AntiScheduleProvider>
+                <TasksProvider>
+                  <AntiScheduleProvider>
                     <Router future={{
                   v7_fetcherPersist: true,
                   v7_normalizeFormMethod: true,
@@ -69,9 +65,7 @@ function App() {
                     <AppRoutes />
                     </Router>
                       </AntiScheduleProvider>
-                    </CalendarProvider>
                   </TasksProvider>
-                </ListsProvider>
               </ContainerProvider>
             </UpdateWebSocketProvider>
           </AccessControlProvider>

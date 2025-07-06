@@ -3,7 +3,6 @@ import { Box, Typography, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import TaskEditor from './TaskEditor';
 import useTasks from './hooks/useTasks';
-import useLists from './hooks/useLists';
 
 export default function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId }) {
   const {
@@ -15,8 +14,8 @@ export default function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId 
     changeTaskStatus,
     deleteTask,
     setSelectedTaskId: setTaskId,
+    selectedListId,
   } = useTasks();
-  const { selectedListId } = useLists();
 
   const handleAddSubTask = useCallback((subtask, taskId) => {
     addSubTask({ title: subtask, parentId: taskId });

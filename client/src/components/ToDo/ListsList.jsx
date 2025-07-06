@@ -11,8 +11,6 @@ import ListsSection from './ListsList/ListsSection';
 import ContextMenu from './ListsList/ContextMenu';
 
 import useTasks from './hooks/useTasks';
-import useLists from './hooks/useLists';
-import useCalendar from './hooks/useCalendar';
 import useContextMenu from './hooks/useContextMenu'
 
 export default function ListsList({
@@ -52,9 +50,7 @@ export default function ListsList({
   const [droppedListItem, setDroppedListItem] = useState(null);
   const [listDropTargetId, setListDropTargetId] = useState(null);
   const inputRef = useRef(null);
-  const { fetchTasks } = useTasks();
-  const { fetchLists: fetchListsHook, updateList } = useLists();
-  const { fetchCalendarEvents } = useCalendar();
+  const { fetchTasks, fetchLists: fetchListsHook, updateList, fetchCalendarEvents } = useTasks();
 
   function handleToggleGroup(id) {
     setOpenGroups((prevOpenGroups) => ({

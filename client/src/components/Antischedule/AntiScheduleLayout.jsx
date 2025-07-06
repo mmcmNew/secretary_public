@@ -3,7 +3,6 @@ import { Box } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import AntischeduleComponent from "./AntischeduleComponent";
 import useContainer from "../DraggableComponents/useContainer";
-import useLists from "../ToDo/hooks/useLists";
 import useTasks from "../ToDo/hooks/useTasks";
 import useAntiSchedule from "../ToDo/hooks/useAntiSchedule";
 import PropTypes from "prop-types";
@@ -29,8 +28,9 @@ export default function AntiScheduleLayout({
   onError = null,
   onSuccess = null,
 }) {
-  const { lists, setSelectedListId } = useLists();
   const {
+    lists,
+    setSelectedListId,
     fetchTasks,
     updateTask,
     changeTaskStatus,

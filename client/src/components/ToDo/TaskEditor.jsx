@@ -25,7 +25,7 @@ import { renderTimeViewClock } from "@mui/x-date-pickers";
 import ColorPicker from "../ColorPicker";
 import NewRecordDialog from "../JournalEditor/NewRecordDialog";
 import PropTypes from "prop-types";
-import useCalendar from "./hooks/useCalendar";
+import useTasks from "./hooks/useTasks";
 
 function TaskDetails({
     taskFields,
@@ -41,7 +41,7 @@ function TaskDetails({
     const [subTasks, setSubTasks] = useState({});
     const [newSubTask, setNewSubTask] = useState("");
     const [newRecordDialogOpen, setNewRecordDialogOpen] = useState(false);
-    const { fetchCalendarEvents } = useCalendar();
+    const { fetchCalendarEvents } = useTasks();
 
     const taskMap = useMemo(() => new Map(tasks.map(t => [t.id, t])), [tasks]);
     const task = taskMap.get(+selectedTaskId) || null;

@@ -4,7 +4,6 @@ import ListIcon from '@mui/icons-material/List';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
 import TasksList from './TasksList';
 import useTasks from './hooks/useTasks';
-import useLists from './hooks/useLists';
 import AddIcon from '@mui/icons-material/Add';
 
 export default function ToDoTasksPanel({ mobile = false, setSelectedListId, additionalButtonClick = null, additionalButton = null, onSuccess = null, onError = null }) {
@@ -17,15 +16,13 @@ export default function ToDoTasksPanel({ mobile = false, setSelectedListId, addi
     changeTaskStatus,
     deleteTask,
     linkTaskList,
-  } = useTasks();
-  const {
     lists,
     selectedListId,
     selectedList,
     updateList,
     linkListGroup,
     deleteFromChildes,
-  } = useLists();
+  } = useTasks();
 
   // Для редактирования названия списка
   const [editingTitle, setEditingTitle] = useState('');

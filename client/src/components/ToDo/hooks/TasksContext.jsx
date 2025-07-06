@@ -1,7 +1,6 @@
 import { createContext, useState, useCallback, useMemo, useRef, useEffect, useContext } from "react";
 import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
-import useLists from './useLists';
 import { AuthContext } from '../../../contexts/AuthContext';
 import useContainer from '../../DraggableComponents/useContainer';
 import api from '../../../utils/api';
@@ -11,7 +10,9 @@ const TasksContext = createContext();
 
 export const TasksProvider = ({ children, onError, setLoading }) => {
   const [tasks, setTasks] = useState({ data: [], loading: false, error: null });
-  const { fetchLists, selectedListId: listsSelectedListId } = useLists();
+  const [lists, setLists] = useState({ lists: [], projects: [], default_lists: [], loading: false, error: null });
+  const [selectedListId, setSelectedListId] = useState(null);
+  const [selectedList, setSelectedList] = useState(null);
   const [taskFields, setTaskFields] = useState({});
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [version, setVersion] = useState(null);
@@ -52,29 +53,102 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     }
   }, [onError, setLoading]);
 
+  // Получить все списки
+  const fetchLists = useCallback(async ({ silent = false } = {}) => {
+    if (fetching.current) return;
+    if (!silent && setLoading) setLoading(true);
+    fetching.current = true;
+    if (!silent) setLists(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const data = await api(`/tasks/get_lists?time_zone=${new Date().getTimezoneOffset()}`);
+      setLists(prev => ({
+        ...prev,
+        lists: data.lists,
+        default_lists: data.default_lists,
+        projects: data.projects,
+        version: data.tasksVersion,
+        loading: silent ? prev.loading : false,
+        error: null,
+      }));
+      if (!silent && setLoading) setLoading(false);
+      fetching.current = false;
+      return data;
+    } catch (err) {
+      if (onError) onError(err);
+      setLists(prev => ({ ...prev, loading: silent ? prev.loading : false, error: err }));
+      if (!silent && setLoading) setLoading(false);
+      fetching.current = false;
+    }
+  }, [onError, setLoading]);
+
+  // CRUD операции со списками
+  const addList = useCallback(async (params) => { const res = await api('/tasks/add_list', 'POST', params); await fetchLists(); return res; }, [fetchLists]);
+  const updateList = useCallback(async (params) => { const res = await api('/tasks/edit_list', 'PUT', params); await fetchLists(); return res; }, [fetchLists]);
+  const deleteList = useCallback(async (params) => { const res = await api('/tasks/del_list', 'DELETE', params); await fetchLists(); return res; }, [fetchLists]);
+  const linkListGroup = useCallback(async (params) => { const res = await api('/tasks/link_group_list', 'PUT', params); await fetchLists(); return res; }, [fetchLists]);
+  const deleteFromChildes = useCallback(async (params) => { const res = await api('/tasks/delete_from_childes', 'DELETE', params); await fetchLists(); return res; }, [fetchLists]);
+  const changeChildesOrder = useCallback(async (params) => { const res = await api('/tasks/change_childes_order', 'PUT', params); await fetchLists(); return res; }, [fetchLists]);
+
+  const handleSelectList = useCallback((listId) => {
+    setSelectedListId(listId);
+  }, []);
+
+  useEffect(() => {
+    if (selectedListId != null) {
+      const allLists = [...lists.lists, ...lists.projects, ...lists.default_lists];
+      const found = allLists.find(l => l.id === selectedListId);
+      setSelectedList(found || null);
+    } else {
+      setSelectedList(null);
+    }
+  }, [selectedListId, lists]);
+
+  // ------ Calendar events ------
+  const [calendarEvents, setCalendarEvents] = useState({ data: [], loading: false, error: null });
+  const fetchCalendarEvents = useCallback(async () => {
+    if (fetching.current) return;
+    fetching.current = true;
+    setCalendarEvents(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const data = await api(`/tasks/get_tasks?list_id=events&version=${version}`);
+      setCalendarEvents({ data: data.tasks || data, loading: false, error: null });
+      setVersion(data.tasksVersion || version);
+      return data.tasks || data;
+    } catch (error) {
+      setCalendarEvents(prev => ({ ...prev, loading: false, error }));
+      return [];
+    } finally {
+      fetching.current = false;
+    }
+  }, [version]);
+
+  const updateCalendarEvent = useCallback((params) => api('/tasks/edit_task', 'PUT', params), []);
+  const addCalendarEvent = useCallback((params) => api('/tasks/add_task', 'POST', params), []);
+  const deleteCalendarEvent = useCallback((params) => api('/tasks/del_task', 'DELETE', params), []);
+
   // CRUD операции
   const addTask = useCallback(async (params) => {
     const res = await api("/tasks/add_task", "POST", params);
     await fetchLists({ silent: true });
     // Локальное обновление вместо полной перезагрузки
-    if (res.task && (params.listId === listsSelectedListId ||
-        (listsSelectedListId === 'tasks' && !params.listId) ||
-        (listsSelectedListId === 'my_day' && params.listId === 'my_day') ||
-        (listsSelectedListId === 'important' && params.listId === 'important') ||
-        (listsSelectedListId === 'background' && params.listId === 'background'))) {
+    if (res.task && (params.listId === selectedListId ||
+        (selectedListId === 'tasks' && !params.listId) ||
+        (selectedListId === 'my_day' && params.listId === 'my_day') ||
+        (selectedListId === 'important' && params.listId === 'important') ||
+        (selectedListId === 'background' && params.listId === 'background'))) {
       setTasks(prev => ({
         ...prev,
         data: [res.task, ...prev.data]
       }));
     }
     return res;
-  }, [fetchLists, listsSelectedListId]);
+  }, [fetchLists, selectedListId]);
 
   const updateTask = useCallback(async (params) => {
     const res = await api("/tasks/edit_task", "PUT", params);
     if (fetchLists) await fetchLists({ silent: true });
     // Локальное обновление задачи
-    if (res.task && (params.listId === listsSelectedListId || !params.listId)) {
+    if (res.task && (params.listId === selectedListId || !params.listId)) {
       setTasks(prev => ({
         ...prev,
         data: prev.data.map(task =>
@@ -83,13 +157,13 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       }));
     }
     return res;
-  }, [fetchLists, listsSelectedListId]);
+  }, [fetchLists, selectedListId]);
 
   const changeTaskStatus = useCallback(async (params) => {
     const res = await api("/tasks/change_status", "PUT", params);
     if (fetchLists) await fetchLists({ silent: true });
     // Локальное обновление статуса
-    if (params.listId === listsSelectedListId) {
+    if (params.listId === selectedListId) {
       setTasks(prev => ({
         ...prev,
         data: prev.data.map(task =>
@@ -98,13 +172,13 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       }));
     }
     return res;
-  }, [fetchLists, listsSelectedListId]);
+  }, [fetchLists, selectedListId]);
 
   const addSubTask = useCallback(async (params) => {
     const res = await api("/tasks/add_subtask", "POST", params);
     if (fetchLists) await fetchLists({ silent: true });
     // Локальное обновление подзадачи
-    if (res.subtask && params.listId === listsSelectedListId) {
+    if (res.subtask && params.listId === selectedListId) {
       setTasks(prev => ({
         ...prev,
         data: prev.data.map(task =>
@@ -115,37 +189,37 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       }));
     }
     return res;
-  }, [fetchLists, listsSelectedListId]);
+  }, [fetchLists, selectedListId]);
 
   const deleteTask = useCallback(async (params) => {
     const res = await api("/tasks/del_task", "DELETE", params);
     if (fetchLists) await fetchLists({ silent: true });
     // Локальное удаление задачи
-    if (params.listId === listsSelectedListId) {
+    if (params.listId === selectedListId) {
       setTasks(prev => ({
         ...prev,
         data: prev.data.filter(task => task.id !== params.taskId)
       }));
     }
     return res;
-  }, [fetchLists, listsSelectedListId]);
+  }, [fetchLists, selectedListId]);
   
   const linkTaskList = useCallback(async (params) => {
     const res = await api("/tasks/link_task", "PUT", params);
     if (fetchLists) await fetchLists({ silent: true });
     // При перемещении задачи нужна полная перезагрузка только текущего списка
-    if (listsSelectedListId && listsSelectedListId === params.fromListId) {
-      await fetchTasks(listsSelectedListId, { silent: true });
+    if (selectedListId && selectedListId === params.fromListId) {
+      await fetchTasks(selectedListId, { silent: true });
     }
     return res;
-  }, [fetchLists, fetchTasks, listsSelectedListId]);
+  }, [fetchLists, fetchTasks, selectedListId]);
 
   // Принудительное обновление задач (когда локальные обновления недостаточны)
   const forceRefreshTasks = useCallback(async () => {
-    if (listsSelectedListId) {
-      await fetchTasks(listsSelectedListId);
+    if (selectedListId) {
+      await fetchTasks(selectedListId);
     }
-  }, [listsSelectedListId, fetchTasks]);
+  }, [selectedListId, fetchTasks]);
 
   // Получить конфиг полей задач
   const fetchTaskFields = useCallback(async () => {
@@ -162,15 +236,17 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   useEffect(() => {
     if (!isLoading && user) {
       fetchTaskFields();
+      fetchLists();
+      fetchCalendarEvents();
     }
-  }, [fetchTaskFields, user, isLoading]);
+  }, [fetchTaskFields, fetchLists, fetchCalendarEvents, user, isLoading]);
 
   const { tasksVersion: wsVersion, taskChange } = useUpdateWebSocket();
 
   // Обработка детальных изменений задач через WebSocket
   useEffect(() => {
     if (draggingContainer) return;
-    if (taskChange && taskChange.listId === listsSelectedListId) {
+    if (taskChange && taskChange.listId === selectedListId) {
       const { action, task } = taskChange;
       
       switch (action) {
@@ -200,23 +276,42 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
           break;
       }
     }
-  }, [taskChange, listsSelectedListId, draggingContainer]);
+  }, [taskChange, selectedListId, draggingContainer]);
 
   // Обновление версии и синхронизация задач
   useEffect(() => {
     if (draggingContainer) return;
     if (wsVersion && wsVersion !== version) {
       // Обновляем список задач выбранного списка
-      if (listsSelectedListId) {
-        fetchTasks(listsSelectedListId, { silent: true });
+      if (selectedListId) {
+        fetchTasks(selectedListId, { silent: true });
       }
+      fetchLists({ silent: true });
+      fetchCalendarEvents();
       setVersion(wsVersion);
     }
-  }, [wsVersion, version, listsSelectedListId, fetchTasks, draggingContainer]);
+  }, [wsVersion, version, selectedListId, fetchTasks, fetchLists, fetchCalendarEvents, draggingContainer]);
 
   const contextValue = useMemo(() => ({
     tasks,
     taskFields,
+    lists,
+    selectedListId,
+    setSelectedListId: handleSelectList,
+    selectedList,
+    setSelectedList,
+    calendarEvents,
+    fetchCalendarEvents,
+    updateCalendarEvent,
+    addCalendarEvent,
+    deleteCalendarEvent,
+    fetchLists,
+    addList,
+    updateList,
+    deleteList,
+    linkListGroup,
+    deleteFromChildes,
+    changeChildesOrder,
     selectedTaskId,
     setSelectedTaskId,
     fetchTasks,
@@ -230,7 +325,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     version,
     setVersion,
     loading: tasks.loading,
-  }), [tasks, taskFields, selectedTaskId, fetchTasks, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, version, listsSelectedListId]);
+  }), [tasks, taskFields, lists, selectedListId, selectedList, calendarEvents, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, version]);
 
   return <TasksContext.Provider value={contextValue}>{children}</TasksContext.Provider>;
 };
