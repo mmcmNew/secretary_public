@@ -7,6 +7,15 @@ import useContainer from "../DraggableComponents/useContainer";
 import TaskDialog from "./TaskDialog";
 import CalendarComponent from "./CalendarComponent";
 
+const defaultCalendarSettings = {
+  slotDuration: 30,
+  timeRange: [8, 24],
+  timeOffset: 0,
+  currentView: "timeGridWeek",
+  views: "timeGridWeek,timeGridDay,dayGridMonth,listWeek",
+  isToggledBGTasksEdit: false,
+};
+
 export default function CalendarLayout({
   containerId = null,
   handleDatesSet = null,
@@ -23,16 +32,8 @@ export default function CalendarLayout({
   const [dialogScroll, setDialogScroll] = useState("paper");
   const [selectedTaskId, setSelectedTaskId] = useState(null);
 
-  const defaultCalendarSettings = {
-    slotDuration: 30,
-    timeRange: [8, 24],
-    timeOffset: 0,
-    currentView: "timeGridWeek",
-    views: "timeGridWeek,timeGridDay,dayGridMonth,listWeek",
-    isToggledBGTasksEdit: false,
-  }
   const [calendarSettings, setCalendarSettings] = useState(
-    calendarSettingsProp || defaultCalendarSettings
+    () => calendarSettingsProp || defaultCalendarSettings
   );
 
   useEffect(() => {
