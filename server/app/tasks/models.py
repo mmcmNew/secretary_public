@@ -376,9 +376,26 @@ class Task(db.Model):
     user_id = db.Column(db.Integer, nullable=False)
     title = db.Column('Title', db.String(255))
     start = db.Column('Start', db.DateTime)
-    deadline = db.Column('Deadline', db.DateTime)
+    end = db.Column('Deadline', db.DateTime)
     is_background = db.Column('IsBackground', db.Boolean, default=False)
-    end_date = db.Column('EndDate', db.DateTime)
+    completed_at = db.Column('EndDate', db.DateTime)
+
+    # Temporary aliases for backward compatibility
+    @property
+    def deadline(self):
+        return self.end
+
+    @deadline.setter
+    def deadline(self, value):
+        self.end = value
+
+    @property
+    def end_date(self):
+        return self.completed_at
+
+    @end_date.setter
+    def end_date(self, value):
+        self.completed_at = value
     attachments = db.Column('Attachments', db.String(255))
     note = db.Column('Note', db.Text)
     childes_order = db.Column('ChildesOrder', db.JSON, default=[])
@@ -407,10 +424,9 @@ class Task(db.Model):
         task_dict = {
             'id': self.id,
             'title': self.title,
-            'deadline': self.deadline.isoformat() + 'Z' if self.deadline else None,
-            'end': self.deadline.isoformat() + 'Z' if self.deadline else None,
+            'end': self.end.isoformat() + 'Z' if self.end else None,
             'start': self.start.isoformat() + 'Z' if self.start else None,
-            'end_date': self.end_date.isoformat() + 'Z' if self.end_date else None,  # Дедлайн для календаря
+            'completed_at': self.completed_at.isoformat() + 'Z' if self.completed_at else None,
             'is_background': self.is_background,
             'attachments': self.attachments,
             'note': self.note,
@@ -429,9 +445,9 @@ class Task(db.Model):
             task_dict['display'] = 'background'
         if self.interval:
             task_dict['rrule'] = self.get_rrule()
-            if self.start and self.deadline:
+            if self.start and self.end:
                 start_time = self.start.time()
-                end_time = self.deadline.time()
+                end_time = self.end.time()
 
                 # Вычисление продолжительности
                 start_datetime = datetime.combine(datetime.min, start_time)
@@ -467,7 +483,7 @@ class Task(db.Model):
         freq = interval_mapping.get(self.interval_id)
 
         # Условия для конечной даты, если задача не бесконечная
-        until_date = self.deadline if not self.is_infinite else None
+        until_date = self.end if not self.is_infinite else None
 
         # Формируем rrule
         if self.interval_id == 5:
@@ -565,7 +581,7 @@ class Task(db.Model):
         }
 
         if not self.is_infinite:
-            rule_params['until'] = self.deadline.isoformat() + 'Z'
+            rule_params['until'] = self.end.isoformat() + 'Z'
 
         if self.interval_id == 5:  # Если рабочие дни
             rule_params['freq'] = 'WEEKLY'  # Используем WEEKLY

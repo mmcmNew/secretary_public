@@ -32,7 +32,7 @@ export function checkIsTaskStart(task, tz = null) {
 
 export function calculateTaskDuration(task) {
   const start = dayjs(task.start);
-  const end = dayjs(task.deadline);
+  const end = dayjs(task.end);
   const startSec = start.hour() * 3600 + start.minute() * 60 + start.second();
   const endSec = end.hour() * 3600 + end.minute() * 60 + end.second();
   let duration = endSec - startSec;
@@ -164,9 +164,9 @@ export function divideTaskWithBreaks(task, settings) {
 
 export function isTaskInPast(task, tz = null) {
   if (tz == null) tz = dayjs.tz.guess();
-  if (!task || !task.deadline) return false;
+  if (!task || !task.end) return false;
   const now = dayjs().tz(tz);
-  const end = dayjs(task.deadline).tz(tz);
+  const end = dayjs(task.end).tz(tz);
   const endMin = end.hour() * 60 + (end.minute() - 1);
   const nowMin = now.hour() * 60 + now.minute();
   return endMin <= nowMin;

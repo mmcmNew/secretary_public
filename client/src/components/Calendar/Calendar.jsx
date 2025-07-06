@@ -68,8 +68,8 @@ export default function Calendar() {
                 updatedEvent.start = applyOffset(event.start).toISOString();
             }
 
-            if (event.deadline) {
-                updatedEvent.end = applyOffset(event.deadline).toISOString();
+            if (event.end) {
+                updatedEvent.end = applyOffset(event.end).toISOString();
             }
 
             if (event.rrule) {
@@ -251,7 +251,7 @@ export default function Calendar() {
                         title: task.title,
                         id: task.id,
                         start: task.start,
-                        end: task.end_date,
+                        end: task.end,
                         allDay: !task.start,
                     };
                 },
@@ -287,7 +287,7 @@ export default function Calendar() {
     }
 
     async function handleDelDateClick(taskId) {
-        await updateTask(taskId, { start: null, deadline: null });
+        await updateTask(taskId, { start: null, end: null });
         setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
     }
 
@@ -310,12 +310,12 @@ export default function Calendar() {
         }
 
         if (eventInfo.event.end) {
-            eventDict.deadline = applyOffset(eventInfo.event.end, timeOffset.current);
+            eventDict.end = applyOffset(eventInfo.event.end, timeOffset.current);
         } else if (eventInfo.event.start) {
             // Время start + 1 час
             const endDate = new Date(eventInfo.event.start);
             endDate.setHours(endDate.getHours() + 1);
-            eventDict.deadline = applyOffset(endDate, timeOffset.current);
+            eventDict.end = applyOffset(endDate, timeOffset.current);
         }
 
         const calendarEvent = calendarEvents.find((event) => event.id == eventInfo.event.id);

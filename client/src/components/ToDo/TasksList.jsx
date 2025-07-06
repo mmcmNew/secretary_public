@@ -94,7 +94,7 @@ export default function TasksList({
         }
         const updatedFields = { status_id };
         if (status_id == 2) {
-            updatedFields.end_date = dayjs().toISOString();
+            updatedFields.completed_at = dayjs().toISOString();
         }
         if (typeof changeTaskStatus === "function") changeTaskStatus({ taskId: task_id, ...updatedFields, listId: selectedList.id });
     }
@@ -233,7 +233,6 @@ export default function TasksList({
                     taskId: task.id,
                     start: today.toISOString(),
                     end: end.toISOString(),
-                    deadline: end.toISOString(),
                 });
                 if (onSuccess) onSuccess('Добавлено в "Мой день"');
             } catch (err) {

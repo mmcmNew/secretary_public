@@ -145,7 +145,7 @@ const FocusModeComponent = ({
             }
 
             case !checkIsTaskStart(currentTask): {
-                const newTaskRange = `${dayjs(currentTask.start).format("HH:mm")} - ${dayjs(currentTask.deadline).format("HH:mm")}`;
+                const newTaskRange = `${dayjs(currentTask.start).format("HH:mm")} - ${dayjs(currentTask.end).format("HH:mm")}`;
                 const newRemainingTime = calculateRemainingTime(currentTask.start);
                 const currentTime = dayjs();
                 const newTimerEndDate = currentTime
@@ -172,7 +172,7 @@ const FocusModeComponent = ({
 
             default: {
                 const intervals = divideTaskWithBreaks(currentTask, modeSettings);
-                const newTaskRange = `${dayjs(currentTask.start).format("HH:mm")} - ${dayjs(currentTask.deadline).format("HH:mm")}`;
+                const newTaskRange = `${dayjs(currentTask.start).format("HH:mm")} - ${dayjs(currentTask.end).format("HH:mm")}`;
                 const nextInterval = findNextInterval(intervals);
                 const newRemainingTime = calculateRemainingTime(nextInterval?.end);
                 return {

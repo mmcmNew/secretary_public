@@ -179,7 +179,7 @@ function CalendarComponent({
             title: task.title,
             id: task.id,
             start: task.start,
-            end: task.end_date,
+            end: task.end,
             allDay: !task.start,
           };
         },
