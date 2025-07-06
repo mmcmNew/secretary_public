@@ -37,6 +37,7 @@ const MemoizedTaskList = React.memo(TasksList);
 
 const FocusModeComponent = ({
     containerId,
+    tasks,
     selectedList,
     updateTask,
     changeTaskStatus,
@@ -59,7 +60,7 @@ const FocusModeComponent = ({
         skippedTasks,
         setSkippedTasks,
         setCurrentTask,
-    } = useFocusTasks(modeSettings);
+    } = useFocusTasks(modeSettings, tasks, selectedList);
     const {
         timerState,
         progress,
@@ -214,7 +215,7 @@ const FocusModeComponent = ({
 
     function handleChangeTaskStatus(taskId, updatedFields) {
         if (typeof changeTaskStatus === "function") {
-            changeTaskStatus(taskId, updatedFields);
+            changeTaskStatus({ taskId, listId: selectedList?.id, ...updatedFields });
         }
     }
 
@@ -387,6 +388,7 @@ export default FocusModeComponent;
 
 FocusModeComponent.propTypes = {
     containerId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    tasks: PropTypes.array,
     selectedList: PropTypes.object,
     updateTask: PropTypes.func,
     changeTaskStatus: PropTypes.func,

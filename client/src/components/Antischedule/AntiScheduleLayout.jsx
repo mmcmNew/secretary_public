@@ -194,7 +194,7 @@ export default function AntiScheduleLayout({
     const fetchAndSetTasks = async () => {
       if (!myDayTasks?.loading) {
         try {
-          const newTasks = await fetchTasks("my_day");
+          const newTasks = await fetchTasks('my_day');
           if (newTasks && Array.isArray(newTasks)) {
             setMyDayTasks(newTasks);
           } else if (newTasks && Array.isArray(newTasks.tasks)) {
@@ -233,15 +233,6 @@ export default function AntiScheduleLayout({
   //   console.log('[AntiScheduleLayout] myDayList:', myDayList);
   // }, [myDayTasks, myDayList]);
 
-  async function handleUpdateTasks() {
-    const newTasks = await fetchTasks("my_day");
-    const newCalendarEvents = await fetchAntiSchedule();
-    const selectedList = lists?.default_lists?.find((list) => list.id === "my_day");
-    setMyDayList(selectedList);
-    if (selectedList) setSelectedListId(selectedList.id);
-    setCalendarEvents(newCalendarEvents || []);
-    setMyDayTasks(newTasks);
-  }
 
   async function handleDelDateClick(taskId) {
     try {
@@ -329,7 +320,7 @@ export default function AntiScheduleLayout({
 
     try {
       if (changeTaskStatus && typeof changeTaskStatus === "function")
-        changeTaskStatus(taskId, updatedFields);
+        changeTaskStatus({ taskId, listId: myDayList?.id, ...updatedFields });
       if (onSuccess) onSuccess('Статус обновлен');
     } catch (err) {
       if (onError) onError(err);
@@ -478,7 +469,7 @@ export default function AntiScheduleLayout({
   const handleUpdateToDoTask = async (taskId, updatedFields) => {
     try {
       // console.log('[DEBUG] handleUpdateToDoTask: calling updateTask for ToDo', taskId, updatedFields);
-      await updateTask(taskId, updatedFields);
+      await updateTask({ taskId, listId: myDayList?.id, ...updatedFields });
       const currentUpdatedTasks = myDayTasks?.map((task) =>
         task.id == taskId ? { ...task, ...updatedFields } : task
       );
