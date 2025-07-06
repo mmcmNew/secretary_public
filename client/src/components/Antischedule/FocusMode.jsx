@@ -37,17 +37,6 @@ const FocusModeComponent = ({
     additionalButtonClick,
     saveSettings
 }) => {
-    // Отладочные логи для props
-    // console.log('[FocusModeComponent] props:', {
-    //     containerId,
-    //     tasks,
-    //     selectedList,
-    //     updateTask,
-    //     changeTaskStatus,
-    //     fetchTasks,
-    //     onTaskClick,
-    //     additionalButtonClick
-    // });
     const [currentTaskParams, setCurrentTaskParams] = useState({intervals: []})
     const [modeSettings, setModeSettings] = useState({
         workIntervalDuration: 30 * 60,
@@ -94,7 +83,6 @@ const FocusModeComponent = ({
                 if (nextTask) {
                     newCurrentTask = {...nextTask, status: 'started'}
                 }
-                console.log(newCurrentTask)
                 setCurrentTask(newCurrentTask)
             } else {
                 const newTimerParams = {
@@ -232,7 +220,6 @@ const FocusModeComponent = ({
     }
 
     const findNextTask = (tasksList, skipedTasksList) => {
-        console.log("findNextTask: skippedTasksList", skipedTasksList)
         const filtredTasks = tasksList?.filter((task) => !skipedTasksList.includes(task.id));
         const nextTask = filtredTasks?.find((task) => !isTaskInPast(task)) || null;
         return nextTask;
@@ -288,10 +275,8 @@ const FocusModeComponent = ({
         let remainingTime = calculateTaskDuration(task);
         let taskStartTime = dayjs(task.start);
         let currentTime = dayjs();
-        console.log("divideTaskWithBreaks", task, modeSettings)
         currentTime = currentTime.hour(taskStartTime.hour()).minute(taskStartTime.minute()).second(taskStartTime.second());
 
-        console.log("remainingTime", remainingTime);
         let currentIntervalId = -1;
         let breakId = 0;
         let intervalType = "work";
@@ -363,7 +348,6 @@ const FocusModeComponent = ({
             }
         }
 
-        console.log("intervals", intervals);
         if (intervals && intervals.length > 0 && intervals[intervals.length - 1].type == "break") {
             let lastBreakDuration = intervals[intervals.length - 1].duration;
             let lastBreakEndTime = dayjs(intervals[intervals.length - 1].end);
@@ -462,15 +446,8 @@ const FocusModeComponent = ({
         setSkippedTasks([]);
         if (selectedList?.id && typeof fetchTasks === 'function') fetchTasks(selectedList.id);
     }
-
-    // Лог перед рендером TasksList
     const filteredTasks = modeSettings?.isBackgroundTasks ? tasks : tasks.filter((task) => !task.is_background);
-    // console.log('[FocusModeComponent] TasksList props:', {
-    //     containerId,
-    //     tasks: filteredTasks,
-    //     selectedList,
-    //     selectedTaskId: currentTaskParams?.currentTask?.id || null
-    // });
+
 
     return (
         <Box
