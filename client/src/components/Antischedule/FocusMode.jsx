@@ -12,7 +12,7 @@ import {
 import SettingsIcon from "@mui/icons-material/Settings";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import TasksList from "../ToDo/TasksList";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import useFocusTimer from "./hooks/useFocusTimer";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -439,7 +439,13 @@ const FocusModeComponent = ({
         setSkippedTasks([]);
         if (selectedList?.id && typeof fetchTasks === 'function') fetchTasks(selectedList.id);
     }
-    const filteredTasks = modeSettings?.isBackgroundTasks ? tasks : tasks.filter((task) => !task.is_background);
+    const filteredTasks = useMemo(
+        () =>
+            modeSettings?.isBackgroundTasks
+                ? tasks
+                : tasks.filter((task) => !task.is_background),
+        [tasks, modeSettings.isBackgroundTasks]
+    );
 
 
     return (
