@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 import useLists from './useLists';
 import { AuthContext } from '../../../contexts/AuthContext';
+import useContainer from '../../DraggableComponents/useContainer';
 import api from '../../../utils/api';
 
 const TasksContext = createContext();
@@ -15,6 +16,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [version, setVersion] = useState(null);
   const fetching = useRef(false);
+  const { draggingContainer } = useContainer();
 
   // Получить задачи для списка
   const fetchTasks = useCallback(async (listId, { silent = false } = {}) => {
@@ -167,6 +169,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
 
   // Обработка детальных изменений задач через WebSocket
   useEffect(() => {
+    if (draggingContainer) return;
     if (taskChange && taskChange.listId === listsSelectedListId) {
       const { action, task } = taskChange;
       
@@ -197,10 +200,11 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
           break;
       }
     }
-  }, [taskChange, listsSelectedListId]);
+  }, [taskChange, listsSelectedListId, draggingContainer]);
 
   // Обновление версии и синхронизация задач
   useEffect(() => {
+    if (draggingContainer) return;
     if (wsVersion && wsVersion !== version) {
       // Обновляем список задач выбранного списка
       if (listsSelectedListId) {
@@ -208,7 +212,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       }
       setVersion(wsVersion);
     }
-  }, [wsVersion, version, listsSelectedListId, fetchTasks]);
+  }, [wsVersion, version, listsSelectedListId, fetchTasks, draggingContainer]);
 
   const contextValue = useMemo(() => ({
     tasks,

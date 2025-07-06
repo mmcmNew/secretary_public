@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 import { AuthContext } from '../../../contexts/AuthContext';
 import api from '../../../utils/api';
+import useContainer from '../../DraggableComponents/useContainer';
 
 const ListsContext = createContext();
 
@@ -13,6 +14,7 @@ export const ListsProvider = ({ children, onError, setLoading }) => {
   const [selectedList, setSelectedList] = useState(null);
   const [version, setVersion] = useState(null);
   const fetching = useRef(false);
+  const { draggingContainer } = useContainer();
 
   // Получить все списки
   const fetchLists = useCallback(async ({ silent = false } = {}) => {
@@ -75,11 +77,12 @@ export const ListsProvider = ({ children, onError, setLoading }) => {
   const { tasksVersion: wsVersion } = useUpdateWebSocket();
 
   useEffect(() => {
+    if (draggingContainer) return;
     if (wsVersion) {
       fetchLists();
       setVersion(wsVersion);
     }
-  }, [wsVersion, fetchLists, setVersion]);
+  }, [wsVersion, fetchLists, setVersion, draggingContainer]);
 
   const { user, isLoading } = useContext(AuthContext);
 

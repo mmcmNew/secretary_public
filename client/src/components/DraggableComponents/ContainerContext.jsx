@@ -20,6 +20,7 @@ const ContainerProvider = ({ children }) => {
     const [updates, setUpdates] = useState([]);
     const [isSecretarySpeak, setIsSecretarySpeak] = useState(false);
     const [windowOrder, setWindowOrder] = useState([]);
+    const [draggingContainer, setDraggingContainer] = useState(null);
 
     function generateUniqueId() {
         const timePart = Date.now().toString();
@@ -343,6 +344,8 @@ const ContainerProvider = ({ children }) => {
                 isSecretarySpeak,
                 setIsSecretarySpeak,
                 createComponentFromType,
+                draggingContainer,
+                setDraggingContainer,
             }}
         >
             {children}
