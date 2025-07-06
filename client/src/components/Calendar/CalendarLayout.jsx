@@ -1,5 +1,5 @@
 import { PropTypes } from 'prop-types';
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import useTasks from "../ToDo/hooks/useTasks";
 import useLists from "../ToDo/hooks/useLists";
 import useCalendar from "../ToDo/hooks/useCalendar";
@@ -51,49 +51,62 @@ export default function CalendarLayout({
   }, [calendarEvents.error, onError]);
 
 
-  const handleSaveCalendarSettings = (settings) => {
-    try {
-      setCalendarSettings(settings);
-      if (handleUpdateContent && containerId) {
-        handleUpdateContent(containerId, { calendarSettingsProp: settings });
+  const handleSaveCalendarSettings = useCallback(
+    (settings) => {
+      try {
+        setCalendarSettings(settings);
+        if (handleUpdateContent && containerId) {
+          handleUpdateContent(containerId, { calendarSettingsProp: settings });
+        }
+        if (onSuccess) onSuccess('Настройки сохранены');
+      } catch (err) {
+        if (onError) onError(err);
       }
-      if (onSuccess) onSuccess('Настройки сохранены');
-    } catch (err) {
-      if (onError) onError(err);
-    }
-  };
+    },
+    [handleUpdateContent, containerId, onSuccess, onError]
+  );
 
-  async function handleDelDateClick(taskId) {
-    try {
-      await updateTask({ taskId, start: null, end: null });
-      setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
-      if (onSuccess) onSuccess('Дата удалена');
-    } catch (err) {
-      console.error('Error deleting date:', err);
-      if (onError) onError(err);
-    }
-  }
+  const handleDelDateClick = useCallback(
+    async (taskId) => {
+      try {
+        await updateTask({ taskId, start: null, end: null });
+        setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
+        if (onSuccess) onSuccess('Дата удалена');
+      } catch (err) {
+        console.error('Error deleting date:', err);
+        if (onError) onError(err);
+      }
+    },
+    [updateTask, setUpdates, onSuccess, onError]
+  );
 
-  const handleDialogOpen = (scrollType) => {
-    setTaskDialogOpen(true);
-    setDialogScroll(scrollType);
-  };
+  const handleDialogOpen = useCallback(
+    (scrollType) => {
+      setTaskDialogOpen(true);
+      setDialogScroll(scrollType);
+    },
+    []
+  );
 
-  const handleDialogClose = () => {
+  const handleDialogClose = useCallback(() => {
     setTaskDialogOpen(false);
     setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
-  };
+  }, [setUpdates]);
 
-  async function handleEventClick(event) {
-    setSelectedTaskId(event?.event?.id || null);
-    try {
-      handleDialogOpen("paper");
-    } catch (error) {
-      console.error("Error handling event click:", error);
-    }
-  }
+  const handleEventClick = useCallback(
+    async (event) => {
+      setSelectedTaskId(event?.event?.id || null);
+      try {
+        handleDialogOpen("paper");
+      } catch (error) {
+        console.error("Error handling event click:", error);
+      }
+    },
+    [handleDialogOpen]
+  );
 
-  async function handleEventChange(eventInfo) {
+  const handleEventChange = useCallback(
+    async (eventInfo) => {
     const offsetHours = Number(calendarSettings?.timeOffset) || 0;
     const applyInverseOffset = (dateInput) => {
       if (!dateInput) return null;
@@ -160,7 +173,9 @@ export default function CalendarLayout({
       console.error('Error updating event:', err);
       if (onError) onError(err);
     }
-  }
+    },
+    [calendarSettings, calendarEvents, updateTask, setUpdates, fetchCalendarEvents, onSuccess, onError]
+  );
 
   return (
     <>
