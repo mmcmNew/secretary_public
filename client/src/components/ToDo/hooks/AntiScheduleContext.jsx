@@ -32,21 +32,38 @@ export const AntiScheduleProvider = ({ children, onError, setLoading }) => {
 
   const addAntiTask = useCallback(async (params) => {
     const res = await api('/tasks/add_anti_task', 'POST', params);
-    await fetchAntiSchedule();
+    if (res.task) {
+      setAntiSchedule(prev => ({
+        ...prev,
+        data: [...prev.data, res.task],
+      }));
+    }
     return res;
-  }, [fetchAntiSchedule]);
+  }, []);
 
   const updateAntiTask = useCallback(async (params) => {
     const res = await api('/tasks/edit_anti_task', 'PUT', params);
-    await fetchAntiSchedule();
+    if (res.task) {
+      setAntiSchedule(prev => ({
+        ...prev,
+        data: prev.data.map(task =>
+          task.id === params.taskId ? { ...task, ...res.task } : task
+        ),
+      }));
+    }
     return res;
-  }, [fetchAntiSchedule]);
+  }, []);
 
   const deleteAntiTask = useCallback(async (params) => {
     const res = await api('/tasks/del_anti_task', 'DELETE', params);
-    await fetchAntiSchedule();
+    if (res.success) {
+      setAntiSchedule(prev => ({
+        ...prev,
+        data: prev.data.filter(task => task.id !== params.taskId),
+      }));
+    }
     return res;
-  }, [fetchAntiSchedule]);
+  }, []);
 
   const { tasksVersion: wsVersion } = useUpdateWebSocket();
 
