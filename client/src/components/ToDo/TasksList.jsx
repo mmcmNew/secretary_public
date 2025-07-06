@@ -124,7 +124,7 @@ export default function TasksList({
     }
 
     async function handleChangeChildesOrder(elementId, direction) {
-
+        handleCloseMenu();
         if (!selectedList) return;
 
         const index = selectedList.childes_order.indexOf(elementId);
@@ -146,7 +146,6 @@ export default function TasksList({
             ];
         }
 
-        handleCloseMenu();
         // Сохраняем изменения в childes_order
         if (typeof updateList === "function") {
             try {
