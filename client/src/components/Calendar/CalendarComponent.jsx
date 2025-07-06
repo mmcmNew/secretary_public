@@ -31,7 +31,7 @@ function CalendarComponent({
   lists = {},
   fetchTasks = () => {},
   fetchEvents = () => {},
-  addTask = () => {},
+  onCreateTask = () => {},
   newSettings,
   saveSettings,
   handleEventClick,
@@ -53,6 +53,15 @@ function CalendarComponent({
     setNewTaskDialogOpen(true);
     setDialogScroll(scrollType);
   }, []);
+
+  const handleTaskCreate = useCallback(
+    (taskData) => {
+      if (onCreateTask && typeof onCreateTask === 'function') {
+        onCreateTask(taskData);
+      }
+    },
+    [onCreateTask]
+  );
 
 
   const timeOffset = newSettings?.timeOffset || 0;
@@ -410,7 +419,7 @@ function CalendarComponent({
               handleClose={() => setNewTaskDialogOpen(false)}
               scroll={dialogScroll}
               selectedDate={selectedDate}
-              addTask={addTask}
+              onCreate={handleTaskCreate}
             />
             {/* Диалоговое окно для настроек */}
             <SettingsDialog
@@ -528,7 +537,7 @@ CalendarComponent.propTypes = {
   lists: PropTypes.object,
   fetchTasks: PropTypes.func,
   fetchEvents: PropTypes.func,
-  addTask: PropTypes.func,
+  onCreateTask: PropTypes.func,
   newSettings: PropTypes.object.isRequired,
   saveSettings: PropTypes.func.isRequired,
   handleEventClick: PropTypes.func,

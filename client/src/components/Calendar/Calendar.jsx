@@ -524,7 +524,7 @@ export default function Calendar() {
                             handleClose={handleDialogClose}
                             scroll={dialogScroll}
                             selectedDate={selectedDate}
-                            addTask={addTask}
+                            onCreate={addTask}
                         />
                         {/* Диалоговое окно для настроек */}
                         <SettingsDialog

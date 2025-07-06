@@ -102,7 +102,7 @@ export default function AntischeduleComponent({
               handleEventClick={handleEventClick}
               handleEventChange={handleEventChange}
               eventReceive={handleEventReceive}
-              addTask={handleAddAntiTask}
+              onCreateTask={handleAddAntiTask}
               fetchTasks={fetchTasks}
               fetchEvents={fetchAntiSchedule}
               datesSet={handleDatesSet}
@@ -135,7 +135,7 @@ export default function AntischeduleComponent({
             handleEventClick={handleEventClick}
             handleEventChange={handleEventChange}
             eventReceive={handleEventReceive}
-            addTask={handleAddAntiTask}
+            onCreateTask={handleAddAntiTask}
             fetchTasks={fetchTasks}
             fetchEvents={fetchAntiSchedule}
             datesSet={handleDatesSet}

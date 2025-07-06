@@ -8,20 +8,20 @@ import DialogTitle from '@mui/material/DialogTitle';
 import { Box } from '@mui/system';
 import { TextField } from '@mui/material';
 
-export default function NewTaskDialog({ open, handleClose, scroll, selectedDate, addTask }) {
+export default function NewTaskDialog({ open, handleClose, scroll, selectedDate, onCreate }) {
   const [newTaskName, setNewTaskName] = React.useState('');
 
 
   function handleCreateClick() {
     if (newTaskName && selectedDate) {
-      console.log('selectedDate', selectedDate);
-      addTask({
+      const taskData = {
         title: newTaskName,
         listId: 'tasks',
         start: selectedDate.start,
-        end: selectedDate.end? selectedDate.end : null,
+        end: selectedDate.end ? selectedDate.end : null,
         type: 'event',
-      });
+      };
+      if (onCreate) onCreate(taskData);
       setNewTaskName('');
       handleCloseClick();
     }
@@ -65,5 +65,5 @@ NewTaskDialog.propTypes = {
   handleClose: PropTypes.func,
   scroll: PropTypes.string.isRequired,
   selectedDate: PropTypes.object,
-  addTask: PropTypes.func.isRequired,
+  onCreate: PropTypes.func.isRequired,
 };
