@@ -602,7 +602,13 @@ class AntiTask(db.Model):
                 user_id = current_user.id
             except Exception:
                 user_id = None
-        query = AntiTask.query
+        load_options = [
+            joinedload(AntiTask.task),
+            joinedload(AntiTask.type),
+            joinedload(AntiTask.status)
+        ]
+
+        query = AntiTask.query.options(*load_options)
         if user_id is not None:
             query = query.filter_by(user_id=user_id)
         anti_tasks = query.all()
