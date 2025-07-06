@@ -282,7 +282,7 @@ function TaskDetails({
                                                 value={value}
                                                 format="DD/MM/YYYY HH:mm"
                                                 onChange={(nv) => { if (nv && nv.isValid()) handleUpdate(key, nv.toISOString()); }}
-                                                onAccept={(nv) => handleUpdate(key, nv.toISOString())}
+                                                onAccept={(nv) => { if (nv && nv.isValid()) handleUpdate(key, nv.toISOString()); }}
                                                 slotProps={{ textField: { onBlur: () => handleUpdate(key, fields[key]) } }}
                                                 onKeyDown={(e) => handleKeyDown(e, key)}
                                             />
