@@ -10,8 +10,6 @@ import { Button, Grid, List, ListItem, ListItemText, Paper, Box, useTheme, Toggl
 import EditIcon from "@mui/icons-material/Edit";
 import EditOffIcon from "@mui/icons-material/EditOff";
 import useTasks from "../ToDo/hooks/useTasks";
-import useLists from "../ToDo/hooks/useLists";
-import useCalendar from "../ToDo/hooks/useCalendar";
 import ListsList from "../ToDo/ListsList";
 import useContainer from "../DraggableComponents/useContainer";
 import TaskDialog from "./TaskDialog";
@@ -19,9 +17,7 @@ import NewTaskDialog from "./NewTaskDialog";
 import SettingsDialog from "./SettingsDialog";
 
 export default function Calendar() {
-    const { updateTask, addTask, fetchTasks, taskFields, addSubTask, changeTaskStatus, deleteTask } = useTasks();
-    const { lists, updateList, deleteFromChildes, linkListGroup } = useLists();
-    const { calendarEvents, fetchCalendarEvents } = useCalendar();
+    const { updateTask, addTask, fetchTasks, taskFields, addSubTask, changeTaskStatus, deleteTask, lists, updateList, deleteFromChildes, linkListGroup, calendarEvents, fetchCalendarEvents } = useTasks();
     const { setUpdates } = useContainer();
     const calendarRef = useRef(null);
     const draggableEl = useRef(null);

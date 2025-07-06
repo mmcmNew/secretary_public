@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { findNextTask, isTaskInPast } from './focusUtils';
 import useTasks from '../../ToDo/hooks/useTasks';
-import useLists from '../../ToDo/hooks/useLists';
 
 export default function useFocusTasks(modeSettings) {
-  const { tasks } = useTasks();
-  const { selectedList } = useLists();
+  const { tasks, selectedList } = useTasks();
 
   const [mainTasks, setMainTasks] = useState([]);
   const [currentTask, setCurrentTask] = useState(null);

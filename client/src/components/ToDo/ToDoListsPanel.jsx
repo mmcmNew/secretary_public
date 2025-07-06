@@ -2,7 +2,6 @@ import { Box, Button, IconButton } from '@mui/material';
 import ListsList from './ListsList';
 import QueueIcon from '@mui/icons-material/Queue';
 import { AccountTree } from '@mui/icons-material';
-import useLists from './hooks/useLists';
 import useTasks from './hooks/useTasks';
 
 export default function ToDoListsPanel({ mobile = false }) {
@@ -15,10 +14,8 @@ export default function ToDoListsPanel({ mobile = false }) {
     linkTaskList,
     addList,
     fetchLists,
-  } = useLists();
-  const {
     selectedTaskId,
-    setSelectedTaskId
+    setSelectedTaskId,
   } = useTasks();
 
   return (

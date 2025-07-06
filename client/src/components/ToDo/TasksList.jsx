@@ -20,7 +20,7 @@ import dayjs from "dayjs";
 import PropTypes from "prop-types";
 import { Draggable } from "@fullcalendar/interaction";
 import useContextMenu from "./hooks/useContextMenu";
-import useCalendar from "./hooks/useCalendar";
+import useTasks from "./hooks/useTasks";
 
 export default function TasksList({
     containerId,
@@ -43,10 +43,10 @@ export default function TasksList({
     const [open, setOpen] = useState({});
     const [completedOpen, setCompletedOpen] = useState(true);
     const { anchorEl, openMenu, closeMenu } = useContextMenu();
+    const { fetchCalendarEvents } = useTasks();
     const [listsMenuAnchorEl, setListsMenuAnchorEl] = useState(null);
     const [actionType, setActionType] = useState(null);
     const [targetItemId, setTargetItemId] = useState(null);
-    const { fetchCalendarEvents } = useCalendar();
 
     // useEffect(() => {
     //     console.log('TasksList received props:', {
