@@ -58,16 +58,9 @@ const FocusModeComponent = ({
     const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
     const [skippedTasks, setSkippedTasks] = useState([]);
     const [currentTask, setCurrentTask] = useState(null);
-    const [timerState, setTimerState] = useState({
-        remainingTime: 0,
-        isOnBreak: true,
-        currentIntervalEndDate: null,
-        currentIntervalIndex: 0,
-        currentIntervalDuration: 0
-    });
-    const [progress, setProgress] = useState(0);
-
     const {
+        timerState,
+        progress,
         updateTimerState,
         startTimer,
         stopTimer,
