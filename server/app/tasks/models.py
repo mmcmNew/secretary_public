@@ -238,21 +238,34 @@ class Group(db.Model):
     lists = db.relationship('List', secondary=list_group_relations, back_populates='groups')
     projects = db.relationship('Project', secondary=group_project_relations, back_populates='groups')
 
-    def unfinished_tasks_count(self):
+    def unfinished_tasks_count(self, lists_map=None, tasks_map=None):
+        """Return count of unfinished tasks within this group.
+
+        Optionally accepts a mapping of list_id -> List objects and a mapping of
+        task_id -> Task objects to avoid per-item database queries."""
         unfinished_tasks_count = 0
         for list_id in self.childes_order:
-            list = List.query.get(list_id)
-            if list:
-                unfinished_tasks_count += list.unfinished_tasks_count()
+            lst = None
+            if lists_map is not None:
+                lst = lists_map.get(list_id)
+            if lst is None:
+                lst = List.query.get(list_id)
+            if lst:
+                unfinished_tasks_count += lst.unfinished_tasks_count(tasks_map)
         return unfinished_tasks_count
 
-    def tasks_count(self):
-        lists_map = {lst.id: lst for lst in self.lists}
-        return sum(
-            len(lists_map[list_id].childes_order)
-            for list_id in self.childes_order
-            if list_id in lists_map
-        )
+    def tasks_count(self, lists_map=None):
+        """Return total number of tasks within this group."""
+        tasks_count = 0
+        for list_id in self.childes_order:
+            lst = None
+            if lists_map is not None:
+                lst = lists_map.get(list_id)
+            if lst is None:
+                lst = List.query.get(list_id)
+            if lst:
+                tasks_count += len(lst.childes_order)
+        return tasks_count
 
     def to_dict(self):
         return {
@@ -282,10 +295,17 @@ class List(db.Model):
     projects = db.relationship('Project', secondary=list_project_relations, back_populates='lists')
     groups = db.relationship('Group', secondary=list_group_relations, back_populates='lists')
 
-    def unfinished_tasks_count(self):
+    def unfinished_tasks_count(self, tasks_map=None):
+        """Return number of unfinished tasks in this list.
+
+        A mapping of task_id -> Task can be provided to avoid database lookups."""
         unfinished_tasks_count = 0
         for task_id in self.childes_order:
-            task = Task.query.get(task_id)
+            task = None
+            if tasks_map is not None:
+                task = tasks_map.get(task_id)
+            if task is None:
+                task = Task.query.get(task_id)
             if task and task.status_id != 2:
                 unfinished_tasks_count += 1
         return unfinished_tasks_count
