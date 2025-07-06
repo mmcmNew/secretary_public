@@ -577,6 +577,10 @@ class Task(db.Model):
 
 class AntiTask(db.Model):
     __tablename__ = 'anti_schedule'
+    __table_args__ = (
+        db.Index('ix_anti_schedule_user_id', 'user_id'),
+        db.Index('ix_anti_schedule_start', 'Start'),
+    )
     id = db.Column('AntiTaskID', db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, nullable=False)
     task_id = db.Column('TaskID', db.Integer, db.ForeignKey('tasks.TaskID'))
@@ -631,7 +635,7 @@ class AntiTask(db.Model):
         query = AntiTask.query.options(*load_options)
         if user_id is not None:
             query = query.filter_by(user_id=user_id)
-        anti_tasks = query.all()
+        anti_tasks = query.order_by(AntiTask.start).all()
         schedule = [task.to_dict() for task in anti_tasks]
 
         return schedule
