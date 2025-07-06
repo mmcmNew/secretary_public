@@ -437,12 +437,15 @@ export default function AntiScheduleLayout({
   const handleUpdateAntiTask = async (payload) => {
     try {
       // console.log('[DEBUG] handleUpdateAntiTask: calling updateAntiTask with', payload);
+      let res = null;
       if (updateAntiTask && typeof updateAntiTask === "function") {
-        await updateAntiTask(payload);
+        res = await updateAntiTask(payload);
       }
       // Локальное обновление
       const currentUpdatedTasks = calendarEvents?.map((task) =>
-        task.id == payload.taskId ? { ...task, ...payload } : task
+        task.id == payload.taskId
+          ? { ...task, ...(res?.task || payload) }
+          : task
       );
       setCalendarEvents(currentUpdatedTasks);
       setCurrentTasks(currentUpdatedTasks);
