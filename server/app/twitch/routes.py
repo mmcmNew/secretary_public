@@ -2,8 +2,7 @@
 from flask import request, jsonify
 from . import twitchAPI
 from .handlers import new_twitch_message
-from app import socketio
-from app.main.routes import save_message_to_base
+from app.main.handlers import save_and_emit_message
 
 
 @twitchAPI.route('/twitch_message', methods=['POST'])
@@ -14,7 +13,6 @@ def twitch_message():
     text = result.get('answer', '')
     user_id = 2
     if text:
-        message, status_code = save_message_to_base(user_id, text)
-        socketio.emit('message', message, namespace='/chat')
+        message, status_code = save_and_emit_message(user_id, text)
     return jsonify(result), status_code
 
