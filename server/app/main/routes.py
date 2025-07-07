@@ -6,7 +6,7 @@ import json
 import os
 
 from . import main
-from .handlers import fetch_table_records
+from .handlers import fetch_table_records, save_and_emit_message
 from app import socketio
 from flask import Response, current_app, abort, render_template, make_response
 from flask import request, jsonify, send_from_directory, send_file
@@ -445,49 +445,6 @@ def get_tts_audio_filename():
         abort(404, description="File not found")
 
 
-def save_message_to_base(user_id, text):
-    user = User.query.filter_by(user_id=user_id).first()
-    if not user:
-        return {"error": "User not found"}, 404
-
-    message = ChatHistory(user_id=user.user_id, text=text)
-    db.session.add(message)
-    db.session.commit()
-
-    # Преобразуем сообщение в словарь
-    message_dict = message.to_dict()
-
-    return message_dict, 201
-
-
-"""@main.route('/api/chat/new_message', methods=['POST'])
-def api_new_message():
-    data = request.get_json()
-    user_id = data.get('user_id')
-    text = data.get('text')
-    files = data.get('files')
-
-    # Проверяем корректность данных
-    if not user_id or not text:
-        return jsonify({'error': 'Invalid data'}), 400
-
-    # Вызываем общую функцию сохранения и трансляции сообщения
-    message, status_code = save_message_to_base(user_id, text, files)
-
-    # Если ошибка, возвращаем её как ответ
-    if status_code != 201:
-        return jsonify(message), status_code
-
-    # Если всё хорошо, возвращаем успешный ответ
-    return jsonify({'result': 'OK'}), status_code"""
-
-
-def message_emit(status_code, message, namespace="/chat"):
-    # current_app.logger.debug(f'Emit message: {message}')
-    if status_code == 201:
-        emit("message", message, namespace=namespace, to=request.sid)
-    else:
-        emit("error", message, namespace=namespace, to=request.sid)
 
 
 @main.route("/chat/new_message", methods=["POST"])
@@ -509,20 +466,20 @@ def new_message():
     if not user_id or not text:
         return jsonify({"error": "Invalid data"}), 400
 
-    # Вызываем общую функцию сохранения сообщения
-    message, status_code = save_message_to_base(user_id, text)
+    # Сохраняем сообщение и отправляем его через SocketIO
+    message, status_code = save_and_emit_message(user_id, text)
     result = {"messages": [message]}
 
     secretary_answer = answer_from_secretary(text, files)
     # current_app.logger.debug(f'Secretary answer: {secretary_answer}')
     if secretary_answer:
-        message, status_code = save_message_to_base("2", secretary_answer.get("text"))
+        message, status_code = save_and_emit_message("2", secretary_answer.get("text"))
         message["params"] = secretary_answer.get("params", None)
         message["context"] = secretary_answer.get("context", None)
         result["messages"].append(message)
         result["status_code"] = status_code
     else:
-        message, status_code = save_message_to_base("2", "Уточните запрос")
+        message, status_code = save_and_emit_message("2", "Уточните запрос")
         result["messages"].append(message)
         result["status_code"] = status_code
     return jsonify(result), status_code
@@ -540,19 +497,15 @@ def handle_new_message(data):
         emit("error", {"error": "Invalid data"}, to=request.sid)
         return
 
-    # Вызываем общую функцию сохранения сообщения
-    message, status_code = save_message_to_base(user_id, text)
-    # Вызываем общую функцию трансляции сообщения
-    message_emit(status_code, message)
+    # Сохраняем сообщение и отправляем его через SocketIO
+    save_and_emit_message(user_id, text)
 
     secretary_answer = answer_from_secretary(text, files)
     # current_app.logger.debug(f'Secretary answer: {secretary_answer}')
     if secretary_answer:
-        message, status_code = save_message_to_base("2", secretary_answer.get("text"))
-        message_emit(status_code, message)
+        save_and_emit_message("2", secretary_answer.get("text"))
     else:
-        message, status_code = save_message_to_base("2", "Уточните запрос")
-        message_emit(status_code, message)
+        save_and_emit_message("2", "Уточните запрос")
 
 
 # Маршрут для получения транскриптов при постоянном прослушивании
@@ -566,8 +519,7 @@ def handle_new_transcript(data):
         emit("stop_listening", to=request.sid)
 
     if text.lower() == "секретарь привет":
-        message, status_code = save_message_to_base(user_id="2", text="Здравствуйте")
-        message_emit(status_code, message)
+        save_and_emit_message(user_id="2", text="Здравствуйте")
         return
 
     current_app.logger.debug(f"{user_id}: {text}")
@@ -581,15 +533,12 @@ def handle_new_transcript(data):
     secretary_answer = answer_from_secretary(text)
     # print(secretary_answer)
     if secretary_answer:
-        message, status_code = save_message_to_base(user_id=user_id, text=text)
-        message_emit(status_code, message)
-        message, status_code = save_message_to_base(
+        save_and_emit_message(user_id=user_id, text=text)
+        message, status_code = save_and_emit_message(
             user_id="2", text=secretary_answer.get("text")
         )
         message["params"] = secretary_answer.get("params", None)
         message["context"] = secretary_answer.get("context", None)
-        # print(message)
-        message_emit(status_code, message)
 
 
 # Маршрут для редактирования записи в чате
