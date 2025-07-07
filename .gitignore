@@ -4,6 +4,7 @@
 **/test*.py
 server/app/dist/index.html
 **/dist
+instance/
 *.pem
 server/user_data/
 server/app/user_data/static/

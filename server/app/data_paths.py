@@ -2,6 +2,7 @@
 Конфигурация путей к системным и пользовательским данным
 """
 import os
+from flask import current_app
 
 # Корневая папка сервера
 SERVER_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,9 +20,11 @@ SYSTEM_PATHS = {
     'audio': os.path.join(DEFAULTS_DIR, 'static', 'audio'),
 }
 
-# Пользовательские данные
-USER_DATA_DIR = os.path.join(SERVER_DIR, 'user_data')
-APP_USER_DATA_DIR = USER_DATA_DIR
+def get_app_user_data_dir():
+    """Return root directory for all user data inside the instance path."""
+    base_dir = os.path.join(current_app.instance_path, 'uploads')
+    os.makedirs(base_dir, exist_ok=True)
+    return base_dir
 
 def get_user_data_path(user_id, data_type):
     """
@@ -34,7 +37,7 @@ def get_user_data_path(user_id, data_type):
     Returns:
         str: Путь к пользовательским данным
     """
-    user_dir = os.path.join(USER_DATA_DIR, f'user_{user_id}')
+    user_dir = os.path.join(get_app_user_data_dir(), f'user_{user_id}')
     
     # Создаем папку пользователя если её нет
     os.makedirs(user_dir, exist_ok=True)
@@ -101,13 +104,14 @@ def initialize_user_data(user_id):
     get_user_data_path(user_id, 'temp')
 
     # Создаем базовую структуру папок пользователя
-    os.makedirs(os.path.join(USER_DATA_DIR, f'user_{user_id}', 'journals'), exist_ok=True)
-    os.makedirs(os.path.join(USER_DATA_DIR, f'user_{user_id}', 'static'), exist_ok=True)
+    base_dir = get_app_user_data_dir()
+    os.makedirs(os.path.join(base_dir, f'user_{user_id}', 'journals'), exist_ok=True)
+    os.makedirs(os.path.join(base_dir, f'user_{user_id}', 'static'), exist_ok=True)
 
 
 # Пути к файлам журналов
 def get_user_journal_path(user_id, journal_name):
     """Возвращает путь к папке журнала пользователя."""
-    base = os.path.join(USER_DATA_DIR, f'user_{user_id}', 'journals', journal_name)
+    base = os.path.join(get_app_user_data_dir(), f'user_{user_id}', 'journals', journal_name)
     os.makedirs(base, exist_ok=True)
     return base

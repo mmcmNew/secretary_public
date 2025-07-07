@@ -31,10 +31,17 @@ def create_app(config_type='work'):
     app = Flask(
         __name__,
         static_folder=dist_folder,
-        static_url_path=''  # Статика будет доступна по /
+        static_url_path='',  # Статика будет доступна по /
+        instance_relative_config=True
     )
 
     csrf.init_app(app)
+
+    # runtime directories under instance path
+    os.makedirs(app.instance_path, exist_ok=True)
+    app.config['UPLOAD_FOLDER'] = os.path.join(app.instance_path, 'uploads')
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(os.path.join(app.instance_path, 'db'), exist_ok=True)
 
     app.config['DIST_FOLDER'] = dist_folder
     app.config['CONFIG_TYPE'] = config_type

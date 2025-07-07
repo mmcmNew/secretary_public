@@ -7,7 +7,7 @@ from flask_jwt_extended import jwt_required, current_user
 from . import journals
 from .models import JournalEntry, JournalSchema, JournalFile
 from app import db
-from app.data_paths import APP_USER_DATA_DIR
+from app.data_paths import get_app_user_data_dir
 
 
 @journals.route('/<journal_type>', methods=['GET'])
@@ -191,7 +191,7 @@ def _process_journal_files(entry, schema, files):
                     # Определяем путь для сохранения
                     upload_path = _get_upload_path(entry.user_id, entry.journal_type)
                     file_path = os.path.join(upload_path, unique_filename)
-                    rel_path = os.path.relpath(file_path, APP_USER_DATA_DIR)
+                    rel_path = os.path.relpath(file_path, get_app_user_data_dir())
                     
                     # Сохраняем файл
                     file.save(file_path)
@@ -225,7 +225,7 @@ def download_journal_file(journal_type, entry_id, file_id):
         entry_id=entry_id
     ).first_or_404()
     
-    abs_path = os.path.join(APP_USER_DATA_DIR, journal_file.file_path)
+    abs_path = os.path.join(get_app_user_data_dir(), journal_file.file_path)
     if not os.path.exists(abs_path):
         return jsonify({'error': 'Файл не найден'}), 404
 
