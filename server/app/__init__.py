@@ -4,13 +4,11 @@ import sys
 from flask import Flask, send_from_directory, jsonify, abort
 from flask_jwt_extended import JWTManager
 from .config import WorkConfig, TestingConfig
-# from flask_ngrok2 import run_with_ngrok
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_wtf import CSRFProtect
 from flask_wtf.csrf import generate_csrf
-# from app.socketio_instance import socketio
 from flask_socketio import SocketIO
 
 db = SQLAlchemy()
@@ -21,12 +19,8 @@ csrf = CSRFProtect()
 
 
 def create_app(config_type='work'):
-    if getattr(sys, 'frozen', False):
-        base_path = sys._MEIPASS
-        dist_folder = os.path.join(base_path, 'app', 'dist')  # путь внутри .exe
-    else:
-        base_path = os.path.abspath(os.path.dirname(__file__))
-        dist_folder = os.path.join(base_path, 'dist')  # путь при разработке
+    base_path = os.path.abspath(os.path.dirname(__file__))
+    dist_folder = os.path.join(base_path, 'dist')
 
     app = Flask(
         __name__,
