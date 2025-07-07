@@ -1,5 +1,5 @@
 from app.command_utils import find_target_module, find_info, find_command_type
-from app.db_utils import save_to_base, save_to_base_modules
+# from app.db_utils import save_to_base, save_to_base_modules
 
 from app.modules.MetaAIAPI import get_eden_ai_response
 
@@ -9,46 +9,46 @@ from rapidfuzz import fuzz, process
 
 
 def answer_from_secretary(text, files=None):
-    command_type = find_command_type(text)
+    # command_type = find_command_type(text)
     result = None
-    if not command_type:
-        return result
-    target_module, target_module_params = find_target_module(text)
-    if not target_module:
-        return result
-    module_name = target_module_params.get('name', target_module)
-    module_info = target_module_params.get('info', {})
-    if target_module == 'tasks':
-        text = text.replace('под задач', 'подзадач')
-    message_info = find_info(target_module, module_info, text)
-    if command_type == 'start' and target_module != 'timer':
-        return {'text': f'Запускаю {module_name}', 'context': {'component': target_module,
-                                                               'params': message_info}}
-    match target_module_params.get('type'):
-        case 'component':
-            message_info['isRunning'] = True
-            time = message_info.get('time', None)
-            if time:
-                end_time = time.get('initialEndTimeProp', None)
-            else:
-                end_time = None
-            params = {'resultText': message_info.get('name'), 'initialEndTimeProp': end_time, 'isRunningProp': True}
-            # print(params)
-            if target_module == 'timer':
-                target_module = 'timersToolbar'
-            result = {'text': f'Запускаю {module_name}', 'context': {'component': target_module,
-                                                                     'params': params}}
-        case 'journal':
-            if message_info:
-                result = save_to_base_modules(target_module, command_type, message_info, files)
-                result['text'] += f' в {module_name}'
-        case 'task':
-            task_module_result, _ = task_module(command_type, message_info)
-            result = {'text': task_module_result.get('message'), 'context': {'UPDATES': ['todo', 'calendar']}}
-        case 'ai_chat':
-            ai_answer = get_eden_ai_response(text)  # убираем слово найди в начале
-            ai_message = ai_answer.get('message', '')
-            result = {'text': ai_message}
+    # if not command_type:
+    #     return result
+    # target_module, target_module_params = find_target_module(text)
+    # if not target_module:
+    #     return result
+    # module_name = target_module_params.get('name', target_module)
+    # module_info = target_module_params.get('info', {})
+    # if target_module == 'tasks':
+    #     text = text.replace('под задач', 'подзадач')
+    # message_info = find_info(target_module, module_info, text)
+    # if command_type == 'start' and target_module != 'timer':
+    #     return {'text': f'Запускаю {module_name}', 'context': {'component': target_module,
+    #                                                            'params': message_info}}
+    # match target_module_params.get('type'):
+    #     case 'component':
+    #         message_info['isRunning'] = True
+    #         time = message_info.get('time', None)
+    #         if time:
+    #             end_time = time.get('initialEndTimeProp', None)
+    #         else:
+    #             end_time = None
+    #         params = {'resultText': message_info.get('name'), 'initialEndTimeProp': end_time, 'isRunningProp': True}
+    #         # print(params)
+    #         if target_module == 'timer':
+    #             target_module = 'timersToolbar'
+    #         result = {'text': f'Запускаю {module_name}', 'context': {'component': target_module,
+    #                                                                  'params': params}}
+    #     case 'journal':
+    #         if message_info:
+    #             result = save_to_base_modules(target_module, command_type, message_info, files)
+    #             result['text'] += f' в {module_name}'
+    #     case 'task':
+    #         task_module_result, _ = task_module(command_type, message_info)
+    #         result = {'text': task_module_result.get('message'), 'context': {'UPDATES': ['todo', 'calendar']}}
+    #     case 'ai_chat':
+    #         ai_answer = get_eden_ai_response(text)  # убираем слово найди в начале
+    #         ai_message = ai_answer.get('message', '')
+    #         result = {'text': ai_message}
         # case 'action_module':
         #     action_module = action_module_processing(target_module)
         #     if action_module:
@@ -177,5 +177,5 @@ def get_best_matching_task_id(task_name, list_id='all'):
     return None, 0
 
 
-if __name__ != '__main__':
-    print('start manage.py')
+if __name__ == '__main__':
+    print('start run.py')

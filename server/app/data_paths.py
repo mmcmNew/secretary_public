@@ -4,21 +4,6 @@
 import os
 from flask import current_app
 
-# Корневая папка сервера
-SERVER_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# Папка со стандартными данными
-DEFAULTS_DIR = os.path.join(SERVER_DIR, 'app', 'static', 'default_settings')
-
-# Пути к системным файлам по умолчанию
-SYSTEM_PATHS = {
-    'scenarios': os.path.join(DEFAULTS_DIR, 'scenarios'),
-    'settings': os.path.join(DEFAULTS_DIR, 'settings'),
-    'memory_images': os.path.join(DEFAULTS_DIR, 'memory'),
-    'sounds': os.path.join(DEFAULTS_DIR, 'static', 'sounds'),
-    'avatars': os.path.join(DEFAULTS_DIR, 'static', 'avatars'),
-    'audio': os.path.join(DEFAULTS_DIR, 'static', 'audio'),
-}
 
 def get_app_user_data_dir():
     """Return root directory for all user data inside the instance path."""
@@ -26,63 +11,6 @@ def get_app_user_data_dir():
     os.makedirs(base_dir, exist_ok=True)
     return base_dir
 
-def get_user_data_path(user_id, data_type):
-    """
-    Возвращает путь к пользовательским данным
-    
-    Args:
-        user_id (int): ID пользователя
-        data_type (str): Тип данных ('scenarios', 'settings', 'memory', 'uploads', 'audio', etc.)
-    
-    Returns:
-        str: Путь к пользовательским данным
-    """
-    user_dir = os.path.join(get_app_user_data_dir(), f'user_{user_id}')
-    
-    # Создаем папку пользователя если её нет
-    os.makedirs(user_dir, exist_ok=True)
-    
-    data_path = os.path.join(user_dir, data_type)
-    
-    # Создаем папку для типа данных если её нет
-    if not os.path.exists(data_path):
-        os.makedirs(data_path, exist_ok=True)
-    
-    return data_path
-
-def get_system_data_path(data_type):
-    """
-    Возвращает путь к системным данным
-    
-    Args:
-        data_type (str): Тип данных ('scenarios', 'settings', 'memory_images', 'sounds', 'avatars', 'audio')
-    
-    Returns:
-        str: Путь к системным данным
-    """
-    return SYSTEM_PATHS.get(data_type)
-
-def copy_system_defaults_to_user(user_id, data_type):
-    """
-    Копирует системные файлы по умолчанию в папку пользователя
-    
-    Args:
-        user_id (int): ID пользователя
-        data_type (str): Тип данных для копирования
-    """
-    import shutil
-    
-    system_path = get_system_data_path(data_type)
-    user_path = get_user_data_path(user_id, data_type)
-    
-    if system_path and os.path.exists(system_path):
-        # Копируем все файлы из системной папки в пользовательскую
-        for filename in os.listdir(system_path):
-            src_file = os.path.join(system_path, filename)
-            dst_file = os.path.join(user_path, filename)
-            
-            if os.path.isfile(src_file) and not os.path.exists(dst_file):
-                shutil.copy2(src_file, dst_file)
 
 def initialize_user_data(user_id):
     """
@@ -91,18 +19,6 @@ def initialize_user_data(user_id):
     Args:
         user_id (int): ID пользователя
     """
-    # Копируем системные файлы по умолчанию
-    copy_system_defaults_to_user(user_id, 'scenarios')
-    copy_system_defaults_to_user(user_id, 'settings')
-    copy_system_defaults_to_user(user_id, 'avatars')
-    copy_system_defaults_to_user(user_id, 'sounds')
-    copy_system_defaults_to_user(user_id, 'audio')
-    
-    # Создаем остальные необходимые папки
-    get_user_data_path(user_id, 'memory')
-    get_user_data_path(user_id, 'uploads')
-    get_user_data_path(user_id, 'temp')
-
     # Создаем базовую структуру папок пользователя
     base_dir = get_app_user_data_dir()
     os.makedirs(os.path.join(base_dir, f'user_{user_id}', 'journals'), exist_ok=True)

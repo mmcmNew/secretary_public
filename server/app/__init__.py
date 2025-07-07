@@ -1,15 +1,14 @@
 import os
-import sys
-
 from flask import Flask, send_from_directory, jsonify, abort
 from flask_jwt_extended import JWTManager
-from .config import WorkConfig, TestingConfig
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_socketio import SocketIO
 from flask_cors import CORS
 from flask_wtf import CSRFProtect
 from flask_wtf.csrf import generate_csrf
-from flask_socketio import SocketIO
+
+from .config import WorkConfig, TestingConfig
 
 db = SQLAlchemy()
 migrate = Migrate(render_as_batch=True)
@@ -17,45 +16,33 @@ socketio = SocketIO(logger=False, engineio_logger=False, cors_allowed_origins="*
 jwt = JWTManager()
 csrf = CSRFProtect()
 
-
 def create_app(config_type='work'):
-    base_path = os.path.abspath(os.path.dirname(__file__))
-    dist_folder = os.path.join(base_path, 'dist')
-
-    app = Flask(
-        __name__,
-        static_folder=dist_folder,
-        static_url_path='',  # Статика будет доступна по /
-        instance_relative_config=True
-    )
-
-    csrf.init_app(app)
-
-    # runtime directories under instance path
+    app = Flask(__name__, static_folder='dist', static_url_path='', instance_relative_config=True)
     os.makedirs(app.instance_path, exist_ok=True)
-    app.config['UPLOAD_FOLDER'] = os.path.join(app.instance_path, 'uploads')
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(os.path.join(app.instance_path, 'db'), exist_ok=True)
 
-    app.config['DIST_FOLDER'] = dist_folder
-    app.config['CONFIG_TYPE'] = config_type
-
-    # Загрузка конфигов
+    # Настройка конфигурации
     if config_type == 'test':
-        CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
         app.config.from_object(TestingConfig)
         TestingConfig.init_app(app)
+        CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
     elif config_type == 'work':
         app.config.from_object(WorkConfig)
         WorkConfig.init_app(app)
     else:
         raise ValueError("Invalid configuration type")
 
+    # Загрузка директорий
+    app.config['UPLOAD_FOLDER'] = os.path.join(app.instance_path, 'uploads')
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+    # Инициализация расширений
+    csrf.init_app(app)
     db.init_app(app)
     migrate.init_app(app, db)
-    socketio.init_app(app)
     jwt.init_app(app)
+    socketio.init_app(app)
 
+    # CSRF токен в cookie
     @app.after_request
     def set_csrf_cookie(response):
         if app.config.get('WTF_CSRF_ENABLED', True):
@@ -63,15 +50,16 @@ def create_app(config_type='work'):
                 'csrf_token',
                 generate_csrf(),
                 secure=True,
+                httponly=False,
                 samesite='Lax'
             )
         return response
+
     with app.app_context():
-        
-        # Добавляем middleware для проверки прав
         from .auth_middleware import load_user_permissions
         app.before_request(load_user_permissions)
 
+        # Роуты
         from .main import main as main_blueprint
         app.register_blueprint(main_blueprint)
         from .tasks import to_do_app as tasks_blueprint
@@ -91,50 +79,62 @@ def create_app(config_type='work'):
         from .subscription_routes import subscription_bp
         app.register_blueprint(subscription_bp)
 
-        db.create_all()
-
+        # JWT загрузка пользователя
         from app.main.models import User
-        if config_type == 'test':
-            User.add_initial_users()
-
         @jwt.user_lookup_loader
         def load_user_callback(_jwt_header, jwt_data):
-            identity = jwt_data["sub"]
-            return User.query.get(int(identity))
-        
+            return User.query.get(int(jwt_data["sub"]))
+
         @jwt.expired_token_loader
         def expired_token_callback(jwt_header, jwt_payload):
             return jsonify({'error': 'Token has expired'}), 401
-        
+
         @jwt.invalid_token_loader
         def invalid_token_callback(error):
             return jsonify({'error': 'Invalid token'}), 401
-          
-        from app.tasks.models import TaskTypes
-        TaskTypes.add_initial_task_types()
-        from app.tasks.models import Status
-        Status.add_initial_statuses()
-        from app.tasks.models import Priority
-        Priority.add_initial_priorities()
-        from app.tasks.models import Interval
-        Interval.add_initial_intervals()
-        
-        # Инициализация данных подписки
-        from .init_subscription_data import init_subscription_data
-        init_subscription_data()
 
+        with app.app_context():
+            # Создание таблиц только в test-режиме
+            if config_type == 'test':
+                db.create_all()
+                from app.main.models import User
+                User.add_initial_users()
+                from app.tasks.models import TaskTypes, Status, Priority, Interval
+                TaskTypes.add_initial_task_types()
+                Status.add_initial_statuses()
+                Priority.add_initial_priorities()
+                Interval.add_initial_intervals()
+                from .init_subscription_data import init_subscription_data
+                init_subscription_data()
+            else:
+                # В work-режиме — предполагаем, что ты сделал flask db upgrade
+                from app.tasks.models import TaskTypes, Status, Priority, Interval
+                try:
+                    TaskTypes.add_initial_task_types()
+                    Status.add_initial_statuses()
+                    Priority.add_initial_priorities()
+                    Interval.add_initial_intervals()
+                except Exception as e:
+                    app.logger.warning(f"Ошибка при инициализации данных: {e}")
 
-        # Отдаем index.html и статику (должно быть в конце, чтобы не перехватывать API маршруты)
+        # SPA: отдача index.html и статики
+        STATIC_EXCLUDES = (
+            'api/', 'static/', 'avatars/', 'sounds/', 'memory/',
+            'audio/', 'temp/', 'upload_files/', 'dashboard/', 'tasks/',
+            'chat/', 'journals/', 'sw.js', 'manifest.webmanifest'
+        )
+
         @app.route('/', defaults={'path': ''})
         @app.route('/<path:path>')
         def serve_dist(path):
-            # Исключаем API маршруты и серверные пути
-            if path.startswith(('api/', 'static/', 'avatars/', 'sounds/', 'memory/', 'audio/', 'temp/', 'upload_files/', 'dashboard/', 'tasks/', 'chat/', 'journals/', 'sw.js', 'manifest.webmanifest')):
+            if any(path.startswith(p) for p in STATIC_EXCLUDES):
                 abort(404)
-            
-            if path != "" and os.path.exists(os.path.join(dist_folder, path)):
-                return send_from_directory(dist_folder, path)
-            else:
-                return send_from_directory(dist_folder, 'index.html')
+            dist_folder = app.config['DIST_FOLDER']
+            file_path = os.path.join(dist_folder, path)
+            return (
+                send_from_directory(dist_folder, path)
+                if path and os.path.exists(file_path)
+                else send_from_directory(dist_folder, 'index.html')
+            )
 
     return app

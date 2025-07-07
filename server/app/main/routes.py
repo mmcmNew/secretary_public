@@ -27,12 +27,9 @@ from app import db
 from app.secretary import answer_from_secretary
 from app.db_utils import (
     update_record,
-    save_to_base,
     save_to_base_modules,
 )
 from app.command_utils import (
-    get_tables,
-    get_columns_names,
     get_modules,
 )
 from app.text_to_edge_tts import generate_tts, del_all_audio_files
