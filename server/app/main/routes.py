@@ -87,14 +87,15 @@ def serve_manifest():
         return "Manifest not found", 404
 
 
-@socketio.on("connect", namespace="/chat")
-def handle_connect():
-    print("Client connected")
+def ws_log(event):
+    """Log websocket connect and disconnect events."""
+    current_app.logger.info(
+        f"Client {event} from chat websocket"
+    )
 
 
-@socketio.on("disconnect", namespace="/chat")
-def handle_disconnect():
-    print("Client disconnected")
+socketio.on_event("connect", lambda auth=None: ws_log("connected"), namespace="/chat")
+socketio.on_event("disconnect", lambda: ws_log("disconnected"), namespace="/chat")
 
 
 @socketio.on("connect", namespace="/updates")
@@ -154,31 +155,27 @@ def get_messages_data():
 @main.route("/memory/<path:filename>", methods=["GET"])
 @jwt_required(optional=True)
 def static_files(filename):
+    prefix_map = {
+        "/avatars": "avatars",
+        "/sounds": "sounds",
+        "/memory": "memory_images",
+    }
 
-    route = request.path
+    prefix = "/" + request.path.strip("/").split("/")[0]
+    system_dir_key = prefix_map.get(prefix)
 
-    if route.startswith("/avatars"):
-        avatars_path = get_system_data_path("avatars")
-        if avatars_path and os.path.isfile(os.path.join(avatars_path, filename)):
-            return send_from_directory(avatars_path, filename)
+    if system_dir_key is None:
+        return "File not found", 404
 
-    elif route.startswith("/sounds"):
-        sounds_path = get_system_data_path("sounds")
-        if sounds_path and os.path.isfile(os.path.join(sounds_path, filename)):
-            return send_from_directory(sounds_path, filename)
+    if prefix == "/memory" and current_user:
+        user_memory_path = get_system_data_path(current_user.id, "memory")
+        user_file = os.path.join(user_memory_path, filename)
+        if os.path.isfile(user_file):
+            return send_from_directory(user_memory_path, filename)
 
-    elif route.startswith("/memory"):
-        # Сначала пользовательские, потом системные
-        if current_user:
-            user_memory_path = get_system_data_path(current_user.id, "memory")
-            user_file = os.path.join(user_memory_path, filename)
-            if os.path.isfile(user_file):
-                return send_from_directory(user_memory_path, filename)
-
-        # Системные изображения памяти
-        memory_path = get_system_data_path("memory_images")
-        if memory_path and os.path.isfile(os.path.join(memory_path, filename)):
-            return send_from_directory(memory_path, filename)
+    system_path = get_system_data_path(system_dir_key)
+    if system_path and os.path.isfile(os.path.join(system_path, filename)):
+        return send_from_directory(system_path, filename)
 
     return "File not found", 404
 
