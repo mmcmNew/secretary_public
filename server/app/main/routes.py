@@ -153,7 +153,6 @@ def get_messages_data():
 @main.route("/memory/<path:filename>", methods=["GET"])
 @jwt_required(optional=True)
 def static_files(filename):
-    from app.data_paths import get_system_data_path, get_user_data_path
 
     route = request.path
 
