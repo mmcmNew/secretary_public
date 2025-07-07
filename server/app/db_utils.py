@@ -80,3 +80,39 @@ def save_to_base_modules(target_module, command_type, message_info=None, files_l
     if save_files_result:
         result['text'] = f' {save_files_result}' + result['text']
     return result
+
+
+def update_record(table_name: str, record_info: dict):
+    """Update a record in the specified table.
+
+    Parameters
+    ----------
+    table_name: str
+        The name of the table to update. This should correspond to a table
+        defined in SQLAlchemy metadata.
+    record_info: dict
+        Dictionary of field values. Must contain an ``id`` key.
+
+    Returns
+    -------
+    dict
+        ``{'result': 'OK'}`` on success or ``{'error': str}`` on failure.
+    """
+    record_id = record_info.get('id')
+    if record_id is None:
+        return {'error': 'No id provided'}
+
+    table = db.Model.metadata.tables.get(table_name)
+    if table is None:
+        return {'error': f'Table {table_name} not found'}
+
+    values = {k: v for k, v in record_info.items() if k != 'id'}
+
+    try:
+        update_stmt = table.update().where(table.c.id == record_id).values(**values)
+        db.session.execute(update_stmt)
+        db.session.commit()
+        return {'result': 'OK'}
+    except Exception as exc:
+        db.session.rollback()
+        return {'error': str(exc)}

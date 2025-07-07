@@ -11,8 +11,8 @@ from flask_jwt_extended import (
 )
 
 from ..models import User
-from ..subscription_models import UserSubscription
-from ..access_control import get_user_permissions
+from ...subscription_models import UserSubscription
+from ...access_control import get_user_permissions
 from app import db
 
 from . import auth_bp
