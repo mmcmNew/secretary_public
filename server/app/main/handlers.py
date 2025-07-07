@@ -2,6 +2,10 @@ from datetime import datetime, timedelta
 
 from flask import current_app
 from flask_jwt_extended import current_user
+from flask_socketio import emit
+
+from app import socketio, db
+from .models import User, ChatHistory
 
 from app.journals.models import JournalEntry
 from app.command_utils import get_modules
@@ -52,4 +56,21 @@ def fetch_table_records(table_name, date_str, timezone_offset_ms):
         return records, columns
 
     raise ValueError("Unsupported table")
+
+
+def save_and_emit_message(user_id, text, files=None):
+    """Save message to the database and emit it via SocketIO."""
+    user = User.query.filter_by(user_id=user_id).first()
+    if not user:
+        error = {"error": "User not found"}
+        socketio.emit("error", error, namespace="/chat")
+        return error, 404
+
+    message = ChatHistory(user_id=user.user_id, text=text, files=files)
+    db.session.add(message)
+    db.session.commit()
+
+    message_dict = message.to_dict()
+    socketio.emit("message", message_dict, namespace="/chat")
+    return message_dict, 201
 
