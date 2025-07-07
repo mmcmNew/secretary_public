@@ -1,7 +1,12 @@
 """
 Менеджер пользовательских данных
 """
-from .data_paths import initialize_user_data, get_user_data_path, get_system_data_path
+from .data_paths import (
+    initialize_user_data,
+    get_user_data_path,
+    get_system_data_path,
+    get_app_user_data_dir,
+)
 import os
 import json
 
@@ -143,9 +148,9 @@ class UserDataManager:
         """
         import shutil
         
-        from .data_paths import USER_DATA_DIR
+        from .data_paths import get_app_user_data_dir
         try:
-            user_dir = os.path.join(USER_DATA_DIR, f'user_{user_id}')
+            user_dir = os.path.join(get_app_user_data_dir(), f'user_{user_id}')
             if os.path.exists(user_dir):
                 shutil.rmtree(user_dir)
                 print(f"Данные пользователя {user_id} удалены")

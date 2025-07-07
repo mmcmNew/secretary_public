@@ -23,21 +23,16 @@ class BaseConfig:
 
     app_dir_name = os.path.dirname(__file__)
     server_root = os.path.dirname(app_dir_name)
-    user_db_dir = os.path.join(server_root, 'user_data', 'db')
-    USERS_DB_PATH = os.path.join(user_db_dir, 'users.db')
-    PRODUCTIVITY_DB_PATH = os.path.join(user_db_dir, 'productivity.db')
-    CONTENT_DB_PATH = os.path.join(user_db_dir, 'content.db')
-    WORKSPACE_DB_PATH = os.path.join(user_db_dir, 'workspace.db')
-    COMMUNICATION_DB_PATH = os.path.join(user_db_dir, 'communication.db')
-    MAIN_DB_PATH = CONTENT_DB_PATH  # Backwards compatibility
+    # Paths to SQLite databases will be set in init_app using app.instance_path
+    USERS_DB_PATH = ''
+    PRODUCTIVITY_DB_PATH = ''
+    CONTENT_DB_PATH = ''
+    WORKSPACE_DB_PATH = ''
+    COMMUNICATION_DB_PATH = ''
+    MAIN_DB_PATH = ''  # Backwards compatibility
 
-    SQLALCHEMY_DATABASE_URI = f"sqlite:///{PRODUCTIVITY_DB_PATH}"
-    SQLALCHEMY_BINDS = {
-        'users': f"sqlite:///{USERS_DB_PATH}",
-        'content': f"sqlite:///{CONTENT_DB_PATH}",
-        'workspace': f"sqlite:///{WORKSPACE_DB_PATH}",
-        'communication': f"sqlite:///{COMMUNICATION_DB_PATH}",
-    }
+    SQLALCHEMY_DATABASE_URI = ''
+    SQLALCHEMY_BINDS = {}
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'connect_args': {'detect_types': 1}
@@ -58,8 +53,25 @@ class BaseConfig:
 
     @staticmethod
     def init_app(app):
-        user_db_dir = os.path.join(os.path.dirname(BaseConfig.app_dir_name), 'user_data', 'db')
+        # Configure database locations inside the instance folder
+        user_db_dir = os.path.join(app.instance_path, 'db')
         os.makedirs(user_db_dir, exist_ok=True)
+
+        app.config['USERS_DB_PATH'] = os.path.join(user_db_dir, 'users.db')
+        app.config['PRODUCTIVITY_DB_PATH'] = os.path.join(user_db_dir, 'productivity.db')
+        app.config['CONTENT_DB_PATH'] = os.path.join(user_db_dir, 'content.db')
+        app.config['WORKSPACE_DB_PATH'] = os.path.join(user_db_dir, 'workspace.db')
+        app.config['COMMUNICATION_DB_PATH'] = os.path.join(user_db_dir, 'communication.db')
+        app.config['MAIN_DB_PATH'] = app.config['CONTENT_DB_PATH']
+
+        app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{app.config['PRODUCTIVITY_DB_PATH']}"
+        app.config['SQLALCHEMY_BINDS'] = {
+            'users': f"sqlite:///{app.config['USERS_DB_PATH']}",
+            'content': f"sqlite:///{app.config['CONTENT_DB_PATH']}",
+            'workspace': f"sqlite:///{app.config['WORKSPACE_DB_PATH']}",
+            'communication': f"sqlite:///{app.config['COMMUNICATION_DB_PATH']}",
+        }
+
         os.makedirs(os.path.dirname(BaseConfig.DEBUG_LOGGING_LOCATION), exist_ok=True)
         os.makedirs(os.path.dirname(BaseConfig.ERROR_LOGGING_LOCATION), exist_ok=True)
 
