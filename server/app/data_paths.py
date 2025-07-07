@@ -5,6 +5,13 @@ import os
 from flask import current_app
 
 
+def get_system_data_path():
+    """Возвращает путь к папке с системными данными приложения."""
+    base_dir = os.path.join(current_app.root_path)
+    os.makedirs(base_dir, exist_ok=True)
+    return base_dir
+
+
 def get_app_user_data_dir():
     """Return root directory for all user data inside the instance path."""
     base_dir = os.path.join(current_app.instance_path, 'uploads')

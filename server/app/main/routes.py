@@ -36,6 +36,7 @@ from app.text_to_edge_tts import generate_tts, del_all_audio_files
 from ..tasks.handlers import create_daily_scenario
 from app.get_records_utils import get_all_filters, fetch_filtered_records
 from app.journals.models import JournalEntry
+from app.data_paths import get_system_data_path
 
 
 EMAIL_REGEX = r"^[\w\.-]+@[\w\.-]+\.[A-Za-z]{2,}$"
@@ -169,7 +170,7 @@ def static_files(filename):
     elif route.startswith("/memory"):
         # Сначала пользовательские, потом системные
         if current_user:
-            user_memory_path = get_user_data_path(current_user.id, "memory")
+            user_memory_path = get_system_data_path(current_user.id, "memory")
             user_file = os.path.join(user_memory_path, filename)
             if os.path.isfile(user_file):
                 return send_from_directory(user_memory_path, filename)
@@ -180,29 +181,6 @@ def static_files(filename):
             return send_from_directory(memory_path, filename)
 
     return "File not found", 404
-
-
-@main.route("/audio/<path:filename>", methods=["GET"])
-@jwt_required()
-def audio_files(filename):
-    from app.data_paths import get_user_journal_path
-
-    user_audio_path = get_user_data_path(current_user.id, "audio")
-    if os.path.isfile(os.path.join(user_audio_path, filename)):
-        return send_from_directory(user_audio_path, filename)
-    return "Audio file not found", 404
-
-
-@main.route("/static/<path:filename>", methods=["GET"])
-@jwt_required(optional=True)
-def user_static_files(filename):
-    from app.data_paths import get_user_journal_path
-
-    if current_user:
-        user_static_path = get_user_data_path(current_user.id, "static")
-        if os.path.isfile(os.path.join(user_static_path, filename)):
-            return send_from_directory(user_static_path, filename)
-    return "Static file not found", 404
 
 
 @main.route("/api/login", methods=["POST"])
@@ -728,120 +706,6 @@ def get_table_survey(table_name, conn=None):
     return None
 
 
-# маршрут для получения списка дней на которые есть записи в журнале по имени таблицы
-@main.route("/get_days", methods=["GET"])
-@jwt_required()
-def get_days_route():
-    table_name = request.args.get("table_name")
-    month = request.args.get("month")
-    year = request.args.get("year")  # Новый параметр year
-    timezone_param = request.args.get("timezone", "0")
-    try:
-        client_timezone_offset = int(timezone_param)
-    except ValueError:
-        client_timezone_offset = 0  # Смещение времени клиента в минутах от UTC
-
-    # Проверка на наличие входных параметров
-    if not table_name or not month or not year:
-        return jsonify({"error": "Missing table_name, month, or year parameters"}), 400
-
-    # Проверка, что month и year являются числовыми значениями
-    if (
-        not month.isdigit()
-        or not (1 <= int(month) <= 12)
-        or not year.isdigit()
-        or len(year) != 4
-    ):
-        return jsonify({"error": "Invalid month or year format"}), 400
-    # current_app.logger.debug(f'get_days: {table_name}, {month}, {year}, {client_timezone_offset}')
-    try:
-        start_date = datetime(int(year), int(month), 1)
-        if int(month) == 12:
-            end_date = datetime(int(year) + 1, 1, 1)
-        else:
-            end_date = datetime(int(year), int(month) + 1, 1)
-
-        start_date_utc = start_date - timedelta(minutes=client_timezone_offset)
-        end_date_utc = end_date - timedelta(minutes=client_timezone_offset)
-        modules = get_modules()
-        days = []
-        unique_dates_set = set()
-
-        # Проверяем, есть ли такой журнал у пользователя
-        from app.journals.models import JournalSchema
-
-        user_schema = JournalSchema.query.filter_by(
-            user_id=current_user.id, name=table_name
-        ).first()
-
-        if user_schema:
-            entries = JournalEntry.query.filter(
-                JournalEntry.journal_type == table_name,
-                JournalEntry.user_id == current_user.id,
-                JournalEntry.created_at >= start_date_utc,
-                JournalEntry.created_at < end_date_utc,
-            ).all()
-            for e in entries:
-                dt_client = e.created_at + timedelta(minutes=client_timezone_offset)
-                days.append(dt_client)
-                unique_dates_set.add(dt_client.date().isoformat())
-        else:
-            raise ValueError("Unsupported table")
-
-        unique_dates = sorted(list(unique_dates_set))
-        survey = get_table_survey(table_name)
-
-    except Exception as e:
-        current_app.logger.error(f"get_days: error: {e}")
-        return jsonify({"error": str(e)}), 404
-
-    # print(f'get_days: {days}')
-    return jsonify({"days": days, "unique_dates": unique_dates, "survey": survey}), 200
-
-
-# @main.route('/journals', methods=['GET'])
-# @jwt_required()
-# def get_file():
-#     current_app.logger.debug(f'get_file{request.args}')
-#     # Получение параметров из запроса
-#     category = request.args.get('category')
-#     date_folder = request.args.get('date_folder')
-#     filename = request.args.get('filename')
-#     # print(f'get_file: {category}, {date_folder}, {filename}')
-
-#     BASE_DIRECTORY = os.path.join(current_app.root_path, 'app', 'user_data', 'journals')
-
-#     # Построение пути к файлу
-#     file_path = os.path.join(BASE_DIRECTORY, category, date_folder, filename)
-#     # print(f'get_file: file_path: {file_path}')
-
-#     # Проверка существования файла
-#     if os.path.exists(file_path):
-#         # Отправка файла клиенту
-#         return send_from_directory(directory=os.path.join(BASE_DIRECTORY, category, date_folder), path=filename)
-#     else:
-#         # Возвращение ошибки 404, если файл не найден
-#         abort(404, description="File not found")
-
-
-@main.route("/journals/file", methods=["GET"])
-@jwt_required()
-def get_journal_file():
-    from app.data_paths import get_user_journal_path
-
-    category = request.args.get("category")
-    date_folder = request.args.get("date_folder")
-    filename = request.args.get("filename")
-
-    base_dir = get_user_journal_path(current_user.id, category or "")
-    if date_folder:
-        base_dir = os.path.join(base_dir, date_folder)
-
-    if os.path.isfile(os.path.join(base_dir, filename)):
-        return send_from_directory(base_dir, filename)
-    abort(404, description="File not found")
-
-
 @main.route("/get_table_data", methods=["GET"])
 @jwt_required()
 def get_table_data():
@@ -870,127 +734,3 @@ def get_table_data():
         current_app.logger.error(f"Ошибка при получении записей: {e}")
         return jsonify({"error": str(e)}), 500
 
-
-@main.route("/update_record_from_blocks", methods=["POST"])
-@jwt_required()
-def update_record_from_blocks():
-    data = request.get_json()
-    table_name = data.get("table_name")
-    records = data.get("records", [])
-    if not table_name or not isinstance(records, list):
-        current_app.logger.error("update_record_from_blocks: Invalid payload")
-        return jsonify({"error": "Invalid payload"}), 400
-
-    try:
-        from app.journals.models import JournalSchema, JournalEntry
-        from app import db
-
-        schema = JournalSchema.query.filter_by(
-            user_id=current_user.id, name=table_name
-        ).first()
-
-        if schema:
-            for record in records:
-                entry_id = record.get("id")
-                if not entry_id:
-                    continue
-                entry = JournalEntry.query.filter_by(
-                    id=entry_id, user_id=current_user.id, journal_type=table_name
-                ).first()
-                if not entry:
-                    current_app.logger.error(
-                        f"Record {entry_id} not found in journal {table_name}"
-                    )
-                    continue
-                entry.data = {
-                    **(entry.data or {}),
-                    **{k: v for k, v in record.items() if k not in ["id", "files"]},
-                }
-            db.session.commit()
-            return jsonify({"success": True}), 200
-
-        for record in records:
-            res = update_record(table_name, record)
-            if res.get("error"):
-                current_app.logger.error(
-                    f"Ошибка обновления записи {record.get('id')}: {res['error']}"
-                )
-        return jsonify({"success": True}), 200
-    except Exception as e:
-        current_app.logger.error(f"Ошибка при обновлении записи: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@main.route("/get_records", methods=["POST"])
-@jwt_required()
-def get_records_route():
-    try:
-        data = request.get_json() or {}
-        current_app.logger.debug(f"get_records_route: {data}")
-        table_name = data.get("table_name")
-        filters = data.get("filters", {})
-
-        if not table_name:
-            return jsonify({"error": "table_name is required"}), 400
-
-        if not filters or all(not v for v in filters.values()):
-            return (
-                jsonify(
-                    {
-                        "error": "Фильтры не заданы. Запрос отклонён для предотвращения получения всех записей."
-                    }
-                ),
-                400,
-            )
-
-        records, columns = fetch_filtered_records(table_name, filters)
-
-        result = [dict(r) for r in records]
-        return jsonify({"records": result, "columns": columns}), 200
-
-    except ValueError as e:
-        current_app.logger.error(f"Validation error: {e}")
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        current_app.logger.error(f"Ошибка при получении отфильтрованных блоков: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@main.route("/get_tables_filters/<table_name>", methods=["GET"])
-@jwt_required()
-def api_get_filter_values(table_name):
-    from app.journals.models import JournalSchema
-
-    # Проверяем пользовательские журналы
-    user_schema = JournalSchema.query.filter_by(
-        user_id=current_user.id, name=table_name
-    ).first()
-    if user_schema:
-        # Получаем уникальные значения для каждого поля
-        entries = JournalEntry.query.filter_by(
-            user_id=current_user.id, journal_type=table_name
-        ).all()
-        field_values = {}
-
-        for field in user_schema.fields:
-            field_name = field["name"]
-            values = set()
-
-            # Добавляем варианты из схемы
-            if field.get("options"):
-                for option in field["options"]:
-                    if option and str(option).strip():
-                        values.add(str(option).strip())
-
-            # Добавляем варианты из существующих записей
-            for entry in entries:
-                if entry.data and field_name in entry.data:
-                    value = entry.data[field_name]
-                    if value and str(value).strip():
-                        values.add(str(value).strip())
-
-            field_values[field_name] = sorted(list(values))
-
-        return jsonify(field_values)
-
-    return jsonify({})
