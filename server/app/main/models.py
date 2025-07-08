@@ -18,6 +18,7 @@ class User(db.Model):
     last_dashboard_id = Column(Integer)
     modules = Column(JSON, default=lambda: ['diary'])
     access_level_id = Column(Integer, default=1)
+    task_types = Column(JSON, default=dict)
 
     @property
     def id(self):
@@ -96,6 +97,7 @@ class User(db.Model):
             'avatar_src': self.avatar_src,
             'last_dashboard_id': self.last_dashboard_id,
             'modules': self.modules,
+            'task_types': self.task_types,
         }
 
 
