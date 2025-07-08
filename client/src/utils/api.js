@@ -20,3 +20,5 @@ export const apiGet = (url) => api(url);
 export const apiPost = (url, body) => api(url, 'POST', body);
 export const apiPut = (url, body) => api(url, 'PUT', body);
 export const apiDelete = (url, body) => api(url, 'DELETE', body);
+
+export const fetchTaskFieldsConfig = () => api('/tasks/fields_config');

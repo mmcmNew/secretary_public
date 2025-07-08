@@ -6,6 +6,7 @@ import useContainer from "../DraggableComponents/useContainer";
 import useTasks from "../ToDo/hooks/useTasks";
 import useAntiSchedule from "../ToDo/hooks/useAntiSchedule";
 import PropTypes from "prop-types";
+import { fetchTaskFieldsConfig } from "../../utils/api";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -60,6 +61,7 @@ export default function AntiScheduleLayout({
   const [updatedCalendarEvents, setUpdatedCalendarEvents] = useState(null);
   const [currentTaskFields, setCurrentTaskFields] = useState({})
   const [currentTaskType, setCurrentTaskType] = useState(null)
+  const [taskTypeOptions, setTaskTypeOptions] = useState([]);
   const [newRecordDialogOpen, setNewRecordDialogOpen] = useState(false);
   const [selectedDayTasks, setSelectedDayTasks] = useState(null);
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -81,6 +83,20 @@ export default function AntiScheduleLayout({
   const eventFields = useRef(null)
 
   useEffect(() => {
+    const loadTaskTypeOptions = async () => {
+      try {
+        const data = await fetchTaskFieldsConfig();
+        if (data?.type_id?.options) {
+          setTaskTypeOptions(data.type_id.options);
+        }
+      } catch (err) {
+        console.error('Failed to load task types', err);
+      }
+    };
+    loadTaskTypeOptions();
+  }, []);
+
+  useEffect(() => {
     if (taskFields && taskFields.type_id) {
       eventFields.current = {
         start: { type: "datetime", name: "Дата начала" },
@@ -92,14 +108,14 @@ export default function AntiScheduleLayout({
           type: "select",
           name: "Тип задачи",
           groupBy: 'type',
-          options: taskFields.type_id.options || [],
+          options: taskTypeOptions,
         },
         divider3: { type: "divider" },
         files: { type: "string", name: "Добавить файл" },
         note: { type: "text", name: "Заметка" },
       }
     }
-  }, [taskFields])
+  }, [taskFields, taskTypeOptions])
 
   const [newSettings, setNewSettings] = useState(
     antiScheduleSettingsProp || {
