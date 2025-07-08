@@ -148,126 +148,18 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
-      '/static': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/upload_files': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/avatars': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/sounds': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/dashboard': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/temp': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/tasks': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/chat': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/memory': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/get_tts_audio': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/post_timers': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/audio': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/get_scenario': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/post_new_record': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/post_edited_record_api': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/get_tables': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/get_table_data': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/journals': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/update_record_from_blocks': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/get_days': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/get_tables_filters': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/get_records': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/login': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/register': {
+      '/': {
         target: 'https://localhost:5100',
         changeOrigin: true,
         secure: false
       },
     },
-  }
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./vitest.setup.js'],
+    include: ['__tests__/**/*.test.{js,jsx}'],
+    threads: 1,
+  },
 })
