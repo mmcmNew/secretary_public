@@ -344,7 +344,6 @@ class List(db.Model):
 
 
 
-
 class Task(db.Model):
     __tablename__ = 'tasks'
     id = db.Column('TaskID', db.Integer, primary_key=True, autoincrement=True)
