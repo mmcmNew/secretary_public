@@ -99,8 +99,8 @@ def create_app(config_type='work'):
                 db.create_all()
                 from app.main.models import User
                 User.add_initial_users()
-                from app.tasks.models import TaskTypes, Status, Priority, Interval
-                TaskTypes.add_initial_task_types()
+                from app.tasks.models import TaskType, Status, Priority, Interval
+                TaskType.add_initial_task_types()
                 Status.add_initial_statuses()
                 Priority.add_initial_priorities()
                 Interval.add_initial_intervals()
@@ -108,9 +108,9 @@ def create_app(config_type='work'):
                 init_subscription_data()
             else:
                 # В work-режиме — предполагаем, что ты сделал flask db upgrade
-                from app.tasks.models import TaskTypes, Status, Priority, Interval
+                from app.tasks.models import TaskType, Status, Priority, Interval
                 try:
-                    TaskTypes.add_initial_task_types()
+                    TaskType.add_initial_task_types()
                     Status.add_initial_statuses()
                     Priority.add_initial_priorities()
                     Interval.add_initial_intervals()

@@ -78,46 +78,28 @@ export default function AntiScheduleLayout({
         setIsMobile(isMobileQuery);
     }, [isMobileQuery]);
 
-  const eventFields = useRef({
-            start: { type: "datetime", name: "Дата начала" },
-            end: { type: "datetime", name: "Дата завершения" },
-            divider1: { type: "divider" },
-            color: { type: "color", name: "Цвет на календаре" },
-            is_background: { type: "toggle", name: "Фоновая задача" },
-            type_id: {
-              type: "select",
-              name: "Тип задачи",
-              groupBy: 'type',
-              options: [
-                { value: 1, type: 'work', label: "Продуктивная работа", groupLabel: "Работа" },
-                { value: 2, type: 'work', label: "Повседневные задачи", groupLabel: "Работа" },
-                { value: 3, type: 'rest', label: "Перерыв", groupLabel: "Отдых" },
-                { value: 4, type: 'meals', label: "Обед", groupLabel: "Питание" },
-                { value: 5, type: 'study', label: "Учеба", groupLabel: "Учёба" },
-                { value: 6, type: 'rest', label: "Прогулка", groupLabel: "Отдых" },
-                { value: 7, type: 'personal', label: "Личные дела", groupLabel: "Личное" },
-                { value: 8, type: 'personal', label: "Домашние дела", groupLabel: "Личное" },
-                { value: 9, type: 'rest', label: "Сон", groupLabel: "Отдых" },
-                { value: 10, type: 'social', label: "Переписки", groupLabel: "Общение" },
-                { value: 11, type: 'everyday', label: "Планирование", groupLabel: "Повседневное" },
-                { value: 12, type: 'work', label: "Составление отчетов", groupLabel: "Работа" },
-                { value: 13, type: 'meals', label: "Ужин", groupLabel: "Питание" },
-                { value: 14, type: 'meals', label: "Перекус", groupLabel: "Питание" },
-                { value: 15, type: 'study', label: "Чтение", groupLabel: "Учёба" },
-                { value: 16, type: 'personal', label: "Анализ записей", groupLabel: "Личное" },
-                { value: 17, type: 'study', label: "Изучение языков", groupLabel: "Учёба" },
-                { value: 18, type: 'personal', label: "Покупки", groupLabel: "Личное" },
-                { value: 19, type: 'everyday', label: "Умывание", groupLabel: "Повседневное" },
-                { value: 20, type: 'rest', label: "Отдых", groupLabel: "Отдых" },
-                { value: 21, type: 'rest', label: "Развлечения", groupLabel: "Отдых" },
-                { value: 22, type: 'work', label: "Совещание", groupLabel: "Работа" },
-                { value: null, label: "Без типа", groupLabel: "Без группы" }
-              ],
-            },
-            divider3: { type: "divider" },
-            files: { type: "string", name: "Добавить файл" },
-            note: { type: "text", name: "Заметка" },
-          })
+  const eventFields = useRef(null)
+
+  useEffect(() => {
+    if (taskFields && taskFields.type_id) {
+      eventFields.current = {
+        start: { type: "datetime", name: "Дата начала" },
+        end: { type: "datetime", name: "Дата завершения" },
+        divider1: { type: "divider" },
+        color: { type: "color", name: "Цвет на календаре" },
+        is_background: { type: "toggle", name: "Фоновая задача" },
+        type_id: {
+          type: "select",
+          name: "Тип задачи",
+          groupBy: 'type',
+          options: taskFields.type_id.options || [],
+        },
+        divider3: { type: "divider" },
+        files: { type: "string", name: "Добавить файл" },
+        note: { type: "text", name: "Заметка" },
+      }
+    }
+  }, [taskFields])
 
   const [newSettings, setNewSettings] = useState(
     antiScheduleSettingsProp || {
