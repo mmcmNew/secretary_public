@@ -13,3 +13,6 @@ server/app/modules/generate_memory_numbers.py
 server/app/modules/yandex_tts_free.py
 server/app/modules/youtube_downloader.py
 server/user_data/user_3/settings/**
+
+node_modules/
+package-lock.json

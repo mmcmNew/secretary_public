@@ -323,15 +323,33 @@ class List(db.Model):
         }
 
 
-class TaskTypes(db.Model):
+class TaskTypeGroup(db.Model):
+    __tablename__ = 'task_type_groups'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255))
+    color = db.Column(db.String(20))
+    order = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True)
+    description = db.Column(db.Text)
+
+    task_types = db.relationship(
+        "TaskType", back_populates="group", cascade="all, delete"
+    )
+
+
+class TaskType(db.Model):
     __tablename__ = 'task_types'
+
     id = db.Column('TaskTypeID', db.Integer, primary_key=True, autoincrement=True)
-    period_type = db.Column('PeriodType', db.String(255))
-    task_type = db.Column('Type', db.String(255))
-    type_name = db.Column('Name', db.String(255))
-    type_color = db.Column('Color', db.String(20))
-    type_icon = db.Column('Icon', db.String(255))
-    group_label = db.Column('GroupLabel', db.String(255))
+    name = db.Column('Name', db.String(255))
+    group_id = db.Column('GroupID', db.Integer, db.ForeignKey('task_type_groups.id'))
+    color = db.Column('Color', db.String(20))
+    is_active = db.Column('IsActive', db.Boolean, default=True)
+    order = db.Column('Order', db.Integer, default=0)
+    description = db.Column('Description', db.Text)
+
+    group = db.relationship("TaskTypeGroup", back_populates="task_types")
 
     @staticmethod
     def add_initial_task_types():
@@ -361,12 +379,13 @@ class TaskTypes(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
-            'period_type': self.period_type,
-            'task_type': self.task_type,
-            'type_name': self.type_name,
-            'type_color': self.type_color,
-            'type_icon': self.type_icon,
-            'group_label': self.group_label
+            'name': self.name,
+            'group_id': self.group_id,
+            'color': self.color,
+            'is_active': self.is_active,
+            'order': self.order,
+            'description': self.description,
+            'group': self.group.name if self.group else None,
         }
 
 
@@ -383,13 +402,13 @@ class Task(db.Model):
     note = db.Column('Note', db.Text)
     childes_order = db.Column('ChildesOrder', db.JSON, default=[])
     color = db.Column('Color', db.String(20))
-    type_id = db.Column('TaskTypeID', db.Integer, db.ForeignKey('task_types.TaskTypeID'))
+    type_id = db.Column('TaskTypeID', db.Integer, db.ForeignKey('task_types.id'))
     status_id = db.Column('StatusID', db.Integer, db.ForeignKey('statuses.StatusID'), default=1)
     priority_id = db.Column('PriorityID', db.Integer, db.ForeignKey('priorities.PriorityID'))
     interval_id = db.Column('IntervalID', db.Integer, db.ForeignKey('intervals.IntervalID'))
     is_infinite = db.Column('IsInfinite', db.Boolean, default=False)
 
-    type = db.relationship('TaskTypes', backref='tasks', foreign_keys=[type_id])
+    type = db.relationship('TaskType', backref='tasks', foreign_keys=[type_id])
     status = db.relationship('Status', backref='tasks', foreign_keys=[status_id])
     priority = db.relationship('Priority', backref='tasks', foreign_keys=[priority_id])
     interval = db.relationship('Interval', backref='tasks', foreign_keys=[interval_id])
@@ -578,13 +597,13 @@ class AntiTask(db.Model):
     end = db.Column('End', db.DateTime)
     note = db.Column('Note', db.Text)
     color = db.Column('Color', db.String(20))
-    type_id = db.Column('TaskTypeID', db.Integer, db.ForeignKey('task_types.TaskTypeID', name="fk_anti_type"))
+    type_id = db.Column('TaskTypeID', db.Integer, db.ForeignKey('task_types.id', name="fk_anti_type"))
     status_id = db.Column('StatusID', db.Integer, db.ForeignKey('statuses.StatusID'), default=1)
     is_background = db.Column('IsBackground', db.Boolean, default=False)
     files = db.Column('Files', db.Text)
 
     task = db.relationship('Task', backref='anti_tasks', foreign_keys=[task_id])
-    type = db.relationship('TaskTypes', backref='anti_tasks', foreign_keys=[type_id])
+    type = db.relationship('TaskType', backref='anti_tasks', foreign_keys=[type_id])
     status = db.relationship('Status', backref='anti_tasks', foreign_keys=[status_id])
 
     def to_dict(self):

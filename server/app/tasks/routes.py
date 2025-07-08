@@ -7,7 +7,7 @@ from .handlers import (get_lists_and_groups_data, add_object, add_task, edit_lis
                        link_group_list, delete_from_childes, link_task, get_anti_schedule,
                        add_anti_task, edit_anti_task, del_anti_task)
 from .versioning import check_version
-from .models import DataVersion, TaskTypes
+from .models import DataVersion, TaskType, TaskTypeGroup
 from app.socketio_utils import notify_data_update, notify_task_change
 
 
@@ -244,16 +244,19 @@ def get_fields_config():
     }
 
     # Получение типов задач из БД
-    task_types = TaskTypes.query.all()
+    task_types = (
+        TaskType.query.outerjoin(TaskTypeGroup)
+        .filter(TaskType.is_active == True)
+        .order_by(TaskType.order)
+        .all()
+    )
     types_list = [
         {
             "value": task_type.id,
-            "type": task_type.task_type,
-            "label": task_type.type_name,
-            "periodType":  task_type.period_type,
-            "groupLabel": task_type.group_label,
-            "color": task_type.type_color,
-            "icon": task_type.type_icon
+            "label": task_type.name,
+            "groupLabel": task_type.group.name if task_type.group else None,
+            "color": task_type.color,
+            "description": task_type.description,
         }
         for task_type in task_types
     ]
