@@ -4,8 +4,8 @@ from sqlalchemy import Column, Integer, String, Text, DECIMAL, DateTime, Boolean
 from sqlalchemy.types import JSON
 
 class AccessLevel(db.Model):
-    __bind_key__ = 'users'
     __tablename__ = 'access_levels'
+    __table_args__ = {'schema': 'users'}
     
     id = Column(Integer, primary_key=True)
     name = Column(String(50), nullable=False)
@@ -14,8 +14,8 @@ class AccessLevel(db.Model):
     features = Column(JSON)
 
 class SubscriptionPlan(db.Model):
-    __bind_key__ = 'users'
     __tablename__ = 'subscription_plans'
+    __table_args__ = {'schema': 'users'}
     
     id = Column(Integer, primary_key=True)
     name = Column(String(50), nullable=False)
@@ -24,12 +24,11 @@ class SubscriptionPlan(db.Model):
     duration_days = Column(Integer)
 
 class UserSubscription(db.Model):
-    __bind_key__ = 'users'
     __tablename__ = 'user_subscriptions'
+    __table_args__ = {'schema': 'users'}
     
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.user_id'))
     plan_id = Column(Integer, ForeignKey('subscription_plans.id'))
     start_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    end_date = Column(DateTime)
-    is_active = Column(Boolean, default=True)
+    end_date = Column(DateTime)    is_active = Column(Boolean, default=True)

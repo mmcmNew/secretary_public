@@ -45,6 +45,7 @@ list_group_relations = db.Table('list_group_relations',
 
 class DataVersion(db.Model):
     __tablename__ = 'data_versions'
+    __table_args__ = {'schema': 'productivity'}
     
     id = db.Column(db.Integer, primary_key=True)
     version_metadata = db.Column(db.JSON, default={})
@@ -109,6 +110,7 @@ class DataVersion(db.Model):
 # Модели для базы данных ToDoBase
 class Priority(db.Model):
     __tablename__ = 'priorities'
+    __table_args__ = {'schema': 'productivity'}
     id = db.Column('PriorityID', db.Integer, primary_key=True, autoincrement=True)
     name = db.Column('PriorityName', db.String(255))
 
@@ -131,6 +133,7 @@ class Priority(db.Model):
 
 class Interval(db.Model):
     __tablename__ = 'intervals'
+    __table_args__ = {'schema': 'productivity'}
     id = db.Column('IntervalID', db.Integer, primary_key=True, autoincrement=True)
     name = db.Column('IntervalName', db.String(255))
     title = db.Column('IntervalTitle', db.String(255))
@@ -156,6 +159,7 @@ class Interval(db.Model):
 
 class TaskTypeGroup(db.Model):
     __tablename__ = 'task_type_groups'
+    __table_args__ = {'schema': 'productivity'}
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, nullable=False)
     name = db.Column(db.String(255))
@@ -180,6 +184,7 @@ class TaskTypeGroup(db.Model):
 
 class TaskType(db.Model):
     __tablename__ = 'task_types'
+    __table_args__ = {'schema': 'productivity'}
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, nullable=False)
     group_id = db.Column(db.Integer, db.ForeignKey('task_type_groups.id'))
@@ -204,6 +209,7 @@ class TaskType(db.Model):
 
 class Status(db.Model):
     __tablename__ = 'statuses'
+    __table_args__ = {'schema': 'productivity'}
     id = db.Column('StatusID', db.Integer, primary_key=True, autoincrement=True)
     name = db.Column('StatusName', db.String(255))
 
@@ -226,6 +232,7 @@ class Status(db.Model):
 
 class Project(db.Model):
     __tablename__ = 'projects'
+    __table_args__ = {'schema': 'productivity'}
     id = db.Column('ProjectID', db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, nullable=False)
     title = db.Column('ProjectName', db.String(255))
@@ -274,6 +281,7 @@ class Project(db.Model):
 
 class Group(db.Model):
     __tablename__ = 'groups'
+    __table_args__ = {'schema': 'productivity'}
     id = db.Column('GroupID', db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, nullable=False)
     title = db.Column('GroupName', db.String(255))
@@ -330,6 +338,7 @@ class Group(db.Model):
 
 class List(db.Model):
     __tablename__ = 'lists'
+    __table_args__ = {'schema': 'productivity'}
     id = db.Column('ListID', db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, nullable=False)
     title = db.Column('ListName', db.String(255))
@@ -373,6 +382,7 @@ class List(db.Model):
 
 class Task(db.Model):
     __tablename__ = 'tasks'
+    __table_args__ = {'schema': 'productivity'}
     id = db.Column('TaskID', db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, nullable=False)
     title = db.Column('Title', db.String(255))
@@ -574,6 +584,7 @@ class AntiTask(db.Model):
     __table_args__ = (
         db.Index('ix_anti_schedule_user_id', 'user_id'),
         db.Index('ix_anti_schedule_start', 'Start'),
+        {'schema': 'productivity'}
     )
     id = db.Column('AntiTaskID', db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, nullable=False)

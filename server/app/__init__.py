@@ -9,6 +9,7 @@ from flask_wtf import CSRFProtect
 from flask_wtf.csrf import generate_csrf
 
 from .config import WorkConfig, TestingConfig
+from sqlalchemy import text
 
 db = SQLAlchemy()
 migrate = Migrate(render_as_batch=True)
@@ -41,6 +42,12 @@ def create_app(config_type='work'):
     migrate.init_app(app, db)
     jwt.init_app(app)
     socketio.init_app(app)
+
+    with app.app_context():
+        if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):
+            engine = db.get_engine()
+            for schema in app.config.get('SCHEMAS', []):
+                engine.execute(text(f'CREATE SCHEMA IF NOT EXISTS {schema}'))
 
     # CSRF токен в cookie
     @app.after_request

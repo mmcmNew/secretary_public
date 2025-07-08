@@ -29,28 +29,22 @@ class BaseConfig:
     SESSION_COOKIE_HTTPONLY = os.environ.get("SESSION_COOKIE_HTTPONLY", "True") == "True"
     PERMANENT_SESSION_LIFETIME = int(os.environ.get("PERMANENT_SESSION_LIFETIME", 3600))
 
+    SCHEMAS = ['users', 'content', 'workspace', 'communication', 'productivity']
+
     @staticmethod
     def init_app(app):
         instance_path = app.instance_path
         db_dir = os.path.join(instance_path, BaseConfig.INSTANCE_DB_DIR)
         os.makedirs(db_dir, exist_ok=True)
 
-        # Пути к базам данных
-        db_paths = {
-            'users': os.path.join(db_dir, 'users.db'),
-            'content': os.path.join(db_dir, 'content.db'),
-            'workspace': os.path.join(db_dir, 'workspace.db'),
-            'communication': os.path.join(db_dir, 'communication.db'),
-            'productivity': os.path.join(db_dir, 'productivity.db')
-        }
+        database_url = os.environ.get('POSTGRES_URI') or os.environ.get('DATABASE_URL')
+        app.config['SCHEMAS'] = BaseConfig.SCHEMAS
 
-        app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_paths['productivity']}"
-        app.config['SQLALCHEMY_BINDS'] = {
-            key: f"sqlite:///{path}" for key, path in db_paths.items() if key != 'productivity'
-        }
-
-        # Основная БД для других нужд
-        app.config['MAIN_DB_PATH'] = db_paths['content']
+        if database_url:
+            app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+        else:
+            db_path = os.path.join(db_dir, 'app.db')
+            app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
 
         # Логирование
         log_dir = os.path.join(instance_path, 'logs')

@@ -5,8 +5,8 @@ from app import db
 from app.data_paths import get_app_user_data_dir
 
 class JournalSchema(db.Model):
-    __bind_key__ = 'content'
     __tablename__ = 'journal_schemas'
+    __table_args__ = {'schema': 'content'}
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, nullable=False)
@@ -29,8 +29,8 @@ class JournalSchema(db.Model):
         }
 
 class JournalEntry(db.Model):
-    __bind_key__ = 'content'
     __tablename__ = 'journal_entries'
+    __table_args__ = {'schema': 'content'}
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, nullable=False)
@@ -52,8 +52,8 @@ class JournalEntry(db.Model):
         }
 
 class JournalFile(db.Model):
-    __bind_key__ = 'content'
     __tablename__ = 'journal_files'
+    __table_args__ = {'schema': 'content'}
 
     id = db.Column(db.Integer, primary_key=True)
     entry_id = db.Column(db.Integer, db.ForeignKey('journal_entries.id'), nullable=False)
