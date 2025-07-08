@@ -6,6 +6,7 @@ import { Button, Container, Typography, Box, Card, CardContent, Chip, Tabs, Tab 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import axios from 'axios';
 import JournalManager from './components/JournalManager/JournalManager.jsx';
+import TaskTypeManager from './components/TaskTypeManager/TaskTypeManager.jsx';
 
 export default function AccountPage() {
   const { user, fetchCurrentUser, logout } = useContext(AuthContext);
@@ -60,6 +61,7 @@ export default function AccountPage() {
         <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
           <Tab label="Профиль" />
           <Tab label="Мои журналы" />
+          <Tab label="Типы задач" />
         </Tabs>
       </Box>
       
@@ -115,6 +117,12 @@ export default function AccountPage() {
       {activeTab === 1 && (
         <Box sx={{ mt: 3 }}>
           <JournalManager />
+        </Box>
+      )}
+
+      {activeTab === 2 && (
+        <Box sx={{ mt: 3 }}>
+          <TaskTypeManager />
         </Box>
       )}
     </Container>

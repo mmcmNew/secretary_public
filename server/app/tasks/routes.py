@@ -8,6 +8,7 @@ from .handlers import (get_lists_and_groups_data, add_object, add_task, edit_lis
                        add_anti_task, edit_anti_task, del_anti_task)
 from .versioning import check_version
 from .models import DataVersion
+from app import db
 from flask_jwt_extended import current_user
 from app.socketio_utils import notify_data_update, notify_task_change
 
@@ -261,3 +262,59 @@ def get_fields_config():
     fields["type_id"]["options"] = types_list
 
     return jsonify(fields)
+
+
+@to_do_app.route('/tasks/task_types', methods=['GET'])
+@jwt_required()
+def get_task_types_route():
+    return jsonify(current_user.task_types or {})
+
+
+@to_do_app.route('/tasks/task_types', methods=['POST'])
+@jwt_required()
+def add_task_type_route():
+    data = request.get_json() or {}
+    name = data.get('name')
+    if not name:
+        return jsonify({'error': 'Name required'}), 400
+    color = data.get('color') or '#3788D8'
+    description = data.get('description') or ''
+    task_types = current_user.task_types or {}
+    new_id = max([int(i) for i in task_types.keys()] or [0]) + 1
+    task_types[str(new_id)] = {'name': name, 'color': color, 'description': description}
+    current_user.task_types = task_types
+    db.session.add(current_user)
+    db.session.commit()
+    return jsonify({'id': new_id, 'name': name, 'color': color, 'description': description}), 201
+
+
+@to_do_app.route('/tasks/task_types/<int:type_id>', methods=['PUT'])
+@jwt_required()
+def edit_task_type_route(type_id):
+    data = request.get_json() or {}
+    task_types = current_user.task_types or {}
+    if str(type_id) not in task_types:
+        return jsonify({'error': 'Not found'}), 404
+    info = task_types[str(type_id)]
+    info.update({
+        'name': data.get('name', info.get('name')),
+        'color': data.get('color', info.get('color')),
+        'description': data.get('description', info.get('description')),
+    })
+    current_user.task_types = task_types
+    db.session.add(current_user)
+    db.session.commit()
+    return jsonify({'id': type_id, **info})
+
+
+@to_do_app.route('/tasks/task_types/<int:type_id>', methods=['DELETE'])
+@jwt_required()
+def delete_task_type_route(type_id):
+    task_types = current_user.task_types or {}
+    if str(type_id) not in task_types:
+        return jsonify({'error': 'Not found'}), 404
+    task_types.pop(str(type_id))
+    current_user.task_types = task_types
+    db.session.add(current_user)
+    db.session.commit()
+    return jsonify({'result': 'deleted'})

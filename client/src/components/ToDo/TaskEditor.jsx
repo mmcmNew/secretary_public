@@ -24,8 +24,10 @@ import dayjs from "dayjs";
 import { renderTimeViewClock } from "@mui/x-date-pickers";
 import ColorPicker from "../ColorPicker";
 import NewRecordDialog from "../JournalEditor/NewRecordDialog";
+import TaskTypeDialog from "../TaskTypeManager/TaskTypeDialog.jsx";
 import PropTypes from "prop-types";
 import useTasks from "./hooks/useTasks";
+
 
 function TaskDetails({
     taskFields,
@@ -41,7 +43,10 @@ function TaskDetails({
     const [subTasks, setSubTasks] = useState({});
     const [newSubTask, setNewSubTask] = useState("");
     const [newRecordDialogOpen, setNewRecordDialogOpen] = useState(false);
-    const { fetchCalendarEvents } = useTasks();
+    const [typeDialogOpen, setTypeDialogOpen] = useState(false);
+    const [newTypeData, setNewTypeData] = useState({ name: '', color: '#3788D8', description: '' });
+    const updateNewTypeData = (field, value) => setNewTypeData(prev => ({ ...prev, [field]: value }));
+    const { fetchCalendarEvents, addTaskType } = useTasks();
 
     const taskMap = useMemo(() => new Map(tasks.map(t => [t.id, t])), [tasks]);
     const task = taskMap.get(+selectedTaskId) || null;
@@ -290,16 +295,22 @@ function TaskDetails({
                                     </FormControl>
                                 ) : field.type === 'select' ? (
                                     <Autocomplete
-                                        options={field.groupBy ? [...field.options].sort((a, b) => {
+                                        options={(key === 'type_id' ? [...field.options, { value: '__add__', label: 'Добавить тип...' }] : field.options).sort((a, b) => {
                                             const ga = a.groupLabel || '';
                                             const gb = b.groupLabel || '';
                                             if (ga !== gb) return ga.localeCompare(gb);
                                             return (a.label || '').localeCompare(b.label || '');
-                                        }) : field.options}
+                                        })}
                                         groupBy={field.groupBy ? opt => opt.groupLabel || 'Без группы' : undefined}
                                         getOptionLabel={opt => opt.label || ''}
                                         value={field.options.find(opt => opt.value === fields[key]) || null}
-                                        onChange={(e, nv) => handleUpdate(key, nv ? nv.value : null)}
+                                        onChange={(e, nv) => {
+                                            if (key === 'type_id' && nv && nv.value === '__add__') {
+                                                setTypeDialogOpen(true);
+                                            } else {
+                                                handleUpdate(key, nv ? nv.value : null);
+                                            }
+                                        }}
                                         renderInput={(params) => <TextField {...params} label={field.name} />}
                                     />
                                 ) : field.type === 'text' ? (
@@ -359,6 +370,21 @@ function TaskDetails({
                     })}
             </Paper>
             <NewRecordDialog open={newRecordDialogOpen} handleClose={() => setNewRecordDialogOpen(false)} taskId={selectedTaskId} />
+            <TaskTypeDialog
+                open={typeDialogOpen}
+                onClose={() => setTypeDialogOpen(false)}
+                data={newTypeData}
+                onChange={updateNewTypeData}
+                onSave={async () => {
+                    try {
+                        await addTaskType(newTypeData);
+                    } catch (err) {
+                        console.error('Failed to add task type', err);
+                    } finally {
+                        setTypeDialogOpen(false);
+                    }
+                }}
+            />
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 1 }}>
                 <Button variant="outlined" color="error" onClick={handleDeleteTask}>
                     Удалить задачу
