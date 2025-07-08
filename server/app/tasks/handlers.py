@@ -117,7 +117,6 @@ def get_tasks(list_id, client_timezone=0):
     seen_tasks = set()  # Множество для отслеживания уникальных идентификаторов задач
     load_options = [db.joinedload(Task.lists),
                     db.joinedload(Task.subtasks),
-                    db.joinedload(Task.type),
                     db.joinedload(Task.status),
                     db.joinedload(Task.priority),
                     db.joinedload(Task.interval),

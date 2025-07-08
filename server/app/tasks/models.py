@@ -323,71 +323,6 @@ class List(db.Model):
         }
 
 
-class TaskTypeGroup(db.Model):
-    __tablename__ = 'task_type_groups'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255))
-    color = db.Column(db.String(20))
-    order = db.Column(db.Integer, default=0)
-    is_active = db.Column(db.Boolean, default=True)
-    description = db.Column(db.Text)
-
-    task_types = db.relationship(
-        "TaskType", back_populates="group", cascade="all, delete"
-    )
-
-
-class TaskType(db.Model):
-    __tablename__ = 'task_types'
-
-    id = db.Column('TaskTypeID', db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column('Name', db.String(255))
-    group_id = db.Column('GroupID', db.Integer, db.ForeignKey('task_type_groups.id'))
-    color = db.Column('Color', db.String(20))
-    is_active = db.Column('IsActive', db.Boolean, default=True)
-    order = db.Column('Order', db.Integer, default=0)
-    description = db.Column('Description', db.Text)
-
-    group = db.relationship("TaskTypeGroup", back_populates="task_types")
-
-    @staticmethod
-    def add_initial_task_types():
-        pass
-
-    #     # Проверяем, есть ли пользователи уже в базе данных
-    #     if not TaskTypes.query.all():  # если база пуста
-    #         task_types = [
-    #             TaskTypes(period_type="productive", task_type="work", type_name="Продуктивная работа",
-    #                       type_color="green", type_icon="work", group_label="Рабочее время"),
-    #             TaskTypes(period_type="everyday", task_type="work", type_name="Повседневные задачи", type_color="green",
-    #                       type_icon="work", group_label="Рабочее время"),
-    #             TaskTypes(period_type="break", task_type="rest", type_name="Перерыв", type_color="green",
-    #                       type_icon="rest", group_label="Отдых"),
-    #             TaskTypes(period_type="lunch", task_type="rest", type_name="Обед", type_color="green", type_icon="rest",
-    #                       group_label="Отдых"),
-    #             TaskTypes(period_type="study", task_type="study", type_name="Учеба", type_color="green",
-    #                       type_icon="study", group_label="Учеба"),
-    #         ]
-    #         db.session.bulk_save_objects(task_types)
-    #         db.session.commit()
-    #         current_app.logger.info("Initial task types added.")
-    #     else:
-    #         pass
-    #         # current_app.logger.info("Task types already exist.")
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'group_id': self.group_id,
-            'color': self.color,
-            'is_active': self.is_active,
-            'order': self.order,
-            'description': self.description,
-            'group': self.group.name if self.group else None,
-        }
-
 
 class Task(db.Model):
     __tablename__ = 'tasks'
@@ -402,13 +337,12 @@ class Task(db.Model):
     note = db.Column('Note', db.Text)
     childes_order = db.Column('ChildesOrder', db.JSON, default=[])
     color = db.Column('Color', db.String(20))
-    type_id = db.Column('TaskTypeID', db.Integer, db.ForeignKey('task_types.id'))
+    type_id = db.Column('TaskTypeID', db.Integer)
     status_id = db.Column('StatusID', db.Integer, db.ForeignKey('statuses.StatusID'), default=1)
     priority_id = db.Column('PriorityID', db.Integer, db.ForeignKey('priorities.PriorityID'))
     interval_id = db.Column('IntervalID', db.Integer, db.ForeignKey('intervals.IntervalID'))
     is_infinite = db.Column('IsInfinite', db.Boolean, default=False)
 
-    type = db.relationship('TaskType', backref='tasks', foreign_keys=[type_id])
     status = db.relationship('Status', backref='tasks', foreign_keys=[status_id])
     priority = db.relationship('Priority', backref='tasks', foreign_keys=[priority_id])
     interval = db.relationship('Interval', backref='tasks', foreign_keys=[interval_id])
@@ -423,6 +357,11 @@ class Task(db.Model):
     lists = db.relationship('List', secondary=task_list_relations, back_populates='tasks')
 
     def to_dict(self):
+        user = User.query.get(self.user_id)
+        type_data = None
+        if user and user.task_types:
+            type_data = user.task_types.get(str(self.type_id))
+
         task_dict = {
             'id': self.id,
             'title': self.title,
@@ -438,7 +377,7 @@ class Task(db.Model):
             'interval_id': self.interval_id,
             'is_infinite': self.is_infinite,
             'type_id': self.type_id,
-            'type': self.type.to_dict() if self.type else None,
+            'type': type_data,
             'color': self.color,  # '#008000' if self.status_id == 2 else self.color,
             'lists_ids': [lst.id for lst in self.lists],
             # 'subtasks': [subtask.to_dict() for subtask in self.subtasks],
@@ -515,7 +454,6 @@ class Task(db.Model):
 
         load_options = [
             joinedload(Task.lists),
-            joinedload(Task.type),
             joinedload(Task.status),
             joinedload(Task.priority),
             joinedload(Task.interval),
@@ -597,16 +535,20 @@ class AntiTask(db.Model):
     end = db.Column('End', db.DateTime)
     note = db.Column('Note', db.Text)
     color = db.Column('Color', db.String(20))
-    type_id = db.Column('TaskTypeID', db.Integer, db.ForeignKey('task_types.id', name="fk_anti_type"))
+    type_id = db.Column('TaskTypeID', db.Integer)
     status_id = db.Column('StatusID', db.Integer, db.ForeignKey('statuses.StatusID'), default=1)
     is_background = db.Column('IsBackground', db.Boolean, default=False)
     files = db.Column('Files', db.Text)
 
     task = db.relationship('Task', backref='anti_tasks', foreign_keys=[task_id])
-    type = db.relationship('TaskType', backref='anti_tasks', foreign_keys=[type_id])
     status = db.relationship('Status', backref='anti_tasks', foreign_keys=[status_id])
 
     def to_dict(self):
+        user = User.query.get(self.user_id)
+        type_data = None
+        if user and user.task_types:
+            type_data = user.task_types.get(str(self.type_id))
+
         task_dict = {
             'id': self.id,
             'task_id': self.task_id,
@@ -619,7 +561,7 @@ class AntiTask(db.Model):
             'is_background': self.is_background,
             'type_id': self.type_id,
             'color': self.color,
-            'type': self.type.to_dict() if self.type else None,
+            'type': type_data,
             'files': self.files
         }
         if self.is_background:
@@ -636,7 +578,6 @@ class AntiTask(db.Model):
                 user_id = None
         load_options = [
             joinedload(AntiTask.task),
-            joinedload(AntiTask.type),
             joinedload(AntiTask.status)
         ]
 
