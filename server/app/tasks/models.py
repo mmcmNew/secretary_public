@@ -9,7 +9,6 @@ import random
 import uuid
 
 from app import db
-from app.main.models import User
 
 # Вспомогательные таблицы для связи между задачами и подзадачами
 task_subtasks_relations = db.Table('task_subtasks_relations',
@@ -153,6 +152,54 @@ class Interval(db.Model):
         else:
             pass
             # current_app.logger.info("Intervals already exist.")
+
+
+class TaskTypeGroup(db.Model):
+    __tablename__ = 'task_type_groups'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=False)
+    name = db.Column(db.String(255))
+    color = db.Column(db.String(20))
+    order = db.Column(db.Integer)
+    is_active = db.Column(db.Boolean, default=True)
+    description = db.Column(db.Text)
+
+    task_types = db.relationship('TaskType', backref='group', cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name': self.name,
+            'color': self.color,
+            'order': self.order,
+            'is_active': self.is_active,
+            'description': self.description,
+        }
+
+
+class TaskType(db.Model):
+    __tablename__ = 'task_types'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('task_type_groups.id'))
+    name = db.Column(db.String(255))
+    color = db.Column(db.String(20))
+    order = db.Column(db.Integer)
+    is_active = db.Column(db.Boolean, default=True)
+    description = db.Column(db.Text)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'group_id': self.group_id,
+            'name': self.name,
+            'color': self.color,
+            'order': self.order,
+            'is_active': self.is_active,
+            'description': self.description,
+        }
 
 
 class Status(db.Model):
@@ -337,7 +384,7 @@ class Task(db.Model):
     note = db.Column('Note', db.Text)
     childes_order = db.Column('ChildesOrder', db.JSON, default=[])
     color = db.Column('Color', db.String(20))
-    type_id = db.Column('TaskTypeID', db.Integer)
+    type_id = db.Column('TaskTypeID', db.Integer, db.ForeignKey('task_types.id'))
     status_id = db.Column('StatusID', db.Integer, db.ForeignKey('statuses.StatusID'), default=1)
     priority_id = db.Column('PriorityID', db.Integer, db.ForeignKey('priorities.PriorityID'))
     interval_id = db.Column('IntervalID', db.Integer, db.ForeignKey('intervals.IntervalID'))
@@ -357,10 +404,11 @@ class Task(db.Model):
     lists = db.relationship('List', secondary=task_list_relations, back_populates='tasks')
 
     def to_dict(self):
-        user = User.query.get(self.user_id)
         type_data = None
-        if user and user.task_types:
-            type_data = user.task_types.get(str(self.type_id))
+        if self.type_id:
+            type_obj = TaskType.query.get(self.type_id)
+            if type_obj:
+                type_data = type_obj.to_dict()
 
         task_dict = {
             'id': self.id,
@@ -535,7 +583,7 @@ class AntiTask(db.Model):
     end = db.Column('End', db.DateTime)
     note = db.Column('Note', db.Text)
     color = db.Column('Color', db.String(20))
-    type_id = db.Column('TaskTypeID', db.Integer)
+    type_id = db.Column('TaskTypeID', db.Integer, db.ForeignKey('task_types.id'))
     status_id = db.Column('StatusID', db.Integer, db.ForeignKey('statuses.StatusID'), default=1)
     is_background = db.Column('IsBackground', db.Boolean, default=False)
     files = db.Column('Files', db.Text)
@@ -544,10 +592,11 @@ class AntiTask(db.Model):
     status = db.relationship('Status', backref='anti_tasks', foreign_keys=[status_id])
 
     def to_dict(self):
-        user = User.query.get(self.user_id)
         type_data = None
-        if user and user.task_types:
-            type_data = user.task_types.get(str(self.type_id))
+        if self.type_id:
+            type_obj = TaskType.query.get(self.type_id)
+            if type_obj:
+                type_data = type_obj.to_dict()
 
         task_dict = {
             'id': self.id,
