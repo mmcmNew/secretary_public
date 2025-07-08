@@ -7,7 +7,8 @@ from .handlers import (get_lists_and_groups_data, add_object, add_task, edit_lis
                        link_group_list, delete_from_childes, link_task, get_anti_schedule,
                        add_anti_task, edit_anti_task, del_anti_task)
 from .versioning import check_version
-from .models import DataVersion, TaskType, TaskTypeGroup
+from .models import DataVersion
+from flask_jwt_extended import current_user
 from app.socketio_utils import notify_data_update, notify_task_change
 
 
@@ -243,24 +244,8 @@ def get_fields_config():
         "note": {"id": 16, "type": "text", "name": "Заметка"}
     }
 
-    # Получение типов задач из БД
-    task_types = (
-        TaskType.query.outerjoin(TaskTypeGroup)
-        .filter(TaskType.is_active == True)
-        .order_by(TaskType.order)
-        .all()
-    )
-    types_list = [
-        {
-            "value": task_type.id,
-            "label": task_type.name,
-            "groupLabel": task_type.group.name if task_type.group else None,
-            "color": task_type.color,
-            "description": task_type.description,
-        }
-        for task_type in task_types
-    ]
-
-    fields["type_id"]["options"] = types_list
+    # Пользователь хранит task_types словарем: {id: {name, color, description}}
+    # Клиент теперь также ожидает словарь, чтобы сортировать опции по id
+    fields["type_id"]["options"] = current_user.task_types or {}
 
     return jsonify(fields)

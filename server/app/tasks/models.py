@@ -3,26 +3,6 @@ from dateutil.rrule import rrule, rruleset, WEEKLY, DAILY, MONTHLY, YEARLY, MO, 
 from flask import current_app
 from flask_jwt_extended import current_user
 from sqlalchemy.orm import joinedload
-
-
-def get_task_type_info(type_id):
-    """Return task type info dictionary for given id using current_user cache."""
-    try:
-        cache = getattr(current_user, "_task_types_cache", None)
-    except Exception:
-        cache = None
-
-    if cache is None:
-        try:
-            cache = {t.id: t.to_dict() for t in TaskType.query.all()}
-            try:
-                setattr(current_user, "_task_types_cache", cache)
-            except Exception:
-                pass
-        except Exception:
-            cache = {}
-
-    return cache.get(type_id)
 import hashlib
 import json
 import random

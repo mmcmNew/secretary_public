@@ -92,7 +92,9 @@ export default function AntiScheduleLayout({
           type: "select",
           name: "Тип задачи",
           groupBy: 'type',
-          options: taskFields.type_id.options || [],
+          options: Object.entries(taskFields.type_id.options || {})
+            .map(([id, info]) => ({ value: +id, ...(info || {}) }))
+            .sort((a, b) => a.value - b.value),
         },
         divider3: { type: "divider" },
         files: { type: "string", name: "Добавить файл" },

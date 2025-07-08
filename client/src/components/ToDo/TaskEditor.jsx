@@ -290,15 +290,26 @@ function TaskDetails({
                                     </FormControl>
                                 ) : field.type === 'select' ? (
                                     <Autocomplete
-                                        options={field.groupBy ? [...field.options].sort((a, b) => {
-                                            const ga = a.groupLabel || '';
-                                            const gb = b.groupLabel || '';
-                                            if (ga !== gb) return ga.localeCompare(gb);
-                                            return (a.label || '').localeCompare(b.label || '');
-                                        }) : field.options}
+                                        options={(Array.isArray(field.options)
+                                            ? field.options
+                                            : Object.entries(field.options || {})
+                                                  .map(([val, o]) => ({ value: +val, ...(o || {}) }))
+                                                  .sort((a, b) => a.value - b.value))
+                                            .sort((a, b) => {
+                                                if (!field.groupBy) return 0;
+                                                const ga = a.groupLabel || '';
+                                                const gb = b.groupLabel || '';
+                                                if (ga !== gb) return ga.localeCompare(gb);
+                                                return (a.label || '').localeCompare(b.label || '');
+                                            })}
                                         groupBy={field.groupBy ? opt => opt.groupLabel || 'Без группы' : undefined}
                                         getOptionLabel={opt => opt.label || ''}
-                                        value={field.options.find(opt => opt.value === fields[key]) || null}
+                                        value={(Array.isArray(field.options)
+                                            ? field.options
+                                            : Object.entries(field.options || {})
+                                                  .map(([val, o]) => ({ value: +val, ...(o || {}) }))
+                                                  .find(opt => opt.value === fields[key])
+                                            ) || null}
                                         onChange={(e, nv) => handleUpdate(key, nv ? nv.value : null)}
                                         renderInput={(params) => <TextField {...params} label={field.name} />}
                                     />
