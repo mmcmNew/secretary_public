@@ -338,13 +338,12 @@ class Task(db.Model):
     note = db.Column('Note', db.Text)
     childes_order = db.Column('ChildesOrder', db.JSON, default=[])
     color = db.Column('Color', db.String(20))
-    type_id = db.Column('TaskTypeID', db.Integer, db.ForeignKey('task_types.id'))
+    type_id = db.Column('TaskTypeID', db.Integer)
     status_id = db.Column('StatusID', db.Integer, db.ForeignKey('statuses.StatusID'), default=1)
     priority_id = db.Column('PriorityID', db.Integer, db.ForeignKey('priorities.PriorityID'))
     interval_id = db.Column('IntervalID', db.Integer, db.ForeignKey('intervals.IntervalID'))
     is_infinite = db.Column('IsInfinite', db.Boolean, default=False)
 
-    type = db.relationship('TaskType', backref='tasks', foreign_keys=[type_id])
     status = db.relationship('Status', backref='tasks', foreign_keys=[status_id])
     priority = db.relationship('Priority', backref='tasks', foreign_keys=[priority_id])
     interval = db.relationship('Interval', backref='tasks', foreign_keys=[interval_id])
@@ -359,6 +358,11 @@ class Task(db.Model):
     lists = db.relationship('List', secondary=task_list_relations, back_populates='tasks')
 
     def to_dict(self):
+        user = User.query.get(self.user_id)
+        type_data = None
+        if user and user.task_types:
+            type_data = user.task_types.get(str(self.type_id))
+
         task_dict = {
             'id': self.id,
             'title': self.title,
@@ -374,7 +378,7 @@ class Task(db.Model):
             'interval_id': self.interval_id,
             'is_infinite': self.is_infinite,
             'type_id': self.type_id,
-            'type': self.type.to_dict() if self.type else None,
+            'type': type_data,
             'color': self.color,  # '#008000' if self.status_id == 2 else self.color,
             'lists_ids': [lst.id for lst in self.lists],
             # 'subtasks': [subtask.to_dict() for subtask in self.subtasks],
@@ -451,7 +455,6 @@ class Task(db.Model):
 
         load_options = [
             joinedload(Task.lists),
-            joinedload(Task.type),
             joinedload(Task.status),
             joinedload(Task.priority),
             joinedload(Task.interval),
@@ -533,16 +536,20 @@ class AntiTask(db.Model):
     end = db.Column('End', db.DateTime)
     note = db.Column('Note', db.Text)
     color = db.Column('Color', db.String(20))
-    type_id = db.Column('TaskTypeID', db.Integer, db.ForeignKey('task_types.id', name="fk_anti_type"))
+    type_id = db.Column('TaskTypeID', db.Integer)
     status_id = db.Column('StatusID', db.Integer, db.ForeignKey('statuses.StatusID'), default=1)
     is_background = db.Column('IsBackground', db.Boolean, default=False)
     files = db.Column('Files', db.Text)
 
     task = db.relationship('Task', backref='anti_tasks', foreign_keys=[task_id])
-    type = db.relationship('TaskType', backref='anti_tasks', foreign_keys=[type_id])
     status = db.relationship('Status', backref='anti_tasks', foreign_keys=[status_id])
 
     def to_dict(self):
+        user = User.query.get(self.user_id)
+        type_data = None
+        if user and user.task_types:
+            type_data = user.task_types.get(str(self.type_id))
+
         task_dict = {
             'id': self.id,
             'task_id': self.task_id,
@@ -555,7 +562,7 @@ class AntiTask(db.Model):
             'is_background': self.is_background,
             'type_id': self.type_id,
             'color': self.color,
-            'type': self.type.to_dict() if self.type else None,
+            'type': type_data,
             'files': self.files
         }
         if self.is_background:
@@ -572,7 +579,6 @@ class AntiTask(db.Model):
                 user_id = None
         load_options = [
             joinedload(AntiTask.task),
-            joinedload(AntiTask.type),
             joinedload(AntiTask.status)
         ]
 
