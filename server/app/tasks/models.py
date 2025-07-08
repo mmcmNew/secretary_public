@@ -3,6 +3,26 @@ from dateutil.rrule import rrule, rruleset, WEEKLY, DAILY, MONTHLY, YEARLY, MO, 
 from flask import current_app
 from flask_jwt_extended import current_user
 from sqlalchemy.orm import joinedload
+
+
+def get_task_type_info(type_id):
+    """Return task type info dictionary for given id using current_user cache."""
+    try:
+        cache = getattr(current_user, "_task_types_cache", None)
+    except Exception:
+        cache = None
+
+    if cache is None:
+        try:
+            cache = {t.id: t.to_dict() for t in TaskType.query.all()}
+            try:
+                setattr(current_user, "_task_types_cache", cache)
+            except Exception:
+                pass
+        except Exception:
+            cache = {}
+
+    return cache.get(type_id)
 import hashlib
 import json
 import random
@@ -438,7 +458,7 @@ class Task(db.Model):
             'interval_id': self.interval_id,
             'is_infinite': self.is_infinite,
             'type_id': self.type_id,
-            'type': self.type.to_dict() if self.type else None,
+            'type': get_task_type_info(self.type_id),
             'color': self.color,  # '#008000' if self.status_id == 2 else self.color,
             'lists_ids': [lst.id for lst in self.lists],
             # 'subtasks': [subtask.to_dict() for subtask in self.subtasks],
@@ -515,7 +535,6 @@ class Task(db.Model):
 
         load_options = [
             joinedload(Task.lists),
-            joinedload(Task.type),
             joinedload(Task.status),
             joinedload(Task.priority),
             joinedload(Task.interval),
@@ -619,7 +638,7 @@ class AntiTask(db.Model):
             'is_background': self.is_background,
             'type_id': self.type_id,
             'color': self.color,
-            'type': self.type.to_dict() if self.type else None,
+            'type': get_task_type_info(self.type_id),
             'files': self.files
         }
         if self.is_background:
@@ -636,7 +655,6 @@ class AntiTask(db.Model):
                 user_id = None
         load_options = [
             joinedload(AntiTask.task),
-            joinedload(AntiTask.type),
             joinedload(AntiTask.status)
         ]
 
