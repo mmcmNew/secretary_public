@@ -351,31 +351,6 @@ class TaskType(db.Model):
 
     group = db.relationship("TaskTypeGroup", back_populates="task_types")
 
-    @staticmethod
-    def add_initial_task_types():
-        pass
-
-    #     # Проверяем, есть ли пользователи уже в базе данных
-    #     if not TaskTypes.query.all():  # если база пуста
-    #         task_types = [
-    #             TaskTypes(period_type="productive", task_type="work", type_name="Продуктивная работа",
-    #                       type_color="green", type_icon="work", group_label="Рабочее время"),
-    #             TaskTypes(period_type="everyday", task_type="work", type_name="Повседневные задачи", type_color="green",
-    #                       type_icon="work", group_label="Рабочее время"),
-    #             TaskTypes(period_type="break", task_type="rest", type_name="Перерыв", type_color="green",
-    #                       type_icon="rest", group_label="Отдых"),
-    #             TaskTypes(period_type="lunch", task_type="rest", type_name="Обед", type_color="green", type_icon="rest",
-    #                       group_label="Отдых"),
-    #             TaskTypes(period_type="study", task_type="study", type_name="Учеба", type_color="green",
-    #                       type_icon="study", group_label="Учеба"),
-    #         ]
-    #         db.session.bulk_save_objects(task_types)
-    #         db.session.commit()
-    #         current_app.logger.info("Initial task types added.")
-    #     else:
-    #         pass
-    #         # current_app.logger.info("Task types already exist.")
-
     def to_dict(self):
         return {
             'id': self.id,
