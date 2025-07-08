@@ -13,8 +13,8 @@ from app.main.models import User
 
 # Вспомогательные таблицы для связи между задачами и подзадачами
 task_subtasks_relations = db.Table('task_subtasks_relations',
-                                   db.Column('TaskID', db.Integer, db.ForeignKey('tasks.TaskID')),
-                                   db.Column('SubtaskID', db.Integer, db.ForeignKey('tasks.TaskID')))
+                                   db.Column('TaskID', db.Integer, db.ForeignKey('tasks.TaskID'), primary_key=True),
+                                   db.Column('SubtaskID', db.Integer, db.ForeignKey('tasks.TaskID'), primary_key=True))
 
 # Вспомогательные таблицы для связи между задачами и проектами
 task_project_relations = db.Table('task_project_relations',
