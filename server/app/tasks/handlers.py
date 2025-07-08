@@ -21,20 +21,26 @@ from collections import defaultdict
 
 
 def get_lists_and_groups_data(client_timezone=0):
+    from collections import defaultdict
+
     user_id = current_user.id
+    client_timezone = int(client_timezone)
+
+    # --- Предзагрузка данных
     groups_list = Group.query.filter_by(user_id=user_id).all()
     lists_list = List.query.filter_by(user_id=user_id).all()
     projects_list = Project.query.filter_by(user_id=user_id).all()
-
     tasks = Task.query.options(db.joinedload(Task.lists)).filter_by(user_id=user_id).all()
+
+    # --- Карты для ускоренного доступа
     tasks_map = {task.id: task for task in tasks}
+    lists_map = {lst.id: lst for lst in lists_list}
 
-    client_timezone = int(client_timezone)
+    # --- Получение задач "Мой день"
+    my_day_tasks = Task.get_myday_tasks(client_timezone=client_timezone, user_id=user_id)
 
+    # --- Default lists
     default_lists = []
-    my_day_tasks = Task.get_myday_tasks(client_timezone)
-
-    # ==== Default lists из уже полученных задач ====
     tasks_without_lists = [task for task in tasks if not task.lists]
     important_tasks = [task for task in tasks if task.priority_id == 3]
     background_tasks = [task for task in tasks if task.is_background]
@@ -45,60 +51,53 @@ def get_lists_and_groups_data(client_timezone=0):
         ('important', 'Важные', important_tasks),
         ('background', 'Фоновые задачи', background_tasks),
     ]:
+        unfinished = len([t for t in task_list if t.status_id != 2])
         default_lists.append({
             'id': list_id,
             'title': title,
             'type': 'list',
             'children': [],
-            'unfinished_tasks_count': sum(1 for task in task_list if task.status_id != 2),
+            'unfinished_tasks_count': unfinished,
             'childes_order': [task.id for task in task_list]
         })
 
-    # ==== Подсчёт unfinished по спискам ====
+    # --- Подсчёт unfinished по спискам
     unfinished_per_list = defaultdict(int)
-    for lst in lists_list:
-        for task_id in lst.childes_order:
-            task = tasks_map.get(task_id)
-            if task and task.status_id != 2:  # Проверяем что задача незавершена
-                # Считаем unfinished не только для текущего списка, но и для всех списков задачи
-                for list_ in task.lists:
-                    unfinished_per_list[list_.id] += 1
+    for task in tasks:
+        if task.status_id != 2:
+            for lst in task.lists:
+                unfinished_per_list[lst.id] += 1
 
-    # ==== Подсчёт unfinished по группам ====
+    # --- Подсчёт unfinished по группам
     unfinished_per_group = defaultdict(int)
     for group in groups_list:
-        for list_id in group.childes_order:
-            unfinished_per_group[group.id] += unfinished_per_list.get(list_id, 0)
+        unfinished_per_group[group.id] = group.unfinished_tasks_count(lists_map=lists_map, tasks_map=tasks_map)
 
-    # ==== Подсчёт unfinished по проектам ====
+    # --- Подсчёт unfinished по проектам
     unfinished_per_project = defaultdict(int)
     for project in projects_list:
-        # Считаем незавершённые задачи из списков проекта
         for lst in project.lists:
             unfinished_per_project[project.id] += unfinished_per_list.get(lst.id, 0)
-        # Считаем незавершённые задачи из групп проекта
         for group in project.groups:
             unfinished_per_project[project.id] += unfinished_per_group.get(group.id, 0)
 
-    # ==== Генерация словарей ====
-    groups_dict = []
-    for group in groups_list:
-        d = group.to_dict()
-        d['unfinished_tasks_count'] = unfinished_per_group.get(group.id, 0)
-        groups_dict.append(d)
+    # --- Словари для UI
+    groups_dict = [
+        {**group.to_dict(), 'unfinished_tasks_count': unfinished_per_group.get(group.id, 0)}
+        for group in groups_list
+    ]
 
-    lists_dict = []
-    for lst in lists_list:
-        d = lst.to_dict()
-        d['unfinished_tasks_count'] = unfinished_per_list.get(lst.id, 0)
-        lists_dict.append(d)
+    lists_dict = [
+        {**lst.to_dict(), 'unfinished_tasks_count': unfinished_per_list.get(lst.id, 0)}
+        for lst in lists_list
+    ]
 
-    projects_dict = []
-    for project in projects_list:
-        d = project.to_dict()
-        d['unfinished_tasks_count'] = unfinished_per_project.get(project.id, 0)
-        projects_dict.append(d)
+    projects_dict = [
+        {**project.to_dict(), 'unfinished_tasks_count': unfinished_per_project.get(project.id, 0)}
+        for project in projects_list
+    ]
 
+    # --- Сортировка
     combined = groups_dict + lists_dict
     sorted_combined = sorted(combined, key=lambda x: x['order'])
     sorted_projects = sorted(projects_dict, key=lambda x: x['order'])

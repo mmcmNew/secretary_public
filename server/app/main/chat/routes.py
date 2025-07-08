@@ -4,9 +4,10 @@ from flask_jwt_extended import jwt_required
 
 from app import socketio
 from ..models import User, ChatHistory
-from ..handlers import fetch_table_records, save_and_emit_message
+from ..handlers import save_and_emit_message
 from app.secretary import answer_from_secretary
 from app.db_utils import update_record
+import json
 
 from . import chat_bp
 

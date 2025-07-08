@@ -450,51 +450,50 @@ class Task(db.Model):
         return task_dict
 
     def build_rrule(self):
-        """Создает rrule для задачи на основе интервала и даты старта."""
         if not self.interval_id or not self.start:
             return None
 
         interval_mapping = {
-            1: DAILY,  # День
-            2: WEEKLY,  # Неделя
-            3: MONTHLY,  # Месяц
-            4: YEARLY,  # Год
-            5: WEEKLY  # Для рабочих дней
+            1: DAILY,
+            2: WEEKLY,
+            3: MONTHLY,
+            4: YEARLY,
+            5: WEEKLY  # рабочие дни тоже weekly, но с byweekday
         }
 
-        # Определяем частоту повторения
         freq = interval_mapping.get(self.interval_id)
-
-        # Условия для конечной даты, если задача не бесконечная
         until_date = self.end if not self.is_infinite else None
 
-        # Формируем rrule
-        if self.interval_id == 5:
-            # Если интервал — рабочие дни (понедельник - пятница)
-            rule = rrule(freq=WEEKLY, dtstart=self.start, until=until_date, byweekday=(MO, TU, WE, TH, FR))
-        else:
-            # Обычное правило для других интервалов
-            rule = rrule(freq=freq, dtstart=self.start, until=until_date)
+        kwargs = {
+            'freq': freq,
+            'dtstart': self.start,
+            'until': until_date,
+        }
 
-        return rule
+        if self.interval_id == 5:
+            kwargs['byweekday'] = (MO, TU, WE, TH, FR)
+
+        return rrule(**kwargs)
 
     @staticmethod
     def get_myday_tasks(client_timezone=0, user_id=None):
-        """Получает задачи на 'Мой день', включая повторяющиеся события."""
-        client_timezone = int(client_timezone) * -1
+        client_timezone_offset = timedelta(minutes=-int(client_timezone))
+
         if user_id is None:
             try:
                 user_id = current_user.id
             except Exception:
                 user_id = None
 
-        today_local = datetime.now(timezone.utc) + timedelta(minutes=client_timezone)
-        start_of_day = datetime.combine(today_local, datetime.min.time()) - timedelta(minutes=client_timezone)
-        end_of_day = datetime.combine(today_local, datetime.max.time()) - timedelta(minutes=client_timezone)
-        # current_app.logger.info(f'Client timezone: {client_timezone}, Local time: {today_local}')
-        # current_app.logger.info(f'start_of_day: {start_of_day}, end_of_day: {end_of_day}')
+        # Локальное «сегодня» в UTC
+        now_local = datetime.now(timezone.utc) + client_timezone_offset
+        start_of_day = datetime.combine(now_local.date(), datetime.min.time())
+        end_of_day = datetime.combine(now_local.date(), datetime.max.time())
 
-        # Предзагружаем связи, чтобы избежать N+1 запросов
+        # Смещение обратно в UTC
+        start_utc = start_of_day - client_timezone_offset
+        end_utc = end_of_day - client_timezone_offset
+
         load_options = [
             joinedload(Task.lists),
             joinedload(Task.type),
@@ -504,48 +503,39 @@ class Task(db.Model):
             joinedload(Task.subtasks)
         ]
 
-        # Фильтруем задачи, которые начинаются сегодня (без учета повторений)
-        tasks_query = Task.query.options(*load_options).filter(
-            Task.start >= start_of_day,
-            Task.start < end_of_day,
+        # Обычные задачи на сегодня
+        query = Task.query.options(*load_options).filter(
+            Task.start >= start_utc,
+            Task.start < end_utc
         )
-        if user_id is not None:
-            tasks_query = tasks_query.filter_by(user_id=user_id)
-        tasks = tasks_query.all()
+        if user_id:
+            query = query.filter(Task.user_id == user_id)
 
-        # Получаем все задачи с интервалом (повторяющиеся)
+        today_tasks = query.all()
+
+        # Повторяющиеся задачи
         recurring_query = Task.query.options(*load_options).filter(
-            Task.interval_id.isnot(None),  # Установлен интервал
-            Task.start.isnot(None),  # Установлена дата начала
-            Task.status_id != 2  # Только невыполненные задачи
+            Task.interval_id.isnot(None),
+            Task.start.isnot(None),
+            Task.status_id != 2
         )
-        if user_id is not None:
-            recurring_query = recurring_query.filter_by(user_id=user_id)
+        if user_id:
+            recurring_query = recurring_query.filter(Task.user_id == user_id)
+
         recurring_tasks = recurring_query.all()
 
-        # Обрабатываем повторяющиеся задачи
         for task in recurring_tasks:
             rule = task.build_rrule()
-            if rule:
-                # Проверяем, есть ли повторяющиеся события на текущую дату
-                occurrences = rule.between(start_of_day, end_of_day, inc=True)
-                # current_app.logger.info(f'start_of_day: {start_of_day}, end_of_day: {end_of_day}, rule: {rule} '
-                #                         f'occurrences: {occurrences}')
-                if occurrences:
-                    tasks.append(task)
-                    # current_app.logger.info(f'tasks: {tasks}')
+            if rule and rule.between(start_utc, end_utc, inc=True):
+                today_tasks.append(task)
 
-        # current_app.logger.info(f'unsorted_tasks: {tasks}')
+        # Удалить дубли
+        unique_tasks = list({task.id: task for task in today_tasks}.values())
 
-        # удалить повторяющиеся задачи, если они уже есть в списке
-        tasks = list(set(tasks))
-        # current_app.logger.info(f'clear_unsorted_tasks: {tasks}')
+        # Сортировка по времени начала
+        unique_tasks.sort(key=lambda t: t.start.time() if t.start else datetime.min.time())
 
-        # Отсортировать по start
-        tasks.sort(key=lambda x: x.start.time())
-        # current_app.logger.info(f'sorted_tasks: {tasks}')
-
-        return tasks
+        return unique_tasks
 
     def get_rrule(self):
         if not self.interval_id or not self.start:
