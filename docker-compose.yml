@@ -9,5 +9,21 @@ services:
       - ./data/user_data:/app/app/user_data
       - ./data/logs:/app/logs
     environment:
-      - FLASK_ENV=production
+      - FLASK_ENV=production      - DATABASE_URL=postgresql+psycopg2://secretary:secretary@postgres/secretary_db
     restart: unless-stopped
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=secretary
+      - POSTGRES_PASSWORD=secretary
+      - POSTGRES_DB=secretary_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+

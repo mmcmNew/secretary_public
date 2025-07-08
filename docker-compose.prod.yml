@@ -12,7 +12,10 @@ services:
       - FLASK_ENV=production
       - PYTHONPATH=/app
       - CONFIG_TYPE=production
+      - DATABASE_URL=postgresql+psycopg2://secretary:secretary@postgres/secretary_db
     restart: unless-stopped
+    depends_on:
+      - postgres
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:5100/ || exit 1"]
       interval: 30s
@@ -31,6 +34,16 @@ services:
       - secretary-app
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=secretary
+      - POSTGRES_PASSWORD=secretary
+      - POSTGRES_DB=secretary_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
 volumes:
-  secretary_user_data:
-  secretary_logs:
+  secretary_user_data:  secretary_logs:
+  postgres_data:

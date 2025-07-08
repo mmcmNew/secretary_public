@@ -7,7 +7,13 @@ The backend runs on Flask and is available by default at `https://localhost:5100
 ## Running the backend
 
 ```bash
-python server/manage.py --mode development
+python server/run.py --mode development
+```
+
+To run with PostgreSQL via Docker:
+
+```bash
+docker-compose up
 ```
 
 ## Running the React client
@@ -29,3 +35,9 @@ used by the AI routes:
 - `AI_IMAGE_WEBHOOK_URL` – URL used for the `/generate-image` route.
 
 If these variables are not set, the defaults from `config.py` will be used.
+
+To use PostgreSQL instead of the default SQLite database set the
+`DATABASE_URL` (or `POSTGRES_URI`) environment variable. When defined the
+application will store all tables in a single PostgreSQL database using
+separate schemas for `users`, `content`, `workspace`, `communication` and
+`productivity`.
