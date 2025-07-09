@@ -25,9 +25,9 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const fetchTasks = useCallback(async (listId, { silent = false } = {}) => {
     if (!listId) return;
     // Если уже есть выполняющийся запрос, дожидаемся его завершения
-    while (fetching.current) {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
+    // while (fetching.current) {
+    //   await new Promise((resolve) => setTimeout(resolve, 50));
+    // }
     if (!silent && setLoading) setLoading(true);
     fetching.current = true;
     if (!silent) {
@@ -146,7 +146,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   // ------ Calendar events ------
   const [calendarEvents, setCalendarEvents] = useState({ data: [], loading: false, error: null });
   const fetchCalendarEvents = useCallback(async () => {
-    if (fetching.current) return;
+    // if (fetching.current) return;
     fetching.current = true;
     setCalendarEvents(prev => ({ ...prev, loading: true, error: null }));
     try {

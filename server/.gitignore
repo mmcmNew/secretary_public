@@ -12,6 +12,8 @@
 /app/static/**
 !/app/static/default_settings/
 !/app/static/default_settings/**
+!/app/static/audio/** 
+!/app/static/sounds/** 
 /venv/
 /app/__pycache__/
 *__pycache__

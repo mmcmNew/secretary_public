@@ -101,10 +101,11 @@ function ToDoLayoutUniversal() {
 
   return (
     <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-      <Box sx={{ opacity: loading ? 0.5 : 1, pointerEvents: loading ? 'none' : 'auto', height: '100%' }}>
+      <Box sx={{ pointerEvents: loading ? 'none' : 'auto', height: '100%'}}> 
+         {/* opacity: loading ? 0.5 : 1, }}> */}
         {content}
       </Box>
-      {loading && (
+      {/* {loading && (
         <Box
           sx={{
             position: 'absolute',
@@ -121,7 +122,7 @@ function ToDoLayoutUniversal() {
         >
           <Typography variant="h5">Загрузка...</Typography>
         </Box>
-      )}
+      )} */}
     </Box>
   );
 }

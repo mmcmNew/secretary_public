@@ -8,30 +8,30 @@ from app.text_to_edge_tts import generate_tts, del_all_audio_files
 from . import files_bp
 
 
-@files_bp.route("/sw.js")
-def serve_sw():
-    try:
-        dist_folder = current_app.config.get("DIST_FOLDER", "")
-        response = make_response(send_from_directory(dist_folder, "sw.js"))
-        response.headers["Content-Type"] = "application/javascript"
-        return response
-    except Exception as e:
-        current_app.logger.error(f"Error serving sw.js: {e}")
-        return "SW not found", 404
+# @files_bp.route("/sw.js")
+# def serve_sw():
+#     try:
+#         dist_folder = current_app.config.get("DIST_FOLDER", "")
+#         response = make_response(send_from_directory(dist_folder, "sw.js"))
+#         response.headers["Content-Type"] = "application/javascript"
+#         return response
+#     except Exception as e:
+#         current_app.logger.error(f"Error serving sw.js: {e}")
+#         return "SW not found", 404
 
 
-@files_bp.route("/manifest.webmanifest")
-def serve_manifest():
-    try:
-        dist_folder = current_app.config.get("DIST_FOLDER", "")
-        response = make_response(
-            send_from_directory(dist_folder, "manifest.webmanifest")
-        )
-        response.headers["Content-Type"] = "application/manifest+json"
-        return response
-    except Exception as e:
-        current_app.logger.error(f"Error serving manifest.webmanifest: {e}")
-        return "Manifest not found", 404
+# @files_bp.route("/manifest.webmanifest")
+# def serve_manifest():
+#     try:
+#         dist_folder = current_app.config.get("DIST_FOLDER", "")
+#         response = make_response(
+#             send_from_directory(dist_folder, "manifest.webmanifest")
+#         )
+#         response.headers["Content-Type"] = "application/manifest+json"
+#         return response
+#     except Exception as e:
+#         current_app.logger.error(f"Error serving manifest.webmanifest: {e}")
+#         return "Manifest not found", 404
 
 
 @files_bp.route("/avatars/<path:filename>", methods=["GET"])

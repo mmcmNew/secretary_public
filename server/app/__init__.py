@@ -1,5 +1,5 @@
 import os
-from flask import Flask, send_from_directory, jsonify, abort
+from flask import Flask, send_from_directory, jsonify, abort, current_app
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -18,7 +18,7 @@ jwt = JWTManager()
 csrf = CSRFProtect()
 
 def create_app(config_type='work'):
-    app = Flask(__name__, static_folder='dist', static_url_path='', instance_relative_config=True)
+    app = Flask(__name__, static_folder='static', static_url_path='/static', instance_relative_config=True)
     os.makedirs(app.instance_path, exist_ok=True)
 
     # Настройка конфигурации
@@ -120,12 +120,11 @@ def create_app(config_type='work'):
         def serve_dist(path):
             if any(path.startswith(p) for p in STATIC_EXCLUDES):
                 abort(404)
-            dist_folder = app.config['DIST_FOLDER']
-            file_path = os.path.join(dist_folder, path)
+            file_path = os.path.join(current_app.static_folder, path)
             return (
-                send_from_directory(dist_folder, path)
+                send_from_directory(current_app._static_folder, path)
                 if path and os.path.exists(file_path)
-                else send_from_directory(dist_folder, 'index.html')
+                else send_from_directory(current_app.static_folder, 'index.html')
             )
 
     # Регистрируем CLI-команды

@@ -7,7 +7,7 @@ from logging.handlers import RotatingFileHandler
 class BaseConfig:
     BASEDIR = os.path.abspath(os.path.dirname(__file__))
     INSTANCE_DB_DIR = os.path.join('db')
-    DIST_FOLDER = os.path.join(BASEDIR, 'dist')
+    # DIST_FOLDER = os.path.join(BASEDIR, 'dist')
     SECRET_KEY = os.environ.get('SECRET_KEY', 'my_secret')
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', SECRET_KEY)
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
