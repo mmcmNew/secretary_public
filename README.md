@@ -10,6 +10,9 @@ The backend runs on Flask and is available by default at `https://localhost:5100
 python server/run.py --mode development
 ```
 
+Use `--mode test` to start the server with the test configuration that creates
+all tables automatically.
+
 To run with PostgreSQL via Docker:
 
 ```bash

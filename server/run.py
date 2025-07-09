@@ -5,8 +5,6 @@ eventlet.monkey_patch()
 
 from app import create_app, socketio
 
-app = create_app('test')
-
 
 def run_server_with_ssl(app, args):
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -28,23 +26,26 @@ def run_server_with_ssl(app, args):
 
 def main():
     parser = argparse.ArgumentParser(description="Manage Secretary server")
-    parser.add_argument('--mode', choices=['development', 'production', 'docker'],
+    parser.add_argument('--mode', choices=['development', 'production', 'docker', 'test'],
                         default=os.environ.get('MODE', 'development'),
                         help='Server mode')
     parser.add_argument('--host', default='0.0.0.0', help='Host to listen on')
     parser.add_argument('--port', type=int, default=5100, help='Port to listen on')
     args = parser.parse_args()
 
+    config_type = 'test' if args.mode == 'test' else 'work'
+    app = create_app(config_type)
+
     if args.mode in ['development', 'production']:
         print(f"{args.mode.capitalize()} server running at: https://{args.host}:{args.port}")
         run_server_with_ssl(app, args)
-    else:  # docker
-        print(f"Docker server running at: http://{args.host}:{args.port}")
+    else:  # docker or test without SSL
+        print(f"{args.mode.capitalize()} server running at: http://{args.host}:{args.port}")
         socketio.run(app,
                      host=args.host,
                      port=args.port,
-                     debug=False,
-                     use_reloader=False)
+                     debug=(args.mode == 'test'),
+                     use_reloader=(args.mode == 'test'))
 
 
 if __name__ == '__main__':

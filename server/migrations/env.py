@@ -5,6 +5,7 @@ from logging.config import fileConfig
 from alembic import context
 from flask import current_app
 
+import os
 from app import create_app, db
 
 # this is the Alembic Config object, which provides
@@ -16,7 +17,9 @@ config = context.config
 fileConfig(config.config_file_name)
 logger = logging.getLogger('alembic.env')
 
-app = create_app('test')
+mode = os.environ.get('MODE', 'development')
+config_type = 'test' if mode == 'test' else 'work'
+app = create_app(config_type)
 
 target_metadata = db.metadata
 
