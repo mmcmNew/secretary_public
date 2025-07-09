@@ -99,9 +99,11 @@ def change_task_status_route():
 @check_version('tasksVersion')
 def get_tasks_route():
     list_id = request.args.get('list_id')
+    start = request.args.get('start')
+    end = request.args.get('end')
     client_timezone = int(request.args.get('time_zone', 0))
     # current_app.logger.info(f'get_tasks, list_id: {list_id}')
-    result, status_code = get_tasks(list_id, client_timezone)
+    result, status_code = get_tasks(list_id, client_timezone, start, end)
     if status_code == 200:
         result['tasksVersion'] = DataVersion.get_version('tasksVersion')
     return jsonify(result), status_code

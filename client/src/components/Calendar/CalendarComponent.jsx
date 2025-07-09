@@ -298,7 +298,9 @@ function CalendarComponent({
     if (!calendarApi) return;
     const currentView = calendarApi.view.type;
     const currentDate = calendarApi.getDate();
-    fetchEvents();
+    const startStr = calendarApi.view.activeStart.toISOString();
+    const endStr = calendarApi.view.activeEnd.toISOString();
+    fetchEvents({ start: startStr, end: endStr });
     if (newSettings.currentView !== currentView) {
       saveSettings({ ...newSettings, currentView });
     }

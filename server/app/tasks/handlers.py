@@ -108,11 +108,13 @@ def get_lists_and_groups_data(client_timezone=0):
     }
 
 
-def get_tasks(list_id, client_timezone=0):
+def get_tasks(list_id, client_timezone=0, start=None, end=None):
     # start_time = datetime.now(timezone.utc)
     tasks_data = []
     user_id = current_user.id
     client_timezone = int(client_timezone)
+    start_dt = _parse_iso_datetime(start) if start else None
+    end_dt = _parse_iso_datetime(end) if end else None
     seen_tasks = set()  # Множество для отслеживания уникальных идентификаторов задач
     load_options = [db.joinedload(Task.lists),
                     db.joinedload(Task.subtasks),
@@ -164,9 +166,26 @@ def get_tasks(list_id, client_timezone=0):
                 subtasks.extend(collect_subtasks(subtask))
         return subtasks
 
+    def task_in_range(task):
+        if start_dt or end_dt:
+            if task.interval_id and task.start:
+                rule = task.build_rrule()
+                rng_start = start_dt or datetime.min.replace(tzinfo=None)
+                rng_end = end_dt or datetime.max.replace(tzinfo=None)
+                if rule and rule.between(rng_start, rng_end, inc=True):
+                    return True
+            st = task.start
+            en = task.end or st
+            if start_dt and en and en < start_dt:
+                return False
+            if end_dt and st and st > end_dt:
+                return False
+        return True
+
     # Сбор всех задач и их подзадач
     for task in tasks_query:
-        tasks_data.extend(collect_subtasks(task))
+        if task_in_range(task):
+            tasks_data.extend(collect_subtasks(task))
 
     # end_time = datetime.now(timezone.utc)
     # total_time = end_time - start_time
