@@ -5,14 +5,10 @@ import ToDoTasksPanel from './ToDoTasksPanel';
 import ToDoTaskEditorPanel from './ToDoTaskEditorPanel';
 import useTasks from './hooks/useTasks';
 import { ErrorContext } from '../../contexts/ErrorContext';
-import useNewTaskInput from './hooks/useNewTaskInput';
-import PropTypes from 'prop-types';
 
 function ToDoLayoutUniversal() {
   const isMobile = useMediaQuery('(max-width:600px)');
   const {
-    addTask,
-    addSubTask,
     updateTask,
     fetchTasks,
     selectedTaskId,
@@ -24,7 +20,6 @@ function ToDoLayoutUniversal() {
   const tasksLoading = tasks.loading;
   const listsLoading = lists.loading;
   const { setError, setSuccess } = useContext(ErrorContext);
-  const { submitTask } = useNewTaskInput();
   const showEditor = Boolean(selectedTaskId);
   const loading = tasksLoading || listsLoading;
 

@@ -42,7 +42,7 @@ def get_lists_and_groups_data(client_timezone=0):
 
     # --- Default lists
     default_lists = []
-    tasks_without_lists = [task for task in tasks if not task.lists]
+    tasks_without_lists = [task for task in tasks if not task.lists and not task.parent_tasks]
     important_tasks = [task for task in tasks if task.priority_id == 3]
     background_tasks = [task for task in tasks if task.is_background]
 
@@ -357,7 +357,10 @@ def change_task_status(data):
         else:
             task.completed_at = datetime.now(timezone.utc)
         set_subtask_status(task, status, completed_at)
-        result = {'success': True, 'task': 'all'}
+        # Собираем id всех изменённых задач (родительская + все подзадачи)
+        all_subtasks = collect_all_subtasks(task)
+        changed_ids = [task.id] + [sub.id for sub in all_subtasks]
+        result = {'success': True, 'task': 'all', 'changed_ids': changed_ids}
     else:
         task.status_id = status_id
         task.completed_at = None

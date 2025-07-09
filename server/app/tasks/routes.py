@@ -44,6 +44,12 @@ def add_task_route():
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
+        if 'task' in result:
+            # Получаем актуальные списки
+            lists_data = get_lists_and_groups_data()
+            # Для календаря: просто отправляем новую задачу
+            calendar_events = [result['task']]
+            notify_task_change('added', result['task'], data.get('listId'), lists_data=lists_data, calendar_events=calendar_events)
     return jsonify(result), status_code
 
 
@@ -80,6 +86,11 @@ def edit_task_route():
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
+        if 'task' in result:
+            lists_data = get_lists_and_groups_data()
+            # Для календаря: отправляем изменённую задачу
+            calendar_events = [result['task']]
+            notify_task_change('updated', result['task'], data.get('listId'), lists_data=lists_data, calendar_events=calendar_events)
     return jsonify(result), status_code
 
 
@@ -91,6 +102,17 @@ def change_task_status_route():
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
+        lists_data = get_lists_and_groups_data()
+        # Для календаря: если есть changed_ids, отправляем задачи по этим id
+        calendar_events = None
+        if 'changed_ids' in result:
+            from .models import Task
+            changed_tasks = Task.query.filter(Task.id.in_(result['changed_ids'])).all()
+            calendar_events = [t.to_dict() for t in changed_tasks]
+            notify_task_change('status_changed', {'changed_ids': result['changed_ids'], 'status_id': data.get('status_id'), 'completed_at': data.get('completed_at')}, data.get('listId'), lists_data=lists_data, calendar_events=calendar_events)
+        elif 'task' in result:
+            calendar_events = [result['task']]
+            notify_task_change('status_changed', result['task'], data.get('listId'), lists_data=lists_data, calendar_events=calendar_events)
     return jsonify(result), status_code
 
 
@@ -159,6 +181,10 @@ def del_task_route():
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
+        lists_data = get_lists_and_groups_data()
+        # Для календаря: просто отправляем id удалённой задачи
+        calendar_events = [{'id': data.get('taskId'), 'deleted': True}]
+        notify_task_change('deleted', {'id': data.get('taskId')}, data.get('listId'), lists_data=lists_data, calendar_events=calendar_events)
     return jsonify(result), status_code
 
 

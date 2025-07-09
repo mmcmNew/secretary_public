@@ -60,7 +60,6 @@ class DataVersion(db.Model):
 
     @classmethod
     def get_version(cls, key='version'):
-        """Get current version for the specified key."""
         version_record = cls.query.first()
         if not version_record:
             version_record = cls(version_metadata={})
@@ -73,18 +72,15 @@ class DataVersion(db.Model):
 
     @classmethod
     def check_version(cls, key, client_version):
-        """Check if client version matches server version for the key."""
         version_record = cls.query.first()
         if not version_record:
             version_record = cls(version_metadata={})
             db.session.add(version_record)
             db.session.commit()
-        current = version_record.version_metadata.get(key)
-        if not current:
+        if key not in version_record.version_metadata:
             version_record.version_metadata[key] = str(uuid.uuid4())
             db.session.commit()
-            current = version_record.version_metadata[key]
-
+        current = version_record.version_metadata[key]
         return {
             'version': current,
             'has_changed': current != client_version
@@ -92,14 +88,14 @@ class DataVersion(db.Model):
 
     @classmethod
     def update_version(cls, key='version'):
-        """Update version for the specified key."""
         version_record = cls.query.first()
         if not version_record:
             version_record = cls(version_metadata={})
             db.session.add(version_record)
-        version_record.version_metadata[key] = str(uuid.uuid4())
+        new_version = str(uuid.uuid4())
+        version_record.version_metadata[key] = new_version
         db.session.commit()
-        return version_record.version_metadata.get(key)
+        return new_version
 
     @classmethod
     def get_version_info(cls, key='version'):

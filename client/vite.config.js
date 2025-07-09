@@ -148,6 +148,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
+      '/updates': {
+        target: 'https://localhost:5100',
+        changeOrigin: true,
+        secure: false
+      },
       '/static': {
         target: 'https://localhost:5100',
         changeOrigin: true,

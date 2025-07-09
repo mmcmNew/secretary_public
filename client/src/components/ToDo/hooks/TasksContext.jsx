@@ -220,8 +220,25 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const changeTaskStatus = useCallback(async (params) => {
     const res = await api("/tasks/change_status", "PUT", params);
     if (fetchLists) await fetchLists({ silent: true });
-    // Локальное обновление статуса
-    if (params.listId === 'my_day') {
+    // Если сервер вернул массив changed_ids, обновляем статус у всех этих задач
+    if (res.changed_ids && Array.isArray(res.changed_ids)) {
+      setTasks(prev => ({
+        ...prev,
+        data: prev.data.map(task =>
+          res.changed_ids.includes(task.id)
+            ? { ...task, status_id: params.status_id, completed_at: params.completed_at || new Date().toISOString() }
+            : task
+        )
+      }));
+      setMyDayTasks(prev => ({
+        ...prev,
+        data: prev.data.map(task =>
+          res.changed_ids.includes(task.id)
+            ? { ...task, status_id: params.status_id, completed_at: params.completed_at || new Date().toISOString() }
+            : task
+        )
+      }));
+    } else if (params.listId === 'my_day') {
       setMyDayTasks(prev => ({
         ...prev,
         data: prev.data.map(task =>
@@ -241,43 +258,38 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
 
   const addSubTask = useCallback(async (params) => {
     const res = await api("/tasks/add_subtask", "POST", params);
-    if (fetchLists) await fetchLists({ silent: true });
-    // Локальное обновление подзадачи
-    if (res.subtask && params.listId === 'my_day') {
-      setMyDayTasks(prev => ({
-        ...prev,
-        data: prev.data.map(task =>
-          task.id === params.parentTaskId
-            ? {
-                ...task,
-                subtasks: [...(task.subtasks || []), res.subtask],
-                childes_order: res.parent_task?.childes_order || [
-                  ...(task.childes_order || []),
-                  res.subtask.id
-                ]
-              }
-            : task
-        )
-      }));
-    } else if (res.subtask && params.listId === selectedListId) {
-      setTasks(prev => ({
-        ...prev,
-        data: prev.data.map(task =>
-          task.id === params.parentTaskId
-            ? {
-                ...task,
-                subtasks: [...(task.subtasks || []), res.subtask],
-                childes_order: res.parent_task?.childes_order || [
-                  ...(task.childes_order || []),
-                  res.subtask.id
-                ]
-              }
-            : task
-        )
-      }));
+
+    // Обновляем версию, если она пришла с сервера
+    if (res.version || res.tasksVersion) {
+      setVersion(res.version || res.tasksVersion);
     }
+
+    if (res.subtask && res.parent_task) {
+      setTasks(prev => {
+        // Добавляем новую подзадачу в общий список задач, если её там ещё нет
+        const exists = prev.data.some(task => task.id === res.subtask.id);
+        const newData = exists
+          ? prev.data
+          : [...prev.data, res.subtask];
+
+        // Обновляем родительскую задачу
+        return {
+          ...prev,
+          data: newData.map(task =>
+            task.id === params.parentTaskId
+              ? {
+                  ...task,
+                  subtasks: [...(task.subtasks || []), res.subtask],
+                  childes_order: res.parent_task.childes_order
+                }
+              : task
+          )
+        };
+      });
+    }
+
     return res;
-  }, [fetchLists, selectedListId]);
+  }, [setVersion]);
 
   const deleteTask = useCallback(async (params) => {
     const res = await api("/tasks/del_task", "DELETE", params);
@@ -372,8 +384,37 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   useEffect(() => {
     if (draggingContainer) return;
     if (taskChange && (taskChange.listId === selectedListId || taskChange.listId === 'my_day')) {
-      const { action, task } = taskChange;
+      const { action, task, lists_data, calendar_events } = taskChange;
       const targetSetter = taskChange.listId === 'my_day' ? setMyDayTasks : setTasks;
+
+      // --- Новое: обновление списков ---
+      if (lists_data) {
+        setLists(prev => ({
+          ...prev,
+          ...lists_data,
+          loading: false,
+          error: null,
+        }));
+      }
+      // --- Новое: обновление событий календаря ---
+      if (calendar_events) {
+        setCalendarEvents(prev => {
+          let events = Array.isArray(prev.data) ? [...prev.data] : [];
+          calendar_events.forEach(ev => {
+            if (ev.deleted) {
+              events = events.filter(e => e.id !== ev.id);
+            } else {
+              const idx = events.findIndex(e => e.id === ev.id);
+              if (idx !== -1) {
+                events[idx] = ev;
+              } else {
+                events.push(ev);
+              }
+            }
+          });
+          return { ...prev, data: events };
+        });
+      }
 
       switch (action) {
         case 'added':
@@ -381,28 +422,49 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
             ...prev,
             data: [...prev.data, task]
           }));
+          fetchCalendarEvents();
+          fetchLists({ silent: true });
           break;
         case 'updated':
           targetSetter(prev => ({
             ...prev,
             data: prev.data.map(t => t.id === task.id ? { ...t, ...task } : t)
           }));
+          fetchCalendarEvents();
+          fetchLists({ silent: true });
           break;
         case 'deleted':
           targetSetter(prev => ({
             ...prev,
             data: prev.data.filter(t => t.id !== task.id)
           }));
+          fetchCalendarEvents();
+          fetchLists({ silent: true });
           break;
         case 'status_changed':
-          targetSetter(prev => ({
-            ...prev,
-            data: prev.data.map(t => t.id === task.id ? { ...t, status: task.status } : t)
-          }));
+          if (task.changed_ids) {
+            // Обновить статус у всех задач с этими id
+            targetSetter(prev => ({
+              ...prev,
+              data: prev.data.map(t =>
+                task.changed_ids.includes(t.id)
+                  ? { ...t, status_id: task.status_id, completed_at: task.completed_at }
+                  : t
+              )
+            }));
+          } else if (task.id) {
+            // Старый вариант — обновить одну задачу
+            targetSetter(prev => ({
+              ...prev,
+              data: prev.data.map(t => t.id === task.id ? { ...t, status: task.status } : t)
+            }));
+          }
+          fetchCalendarEvents();
+          fetchLists({ silent: true });
           break;
       }
     }
-  }, [taskChange, selectedListId, draggingContainer]);
+  }, [taskChange, selectedListId, draggingContainer, fetchCalendarEvents, fetchLists]);
 
   // Обновление версии и синхронизация задач
   useEffect(() => {
