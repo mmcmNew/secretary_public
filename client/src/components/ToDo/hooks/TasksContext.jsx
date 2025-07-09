@@ -39,11 +39,16 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     }
     try {
       // console.log('fetchTasks: start', listId);
-      const data = await api(`/tasks/get_tasks?list_id=${listId}&time_zone=${new Date().getTimezoneOffset()}`);
-      // console.log('fetchTasks: data', data);
+      const data = await api(`/tasks/get_tasks?list_id=${listId}&time_zone=${new Date().getTimezoneOffset()}&version=${version || ''}`);
+      if (data.version_matches) {
+        setVersion(data.version);
+        if (!silent && setLoading) setLoading(false);
+        fetching.current = false;
+        return data;
+      }
       const update = {
         data: data.tasks || [],
-        version: data.tasksVersion,
+        version: data.tasksVersion || data.version,
         loading: false,
         error: null,
       };
@@ -62,6 +67,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       }
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
+      setVersion(update.version);
       // console.log('fetchTasks: success');
       return data;
     } catch (err) {
@@ -75,7 +81,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       fetching.current = false;
       console.log('fetchTasks: error', err);
     }
-  }, [onError, setLoading]);
+  }, [onError, setLoading, version]);
 
 
   // Получить все списки
@@ -85,16 +91,23 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     fetching.current = true;
     if (!silent) setLists(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await api(`/tasks/get_lists?time_zone=${new Date().getTimezoneOffset()}`);
+      const data = await api(`/tasks/get_lists?time_zone=${new Date().getTimezoneOffset()}&version=${version || ''}`);
+      if (data.version_matches) {
+        setVersion(data.version);
+        if (!silent && setLoading) setLoading(false);
+        fetching.current = false;
+        return data;
+      }
       setLists(prev => ({
         ...prev,
         lists: data.lists,
         default_lists: data.default_lists,
         projects: data.projects,
-        version: data.tasksVersion,
+        version: data.tasksVersion || data.version,
         loading: silent ? prev.loading : false,
         error: null,
       }));
+      setVersion(data.tasksVersion || data.version || version);
       const myDay = data.default_lists?.find(l => l.id === 'my_day');
       setMyDayList(myDay || null);
       if (!silent && setLoading) setLoading(false);
@@ -106,7 +119,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
     }
-  }, [onError, setLoading]);
+  }, [onError, setLoading, version]);
 
   // CRUD операции со списками
   const addList = useCallback(async (params) => { const res = await api('/tasks/add_list', 'POST', params); await fetchLists(); return res; }, [fetchLists]);
@@ -137,9 +150,14 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     fetching.current = true;
     setCalendarEvents(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await api(`/tasks/get_tasks?list_id=events&version=${version}`);
+      const data = await api(`/tasks/get_tasks?list_id=events&version=${version || ''}`);
+      if (data.version_matches) {
+        setVersion(data.version);
+        setCalendarEvents(prev => ({ ...prev, loading: false }));
+        return calendarEvents.data;
+      }
       setCalendarEvents({ data: data.tasks || data, loading: false, error: null });
-      setVersion(data.tasksVersion || version);
+      setVersion(data.tasksVersion || data.version || version);
       return data.tasks || data;
     } catch (error) {
       setCalendarEvents(prev => ({ ...prev, loading: false, error }));
