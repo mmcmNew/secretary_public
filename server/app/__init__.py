@@ -47,7 +47,9 @@ def create_app(config_type='work'):
         if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):
             engine = db.get_engine()
             for schema in app.config.get('SCHEMAS', []):
-                engine.execute(text(f'CREATE SCHEMA IF NOT EXISTS {schema}'))
+                with engine.connect() as conn:
+                    conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {schema}'))
+                    conn.commit()
 
     # CSRF токен в cookie
     @app.after_request

@@ -14,7 +14,7 @@ class BaseConfig:
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {'connect_args': {'detect_types': 1}}
+    # SQLALCHEMY_ENGINE_OPTIONS = {'connect_args': {'detect_types': 1}}
 
     AI_WEBHOOK_URL = os.environ.get(
         "AI_WEBHOOK_URL",
@@ -36,15 +36,16 @@ class BaseConfig:
         instance_path = app.instance_path
         db_dir = os.path.join(instance_path, BaseConfig.INSTANCE_DB_DIR)
         os.makedirs(db_dir, exist_ok=True)
+        postgres_url="postgresql+psycopg2://secretary:secretary@localhost:5432/secretary_db"
 
-        database_url = os.environ.get('POSTGRES_URI') or os.environ.get('DATABASE_URL')
+        database_url = os.environ.get('POSTGRES_URI') or os.environ.get('DATABASE_URL') or postgres_url
         app.config['SCHEMAS'] = BaseConfig.SCHEMAS
 
-        if database_url:
-            app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-        else:
-            db_path = os.path.join(db_dir, 'app.db')
-            app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
+        # if database_url:
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+        # else:
+        #     db_path = os.path.join(db_dir, 'app.db')
+        #     app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
 
         # Логирование
         log_dir = os.path.join(instance_path, 'logs')

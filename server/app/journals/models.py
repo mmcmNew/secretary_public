@@ -56,7 +56,7 @@ class JournalFile(db.Model):
     __table_args__ = {'schema': 'content'}
 
     id = db.Column(db.Integer, primary_key=True)
-    entry_id = db.Column(db.Integer, db.ForeignKey('journal_entries.id'), nullable=False)
+    entry_id = db.Column(db.Integer, db.ForeignKey('content.journal_entries.id'), nullable=False)
     field_name = db.Column(db.String(100), nullable=False)  # Имя поля, к которому относится файл
     filename = db.Column(db.String(255), nullable=False)
     original_filename = db.Column(db.String(255), nullable=False)

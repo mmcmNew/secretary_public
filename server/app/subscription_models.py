@@ -20,7 +20,7 @@ class SubscriptionPlan(db.Model):
     id = Column(Integer, primary_key=True)
     name = Column(String(50), nullable=False)
     price = Column(DECIMAL(10,2))
-    access_level_id = Column(Integer, ForeignKey('access_levels.id'))
+    access_level_id = Column(Integer, ForeignKey('users.access_levels.id'))
     duration_days = Column(Integer)
 
 class UserSubscription(db.Model):
@@ -28,7 +28,8 @@ class UserSubscription(db.Model):
     __table_args__ = {'schema': 'users'}
     
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.user_id'))
-    plan_id = Column(Integer, ForeignKey('subscription_plans.id'))
+    user_id = Column(Integer, ForeignKey('users.users.user_id')) 
+    plan_id = Column(Integer, ForeignKey('users.subscription_plans.id'))  
     start_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    end_date = Column(DateTime)    is_active = Column(Boolean, default=True)
+    end_date = Column(DateTime)    
+    is_active = Column(Boolean, default=True)
