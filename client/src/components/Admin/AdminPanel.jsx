@@ -14,19 +14,6 @@ export default function AdminPanel() {
     const [plans, setPlans] = useState([]);
     const [availableModules, setAvailableModules] = useState([]);
     
-    if (!hasAccess('admin')) {
-        return (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography variant="h5" color="error">
-                    Доступ запрещен
-                </Typography>
-                <Typography variant="body1">
-                    У вас нет прав для доступа к панели администратора
-                </Typography>
-            </Box>
-        );
-    }
-
     useEffect(() => {
         fetchUsers();
         fetchPlans();
@@ -82,6 +69,19 @@ export default function AdminPanel() {
 
 
     if (loading) return <Typography>Загрузка...</Typography>;
+
+    if (!hasAccess('admin')) {
+        return (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+                <Typography variant="h5" color="error">
+                    Доступ запрещен
+                </Typography>
+                <Typography variant="body1">
+                    У вас нет прав для доступа к панели администратора
+                </Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ p: 3 }}>
