@@ -7,7 +7,7 @@ from flask_jwt_extended import jwt_required, current_user
 from . import journals
 from .models import JournalEntry, JournalSchema, JournalFile
 from app import db
-from app.data_paths import get_app_user_data_dir
+from flask import current_app
 
 
 @journals.route('/<journal_type>', methods=['GET'])
@@ -165,8 +165,14 @@ def delete_schema(schema_id):
 
 def _get_upload_path(user_id, journal_type):
     """Получаем путь для загрузки файлов журнала"""
-    from app.data_paths import get_user_journal_path
-    upload_path = get_user_journal_path(user_id, journal_type)
+    upload_path = os.path.join(
+        current_app.instance_path,
+        'uploads',
+        f'user_{user_id}',
+        'journals',
+        journal_type,
+    )
+    os.makedirs(upload_path, exist_ok=True)
     return upload_path
 
 
@@ -191,7 +197,10 @@ def _process_journal_files(entry, schema, files):
                     # Определяем путь для сохранения
                     upload_path = _get_upload_path(entry.user_id, entry.journal_type)
                     file_path = os.path.join(upload_path, unique_filename)
-                    rel_path = os.path.relpath(file_path, get_app_user_data_dir())
+                    rel_path = os.path.relpath(
+                        file_path,
+                        os.path.join(current_app.instance_path, 'uploads')
+                    )
                     
                     # Сохраняем файл
                     file.save(file_path)
@@ -225,7 +234,7 @@ def download_journal_file(journal_type, entry_id, file_id):
         entry_id=entry_id
     ).first_or_404()
     
-    abs_path = os.path.join(get_app_user_data_dir(), journal_file.file_path)
+    abs_path = os.path.join(current_app.instance_path, 'uploads', journal_file.file_path)
     if not os.path.exists(abs_path):
         return jsonify({'error': 'Файл не найден'}), 404
 
