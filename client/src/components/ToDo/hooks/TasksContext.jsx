@@ -145,12 +145,19 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
 
   // ------ Calendar events ------
   const [calendarEvents, setCalendarEvents] = useState({ data: [], loading: false, error: null });
-  const fetchCalendarEvents = useCallback(async () => {
-    // if (fetching.current) return;
+  const [calendarRange, setCalendarRange] = useState({ start: null, end: null });
+
+  const fetchCalendarEvents = useCallback(async (range) => {
+    const finalRange = range || calendarRange;
+    if (range) setCalendarRange(range);
+    if (!finalRange.start || !finalRange.end) return [];
     fetching.current = true;
     setCalendarEvents(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await api(`/tasks/get_tasks?list_id=events&version=${version || ''}`);
+      const params = new URLSearchParams({ list_id: 'events', version: version || '' });
+      params.append('start', finalRange.start);
+      params.append('end', finalRange.end);
+      const data = await api(`/tasks/get_tasks?${params.toString()}`);
       if (data.version_matches) {
         setVersion(data.version);
         setCalendarEvents(prev => ({ ...prev, loading: false }));
@@ -374,9 +381,9 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     if (!isLoading && user) {
       fetchTaskFields();
       fetchLists();
-      fetchCalendarEvents();
     }
-  }, [fetchTaskFields, fetchLists, fetchCalendarEvents, user, isLoading]);
+  }, [fetchTaskFields, fetchLists, user, isLoading]);
+
 
   const { tasksVersion: wsVersion, taskChange } = useUpdateWebSocket();
 
@@ -492,6 +499,8 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     selectedList,
     setSelectedList,
     calendarEvents,
+    calendarRange,
+    setCalendarRange,
     fetchCalendarEvents,
     updateCalendarEvent,
     addCalendarEvent,
@@ -521,10 +530,9 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     version,
     setVersion,
     loading: tasks.loading,
-  }), [tasks, myDayTasks, myDayList, taskFields, lists, selectedListId, selectedList, calendarEvents, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, fetchTaskFields, getTaskTypes, addTaskType, updateTaskType, deleteTaskType, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, version]);
+  }), [tasks, myDayTasks, myDayList, taskFields, lists, selectedListId, selectedList, calendarEvents, calendarRange, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, fetchTaskFields, getTaskTypes, addTaskType, updateTaskType, deleteTaskType, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, version]);
 
   return <TasksContext.Provider value={contextValue}>{children}</TasksContext.Provider>;
 };
 
-TasksProvider.propTypes = { children: PropTypes.node.isRequired };
-export default TasksContext; 
+TasksProvider.propTypes = { children: PropTypes.node.isRequired };export default TasksContext; 
