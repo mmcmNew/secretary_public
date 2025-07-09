@@ -248,7 +248,14 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
         ...prev,
         data: prev.data.map(task =>
           task.id === params.parentTaskId
-            ? { ...task, subtasks: [...(task.subtasks || []), res.subtask] }
+            ? {
+                ...task,
+                subtasks: [...(task.subtasks || []), res.subtask],
+                childes_order: res.parent_task?.childes_order || [
+                  ...(task.childes_order || []),
+                  res.subtask.id
+                ]
+              }
             : task
         )
       }));
@@ -257,7 +264,14 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
         ...prev,
         data: prev.data.map(task =>
           task.id === params.parentTaskId
-            ? { ...task, subtasks: [...(task.subtasks || []), res.subtask] }
+            ? {
+                ...task,
+                subtasks: [...(task.subtasks || []), res.subtask],
+                childes_order: res.parent_task?.childes_order || [
+                  ...(task.childes_order || []),
+                  res.subtask.id
+                ]
+              }
             : task
         )
       }));
