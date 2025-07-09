@@ -18,9 +18,12 @@ def upload_files_to_server(files_list, dir_name):
             return "Не получены файлы для загрузки"
         if files_list:
             current_month = datetime.now().strftime('%Y-%m')
-            from app.data_paths import get_user_journal_path
             save_path = os.path.join(
-                get_user_journal_path(current_user.id, dir_name),
+                current_app.instance_path,
+                'uploads',
+                f'user_{current_user.id}',
+                'journals',
+                dir_name,
                 current_month,
             )
             os.makedirs(save_path, exist_ok=True)

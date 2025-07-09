@@ -4,7 +4,6 @@ from flask_jwt_extended import jwt_required, current_user
 
 from ..models import ChatHistory
 from app.text_to_edge_tts import generate_tts, del_all_audio_files
-from app.data_paths import get_system_data_path
 
 from . import files_bp
 
@@ -53,13 +52,18 @@ def static_files(filename):
         return "File not found", 404
 
     if prefix == "/memory" and current_user:
-        user_memory_path = get_system_data_path(current_user.id, "memory")
+        user_memory_path = os.path.join(
+            current_app.instance_path,
+            'uploads',
+            f'user_{current_user.id}',
+            'memory'
+        )
         user_file = os.path.join(user_memory_path, filename)
         if os.path.isfile(user_file):
             return send_from_directory(user_memory_path, filename)
 
-    system_path = get_system_data_path(system_dir_key)
-    if system_path and os.path.isfile(os.path.join(system_path, filename)):
+    system_path = os.path.join(current_app.static_folder, system_dir_key)
+    if os.path.isfile(os.path.join(system_path, filename)):
         return send_from_directory(system_path, filename)
 
     return "File not found", 404

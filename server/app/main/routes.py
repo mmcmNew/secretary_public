@@ -10,7 +10,6 @@ from . import main
 from .handlers import fetch_table_records
 from app.db_utils import save_to_base_modules
 from ..tasks.handlers import create_daily_scenario
-from app.data_paths import get_user_data_path, get_system_data_path
 
 
 @socketio.on("connect", namespace="/updates")
@@ -47,17 +46,21 @@ def get_scenario(name):
     scenario_path = None
 
     if current_user:
-        user_scenarios_path = get_user_data_path(current_user.id, "scenarios")
+        user_scenarios_path = os.path.join(
+            current_app.instance_path,
+            'uploads',
+            f'user_{current_user.id}',
+            'scenarios'
+        )
         user_scenario_file = os.path.join(user_scenarios_path, f"{name}.json")
         if os.path.isfile(user_scenario_file):
             scenario_path = user_scenario_file
 
     if not scenario_path:
-        system_scenarios_path = get_system_data_path("scenarios")
-        if system_scenarios_path:
-            system_scenario_file = os.path.join(system_scenarios_path, f"{name}.json")
-            if os.path.isfile(system_scenario_file):
-                scenario_path = system_scenario_file
+        system_scenarios_path = os.path.join(current_app.static_folder, 'scenarios')
+        system_scenario_file = os.path.join(system_scenarios_path, f"{name}.json")
+        if os.path.isfile(system_scenario_file):
+            scenario_path = system_scenario_file
 
     if not scenario_path:
         abort(404, description="Scenario not found")
