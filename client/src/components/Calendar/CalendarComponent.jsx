@@ -152,10 +152,6 @@ function CalendarComponent({
   }, [selectedListId, fetchTasks]);
 
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
-
-  useEffect(() => {
     if (!isCollapsed) {
       fetchEvents();
     }
@@ -307,6 +303,12 @@ function CalendarComponent({
     if (datesSet && typeof datesSet === "function")
       datesSet(currentView, currentDate);
   };
+
+  useEffect(() => {
+    if (calendarRef?.current?.getApi) {
+      handleDatesSet();
+    }
+  }, []);
 
   const calendarProps = {
     locale: ruLocale,

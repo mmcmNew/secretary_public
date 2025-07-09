@@ -5,6 +5,7 @@ from .models import *
 from flask_jwt_extended import current_user
 from datetime import datetime, timezone, timedelta
 from flask import current_app
+from sqlalchemy import func
 
 # Helper to parse ISO datetime strings that may contain timezone information.
 # All datetimes are converted to naive UTC before storing in the database so
@@ -19,6 +20,68 @@ def _parse_iso_datetime(value):
     return dt
 from collections import defaultdict
 # from dateutil.relativedelta import relativedelta
+
+
+def get_unfinished_tasks_count_per_list(user_id):
+    """
+    Возвращает словарь: {list_id: unfinished_count} для всех списков пользователя.
+    """
+    results = (
+        db.session.query(
+            task_list_relations.c.ListID.label('list_id'),
+            func.count(Task.id).label('unfinished_count')
+        )
+        .join(Task, Task.id == task_list_relations.c.TaskID)
+        .filter(Task.status_id != 2, Task.user_id == user_id)
+        .group_by(task_list_relations.c.ListID)
+        .all()
+    )
+    return {row.list_id: row.unfinished_count for row in results}
+
+
+def get_unfinished_tasks_count_per_group(user_id):
+    """
+    Возвращает словарь: {group_id: unfinished_count} для всех групп пользователя.
+    """
+    # Получаем соответствие: group_id -> [list_id, ...]
+    from collections import defaultdict
+    group_lists = defaultdict(list)
+    group_list_rows = db.session.query(list_group_relations.c.GroupID, list_group_relations.c.ListID).all()
+    for group_id, list_id in group_list_rows:
+        group_lists[group_id].append(list_id)
+    # Получаем количество незавершённых задач по спискам
+    unfinished_per_list = get_unfinished_tasks_count_per_list(user_id)
+    # Суммируем по группам
+    unfinished_per_group = {}
+    for group_id, lists in group_lists.items():
+        unfinished_per_group[group_id] = sum(unfinished_per_list.get(list_id, 0) for list_id in lists)
+    return unfinished_per_group
+
+
+def get_unfinished_tasks_count_per_project(user_id):
+    """
+    Возвращает словарь: {project_id: unfinished_count} для всех проектов пользователя.
+    """
+    from collections import defaultdict
+    # Получаем соответствие: project_id -> [list_id, ...] и project_id -> [group_id, ...]
+    project_lists = defaultdict(list)
+    project_groups = defaultdict(list)
+    project_list_rows = db.session.query(list_project_relations.c.ProjectID, list_project_relations.c.ListID).all()
+    for project_id, list_id in project_list_rows:
+        project_lists[project_id].append(list_id)
+    project_group_rows = db.session.query(group_project_relations.c.ProjectID, group_project_relations.c.GroupID).all()
+    for project_id, group_id in project_group_rows:
+        project_groups[project_id].append(group_id)
+    # Получаем количество незавершённых задач по спискам и группам
+    unfinished_per_list = get_unfinished_tasks_count_per_list(user_id)
+    unfinished_per_group = get_unfinished_tasks_count_per_group(user_id)
+    # Суммируем по проектам
+    unfinished_per_project = {}
+    for project_id in set(list(project_lists.keys()) + list(project_groups.keys())):
+        count = sum(unfinished_per_list.get(list_id, 0) for list_id in project_lists.get(project_id, []))
+        count += sum(unfinished_per_group.get(group_id, 0) for group_id in project_groups.get(project_id, []))
+        unfinished_per_project[project_id] = count
+    return unfinished_per_project
 
 
 def get_lists_and_groups_data(client_timezone=0):
@@ -61,24 +124,10 @@ def get_lists_and_groups_data(client_timezone=0):
             'unfinished_tasks_count': unfinished,
             'childes_order': [task.id for task in task_list]
         })
-
-    # --- Подсчёт unfinished по спискам
-    unfinished_per_list = defaultdict(int)
-    for lst in lists_list:
-        unfinished_per_list[lst.id] = lst.unfinished_tasks_count(tasks_map=tasks_map)
-
-    # --- Подсчёт unfinished по группам
-    unfinished_per_group = defaultdict(int)
-    for group in groups_list:
-        unfinished_per_group[group.id] = group.unfinished_tasks_count(lists_map=lists_map, tasks_map=tasks_map)
-
-    # --- Подсчёт unfinished по проектам
-    unfinished_per_project = defaultdict(int)
-    for project in projects_list:
-        for lst in project.lists:
-            unfinished_per_project[project.id] += unfinished_per_list.get(lst.id, 0)
-        for group in project.groups:
-            unfinished_per_project[project.id] += unfinished_per_group.get(group.id, 0)
+        
+    unfinished_per_list = get_unfinished_tasks_count_per_list(user_id)
+    unfinished_per_group = get_unfinished_tasks_count_per_group(user_id)
+    unfinished_per_project = get_unfinished_tasks_count_per_project(user_id)
 
     # --- Словари для UI
     groups_dict = [
