@@ -1,6 +1,6 @@
 from app import db
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Text
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Text, Boolean
 from sqlalchemy.types import JSON
 from flask import current_app
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -18,6 +18,7 @@ class User(db.Model):
     last_dashboard_id = Column(Integer)
     modules = Column(JSON, default=lambda: ['diary'])
     access_level_id = Column(Integer, default=1)
+    is_admin = Column(Boolean, default=False)
 
     @property
     def id(self):
@@ -39,7 +40,7 @@ class User(db.Model):
 
         # Проверяем, есть ли пользователи уже в базе данных
         if not User.query.all():  # если база пуста
-            admin = User(user_name="admin", email="admin@example.com", avatar_src="me.png", last_dashboard_id=0, modules=[], access_level_id=4)
+            admin = User(user_name="admin", email="admin@example.com", avatar_src="me.png", last_dashboard_id=0, modules=[], access_level_id=3, is_admin=True)
             admin.set_password("password")
             secretary = User(user_name="Secretary", avatar_src="secretary.png", last_dashboard_id=0, modules=[], access_level_id=3)
             secretary.set_password("password")
@@ -96,6 +97,7 @@ class User(db.Model):
             'avatar_src': self.avatar_src,
             'last_dashboard_id': self.last_dashboard_id,
             'modules': self.modules,
+            'is_admin': self.is_admin,
         }
 
 
@@ -129,3 +131,4 @@ class Quote(db.Model):
     quote_id = Column(Integer, primary_key=True)
     user_id = Column(Integer, nullable=False)
     quote = Column(String(255))  # Использование String вместо Text для коротких строковых полей
+

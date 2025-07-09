@@ -34,6 +34,7 @@ def get_users():
             'id': user.id,
             'username': user.user_name,
             'email': user.email,
+            'is_admin': user.is_admin,
             'plan_id': plan_id,
             'plan_name': plan_name,
             'modules': user.modules or []

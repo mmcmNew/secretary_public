@@ -57,7 +57,7 @@ def api_login():
             active_sub.is_active = False
             user.access_level_id = 1
             db.session.commit()
-    permissions = get_user_permissions(getattr(user, "access_level_id", 1))
+    permissions = get_user_permissions(getattr(user, "access_level_id", 1), user.user_id)
 
     access_token = create_access_token(identity=str(user.user_id))
     refresh_token = create_refresh_token(identity=str(user.user_id))
