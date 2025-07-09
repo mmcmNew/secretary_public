@@ -4,6 +4,7 @@ from flask import current_app, jsonify
 from .models import *
 from flask_jwt_extended import current_user
 from datetime import datetime, timezone, timedelta
+from flask import current_app
 
 # Helper to parse ISO datetime strings that may contain timezone information.
 # All datetimes are converted to naive UTC before storing in the database so
@@ -197,51 +198,53 @@ def add_object(data):
 
 
 def add_task(data):
+    current_app.logger.info(f'add_task: {data}')
     task_title = data.get('title', '')
+    if not task_title or not task_title.strip():
+        return {'success': False, 'message': 'Не передан title задачи'}, 400
+
     start = data.get('start', None)
     end = data.get('end', None)
     list_id = data.get('listId', 'tasks')
     priority_id = 1
-    # current_app.logger.info(f'add_task: data: {data}')
     is_background = False
+    updated_list_dict = {}
+
     if end:
         end = _parse_iso_datetime(end)
     if start:
         start = _parse_iso_datetime(start)
-    if list_id == 'my_day':
-        end = datetime.now(timezone.utc) + timedelta(hours=2)
-        start = datetime.now(timezone.utc) + timedelta(hours=1)
-    if list_id == 'important':
-        priority_id = 3
-    if list_id == 'background':
-        is_background = True
 
-    task_list_dict = {}
+    match list_id:
+        case 'my_day':
+            end = datetime.now(timezone.utc) + timedelta(hours=2)
+            start = datetime.now(timezone.utc) + timedelta(hours=1)
+        case 'important':
+            priority_id = 3
+        case 'background':
+            is_background = True
 
-    if list_id:
-        new_task = Task(title=task_title, end=end, start=start, priority_id=priority_id,
-                        is_background=is_background, user_id=current_user.id)
-        task_list = List.query.filter_by(id=list_id, user_id=current_user.id).first()
+    new_task = Task(title=task_title, end=end, start=start, priority_id=priority_id,
+                    is_background=is_background, user_id=current_user.id)
+    db.session.add(new_task)
 
-        db.session.add(new_task)
+    if list_id and str(list_id).isdigit():
+        updated_list = List.query.filter_by(id=int(list_id), user_id=current_user.id).first()
 
-        if task_list:
-            task_list.tasks.append(new_task)
-            updated_childes_order = task_list.childes_order.copy() or []
-            # добавляем id задачи в начало списка childes_order
+        if updated_list:
+            updated_list.tasks.append(new_task)
+            updated_childes_order = updated_list.childes_order.copy() or []
             if new_task.id not in updated_childes_order:
                 updated_childes_order.insert(0, new_task.id)
-            task_list.childes_order = updated_childes_order
-            task_list_dict = task_list.to_dict()
+            updated_list.childes_order = updated_childes_order
+            updated_list_dict = updated_list.to_dict()
 
-            db.session.add(task_list)
+            db.session.add(updated_list)
 
-        db.session.commit()
+    db.session.commit()
 
-        return {'success': True, 'message': 'Задача добавлена', 'task': new_task.to_dict(),
-                'task_list': task_list_dict}, 200
-    else:
-        return {'success': False, 'message': 'Недостаточно данных для создания задачи'}, 404
+    return {'success': True, 'message': 'Задача добавлена', 'task': new_task.to_dict(),
+                'task_list': updated_list_dict}, 200
 
 
 def edit_list(data):

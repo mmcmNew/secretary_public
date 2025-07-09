@@ -33,7 +33,7 @@ def main():
     parser.add_argument('--port', type=int, default=5100, help='Port to listen on')
     args = parser.parse_args()
 
-    config_type = 'test' if args.mode == 'test' else 'work'
+    config_type = 'test' if args.mode == 'test' or 'development' else 'work'
     app = create_app(config_type)
 
     if args.mode in ['development', 'production']:
