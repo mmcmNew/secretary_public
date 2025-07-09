@@ -8,8 +8,7 @@ from flask_jwt_extended import current_user
 
 def load_json(filename):
     filename = os.path.join(
-        current_app.root_path,
-        'static',
+        current_app.static_folder,
         'default_settings',
         'settings',
         filename,

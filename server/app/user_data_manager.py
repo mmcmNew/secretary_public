@@ -1,14 +1,34 @@
 """
 Менеджер пользовательских данных
 """
-from .data_paths import (
-    initialize_user_data,
-    get_user_data_path,
-    get_system_data_path,
-    get_app_user_data_dir,
-)
 import os
 import json
+from flask import current_app
+
+
+def get_app_user_data_dir():
+    """Return root directory for all user uploads."""
+    return os.path.join(current_app.instance_path, 'uploads')
+
+
+def get_user_data_path(user_id, *path_parts):
+    base_dir = os.path.join(get_app_user_data_dir(), f'user_{user_id}')
+    if path_parts:
+        base_dir = os.path.join(base_dir, *[str(p) for p in path_parts])
+    return base_dir
+
+
+def get_system_data_path(*path_parts):
+    base_dir = current_app.static_folder
+    if path_parts:
+        base_dir = os.path.join(base_dir, *[str(p) for p in path_parts])
+    return base_dir
+
+
+def initialize_user_data(user_id):
+    base_dir = get_app_user_data_dir()
+    os.makedirs(os.path.join(base_dir, f'user_{user_id}', 'journals'), exist_ok=True)
+    os.makedirs(os.path.join(base_dir, f'user_{user_id}', 'static'), exist_ok=True)
 
 class UserDataManager:
     """Класс для управления пользовательскими данными"""
@@ -148,7 +168,6 @@ class UserDataManager:
         """
         import shutil
         
-        from .data_paths import get_app_user_data_dir
         try:
             user_dir = os.path.join(get_app_user_data_dir(), f'user_{user_id}')
             if os.path.exists(user_dir):
@@ -156,6 +175,4 @@ class UserDataManager:
                 print(f"Данные пользователя {user_id} удалены")
                 return True
         except Exception as e:
-            print(f"Ошибка при удалении данных пользователя {user_id}: {e}")
-            
-        return False
+            print(f"Ошибка при удалении данных пользователя {user_id}: {e}")        return False

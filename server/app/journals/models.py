@@ -2,7 +2,7 @@ from datetime import datetime
 import os
 
 from app import db
-from app.data_paths import get_app_user_data_dir
+from flask import current_app
 
 class JournalSchema(db.Model):
     __tablename__ = 'journal_schemas'
@@ -78,7 +78,7 @@ class JournalFile(db.Model):
 
     @property
     def absolute_path(self):
-        return os.path.join(get_app_user_data_dir(), self.file_path)
+        return os.path.join(current_app.instance_path, 'uploads', self.file_path)
 
     def delete_file(self):
         """Удаляет физический файл с диска"""
