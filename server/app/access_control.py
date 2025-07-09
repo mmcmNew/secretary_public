@@ -48,7 +48,8 @@ def get_user_permissions(user_access_level, user_id=None):
     {'name': str, 'max_containers': int, 'features': list}
     Данные берутся из таблицы access_levels. Если таблица недоступна,
     используются значения по умолчанию из DEFAULT_ACCESS_LEVELS.
-    Если указан user_id, к списку features добавляются modules пользователя."""
+    Если указан user_id и у пользователя есть modules, возвращается список
+    modules пользователя, иначе берётся список из тарифа."""
 
     try:
         from .subscription_models import AccessLevel
@@ -69,8 +70,10 @@ def get_user_permissions(user_access_level, user_id=None):
 
         if user_id:
             user = User.query.get(user_id)
-            if user and user.modules:
-                permissions['features'] = list(set(permissions['features'] + user.modules))
+            if user:
+                if user.modules:
+                    permissions['features'] = user.modules
+                # если модулей нет, оставляем список из тарифа
 
         return permissions
 
