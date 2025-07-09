@@ -94,6 +94,8 @@ class DataVersion(db.Model):
             db.session.add(version_record)
         new_version = str(uuid.uuid4())
         version_record.version_metadata[key] = new_version
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(version_record, "version_metadata")
         db.session.commit()
         return new_version
 

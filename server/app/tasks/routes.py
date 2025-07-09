@@ -15,7 +15,6 @@ from app.socketio_utils import notify_data_update, notify_task_change
 
 @to_do_app.route('/tasks/get_lists', methods=['GET'])
 @jwt_required()
-@check_version('tasksVersion')
 def get_lists_and_groups():
     client_timezone = int(request.args.get('time_zone', 0))
     data = get_lists_and_groups_data(client_timezone)
@@ -118,7 +117,6 @@ def change_task_status_route():
 
 @to_do_app.route('/tasks/get_tasks', methods=['GET'])
 @jwt_required()
-@check_version('tasksVersion')
 def get_tasks_route():
     list_id = request.args.get('list_id')
     client_timezone = int(request.args.get('time_zone', 0))
@@ -131,7 +129,6 @@ def get_tasks_route():
 
 @to_do_app.route('/tasks/get_anti_schedule', methods=['GET'])
 @jwt_required()
-@check_version('tasksVersion')
 def get_anti_schedule_route():
     current_app.logger.info('get_anti_schedule')
     result, status_code = get_anti_schedule()
