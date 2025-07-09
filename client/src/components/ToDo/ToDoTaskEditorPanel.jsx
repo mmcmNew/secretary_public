@@ -18,7 +18,7 @@ export default function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId 
   } = useTasks();
 
   const handleAddSubTask = useCallback((subtask, taskId) => {
-    addSubTask({ title: subtask, parentId: taskId });
+    addSubTask({ title: subtask, parentTaskId: taskId });
     setNewSubTask && setNewSubTask("");
   }, [addSubTask]);
 
