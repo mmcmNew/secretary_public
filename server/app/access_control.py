@@ -19,11 +19,6 @@ DEFAULT_ACCESS_LEVELS = {
         'name': 'Premium',
         'max_containers': 10,
         'features': ['tasks', 'calendar', 'memory', 'JournalEditor', 'metronome', 'Scenario', 'AntiSchedule', 'chat']
-    },
-    4: {  # Admin
-        'name': 'Admin',
-        'max_containers': -1,  # unlimited
-        'features': ['*', 'admin']  # all features + admin access
     }
 }
 
@@ -71,7 +66,10 @@ def get_user_permissions(user_access_level, user_id=None):
         if user_id:
             user = User.query.get(user_id)
             if user:
-                if user.modules:
+                if getattr(user, 'is_admin', False):
+                    permissions['features'] = ['*', 'admin']
+                    permissions['max_containers'] = -1
+                elif user.modules:
                     permissions['features'] = user.modules
                 # если модулей нет, оставляем список из тарифа
 

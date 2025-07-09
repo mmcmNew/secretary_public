@@ -31,13 +31,6 @@ def init_subscription_data():
             'description': 'Премиум тариф',
             'max_containers': -1,
             'features': json.dumps(['tasks', 'calendar', 'memory', 'JournalEditor', 'metronome', 'Scenario', 'AntiSchedule', 'chat'])
-        },
-        {
-            'id': 4,
-            'name': 'Admin',
-            'description': 'Администратор',
-            'max_containers': -1,
-            'features': json.dumps(['*', 'admin'])
         }
     ]
     
