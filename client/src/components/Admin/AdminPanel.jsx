@@ -1,23 +1,18 @@
 import { useState, useEffect } from 'react';
 import {
     Box, Paper, Typography, Table, TableBody, TableCell, TableContainer,
-    TableHead, TableRow, Select, MenuItem, Button, Chip
+    TableHead, TableRow, Select, MenuItem
 } from '@mui/material';
-import Swal from 'sweetalert2';
 import { useAccessControl } from '../../contexts/AccessControlContext';
 import axios from 'axios';
 
-const ACCESS_LEVELS = {
-    1: { name: 'Free', color: 'default' },
-    2: { name: 'Basic', color: 'primary' },
-    3: { name: 'Premium', color: 'secondary' },
-    4: { name: 'Admin', color: 'error' }
-};
 
 export default function AdminPanel() {
     const { hasAccess } = useAccessControl();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [plans, setPlans] = useState([]);
+    const [availableModules, setAvailableModules] = useState([]);
     
     if (!hasAccess('admin')) {
         return (
@@ -34,6 +29,8 @@ export default function AdminPanel() {
 
     useEffect(() => {
         fetchUsers();
+        fetchPlans();
+        fetchAvailableModules();
     }, []);
 
     const fetchUsers = async () => {
@@ -47,14 +44,30 @@ export default function AdminPanel() {
         }
     };
 
-    const updateUserAccessLevel = async (userId, newLevel) => {
+    const fetchPlans = async () => {
         try {
-            await axios.post(`/api/admin/users/${userId}/access-level`, {
-                access_level: newLevel
-            });
+            const response = await axios.get('/api/subscription-plans');
+            setPlans(response.data);
+        } catch (e) {
+            console.error('Failed to fetch plans:', e);
+        }
+    };
+
+    const fetchAvailableModules = async () => {
+        try {
+            const response = await axios.get('/api/admin/available-modules');
+            setAvailableModules(response.data);
+        } catch (e) {
+            console.error('Failed to fetch modules list:', e);
+        }
+    };
+
+    const updateUserPlan = async (userId, planId) => {
+        try {
+            await axios.post(`/api/admin/users/${userId}/plan`, { plan_id: planId });
             fetchUsers();
         } catch (error) {
-            console.error('Failed to update access level:', error);
+            console.error('Failed to update plan:', error);
         }
     };
 
@@ -67,19 +80,6 @@ export default function AdminPanel() {
         }
     };
 
-    const handleEditModules = async (user) => {
-        const { value } = await Swal.fire({
-            title: 'Модули пользователя',
-            input: 'text',
-            inputLabel: 'Список модулей через запятую',
-            inputValue: (user.modules || []).join(', '),
-            showCancelButton: true
-        });
-        if (value !== undefined) {
-            const modules = value.split(',').map(m => m.trim()).filter(Boolean);
-            updateUserModules(user.id, modules);
-        }
-    };
 
     if (loading) return <Typography>Загрузка...</Typography>;
 
@@ -97,9 +97,8 @@ export default function AdminPanel() {
                                 <TableCell>ID</TableCell>
                                 <TableCell>Имя пользователя</TableCell>
                                 <TableCell>Email</TableCell>
-                                <TableCell>Уровень доступа</TableCell>
+                                <TableCell>Тариф</TableCell>
                                 <TableCell>Модули</TableCell>
-                                <TableCell>Действия</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -109,30 +108,31 @@ export default function AdminPanel() {
                                     <TableCell>{user.username}</TableCell>
                                     <TableCell>{user.email}</TableCell>
                                     <TableCell>
-                                        <Chip
-                                            label={ACCESS_LEVELS[user.access_level_id]?.name || 'Free'}
-                                            color={ACCESS_LEVELS[user.access_level_id]?.color || 'default'}
-                                        />
+                                        <Select
+                                            value={user.plan_id || ''}
+                                            onChange={(e) => updateUserPlan(user.id, e.target.value)}
+                                            size="small"
+                                        >
+                                            {plans.map((plan) => (
+                                                <MenuItem key={plan.id} value={plan.id}>
+                                                    {plan.name}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
                                     </TableCell>
-                                <TableCell>
-                                    <Select
-                                        value={user.access_level_id || 1}
-                                        onChange={(e) => updateUserAccessLevel(user.id, e.target.value)}
-                                        size="small"
-                                    >
-                                        {Object.entries(ACCESS_LEVELS).map(([level, data]) => (
-                                            <MenuItem key={level} value={parseInt(level)}>
-                                                {data.name}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </TableCell>
-                                <TableCell>
-                                    {(user.modules || []).map(m => (
-                                        <Chip key={m} label={m} size="small" sx={{ mr: 0.5 }} />
-                                    ))}
-                                    <Button size="small" onClick={() => handleEditModules(user)}>Edit</Button>
-                                </TableCell>
+                                    <TableCell>
+                                        <Select
+                                            multiple
+                                            value={user.modules || []}
+                                            onChange={(e) => updateUserModules(user.id, e.target.value)}
+                                            size="small"
+                                            renderValue={(selected) => selected.join(', ')}
+                                        >
+                                            {availableModules.map((m) => (
+                                                <MenuItem key={m} value={m}>{m}</MenuItem>
+                                            ))}
+                                        </Select>
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -140,5 +140,4 @@ export default function AdminPanel() {
                 </TableContainer>
             </Paper>
         </Box>
-    );
-}
+    );}
