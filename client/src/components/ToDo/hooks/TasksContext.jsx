@@ -225,14 +225,14 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       setMyDayTasks(prev => ({
         ...prev,
         data: prev.data.map(task =>
-          task.id === params.taskId ? { ...task, status: params.status } : task
+          task.id === params.taskId ? { ...task, status_id: params.status_id } : task
         )
       }));
     } else if (params.listId === selectedListId) {
       setTasks(prev => ({
         ...prev,
         data: prev.data.map(task =>
-          task.id === params.taskId ? { ...task, status: params.status } : task
+          task.id === params.taskId ? { ...task, status_id: params.status_id } : task
         )
       }));
     }

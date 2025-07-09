@@ -64,10 +64,8 @@ def get_lists_and_groups_data(client_timezone=0):
 
     # --- Подсчёт unfinished по спискам
     unfinished_per_list = defaultdict(int)
-    for task in tasks:
-        if task.status_id != 2:
-            for lst in task.lists:
-                unfinished_per_list[lst.id] += 1
+    for lst in lists_list:
+        unfinished_per_list[lst.id] = lst.unfinished_tasks_count(tasks_map=tasks_map)
 
     # --- Подсчёт unfinished по группам
     unfinished_per_group = defaultdict(int)
@@ -308,7 +306,7 @@ def add_subtask(data):
         db.session.add(parent_task)
         db.session.commit()
 
-        return {'success': True, 'message': 'Подзадача добавлена', 'new_object': new_task.to_dict(),
+        return {'success': True, 'message': 'Подзадача добавлена', 'subtask': new_task.to_dict(),
                 'parent_task': parent_task.to_dict()}, 200
     else:
         return {'success': False, 'message': 'Недостаточно данных для создания подзадачи'}, 404

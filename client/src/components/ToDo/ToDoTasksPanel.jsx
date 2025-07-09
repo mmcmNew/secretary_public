@@ -9,6 +9,7 @@ import AddIcon from '@mui/icons-material/Add';
 export default function ToDoTasksPanel({ mobile = false, setSelectedListId, additionalButtonClick = null, additionalButton = null, onSuccess = null, onError = null }) {
   const {
     tasks,
+    myDayTasks,
     selectedTaskId,
     setSelectedTaskId,
     addTask,
@@ -138,7 +139,7 @@ export default function ToDoTasksPanel({ mobile = false, setSelectedListId, addi
         )}
         <TasksList
           containerId={selectedListId}
-          tasks={tasks.data}
+          tasks={selectedListId === 'my_day' ? myDayTasks.data : tasks.data}
           selectedTaskId={selectedTaskId}
           listsList={lists.lists}
           projects={lists.projects}
