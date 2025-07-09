@@ -125,7 +125,11 @@ def get_tasks(list_id, client_timezone=0):
         case 'my_day':
             tasks_query = [t for t in Task.get_myday_tasks(client_timezone) if t.user_id == user_id]
         case 'tasks':
-            tasks_query = Task.query.options(*load_options).filter(~Task.lists.any(), Task.user_id == user_id).all()
+            tasks_query = (
+                Task.query.options(*load_options)
+                .filter(~Task.lists.any(), ~Task.parent_tasks.any(), Task.user_id == user_id)
+                .all()
+            )
         case 'important':
             tasks_query = Task.query.options(*load_options).filter(Task.priority_id == 3, Task.user_id == user_id).all()
         case 'background':
@@ -139,7 +143,11 @@ def get_tasks(list_id, client_timezone=0):
                 Task.query
                 .join(task_list_relations, Task.id == task_list_relations.c.TaskID)
                 .join(List, List.id == task_list_relations.c.ListID)
-                .filter(List.id == list_id, Task.user_id == user_id)
+                .filter(
+                    List.id == list_id,
+                    Task.user_id == user_id,
+                    ~Task.parent_tasks.any()
+                )
                 .options(*load_options)
                 .all()
             )
@@ -279,7 +287,6 @@ def edit_list(data):
 
 def add_subtask(data):
     task_title = data.get('title', '')
-    list_id = data.get('listId', None)
     parent_task_id = data.get('parentTaskId', None)
 
     if parent_task_id:
@@ -288,10 +295,6 @@ def add_subtask(data):
             return {'success': False, 'message': 'Родительская задача не найдена'}, 404
 
         new_task = Task(title=task_title, user_id=current_user.id)
-        if list_id:
-            task_list = List.query.filter_by(id=list_id, user_id=current_user.id).first()
-            if task_list:
-                new_task.lists.append(task_list)
 
         db.session.add(new_task)
         db.session.commit()
