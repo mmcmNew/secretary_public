@@ -14,8 +14,8 @@ from app.socketio_utils import notify_data_update, notify_task_change
 
 
 @to_do_app.route('/tasks/get_lists', methods=['GET'])
-# @check_version()
 @jwt_required()
+@check_version('tasksVersion')
 def get_lists_and_groups():
     client_timezone = int(request.args.get('time_zone', 0))
     data = get_lists_and_groups_data(client_timezone)
@@ -96,6 +96,7 @@ def change_task_status_route():
 
 @to_do_app.route('/tasks/get_tasks', methods=['GET'])
 @jwt_required()
+@check_version('tasksVersion')
 def get_tasks_route():
     list_id = request.args.get('list_id')
     client_timezone = int(request.args.get('time_zone', 0))

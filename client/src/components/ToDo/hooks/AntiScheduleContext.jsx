@@ -19,8 +19,16 @@ export const AntiScheduleProvider = ({ children, onError, setLoading }) => {
     fetching.current = true;
     setAntiSchedule(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await api('/tasks/get_anti_schedule');
+      const data = await api(`/tasks/get_anti_schedule?version=${version || ''}`);
+      if (data.version_matches) {
+        setVersion(data.version);
+        setAntiSchedule(prev => ({ ...prev, loading: false }));
+        fetching.current = false;
+        if (setLoading) setLoading(false);
+        return antiSchedule.data;
+      }
       setAntiSchedule({ data: data.anti_schedule || data, loading: false, error: null });
+      setVersion(data.tasksVersion || data.version || version);
       if (setLoading) setLoading(false);
       fetching.current = false;
       return data.anti_schedule || data;
@@ -30,7 +38,7 @@ export const AntiScheduleProvider = ({ children, onError, setLoading }) => {
       if (setLoading) setLoading(false);
       fetching.current = false;
     }
-  }, [onError, setLoading]);
+  }, [onError, setLoading, version]);
 
   const addAntiTask = useCallback(async (params) => {
     const res = await api('/tasks/add_anti_task', 'POST', params);

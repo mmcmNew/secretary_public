@@ -39,9 +39,6 @@ def check_version(key='version'):
             
             current_app.logger.info('Version mismatch, proceeding with handler')
             result = f(*args, **kwargs)
-            # Update version after getting new data
-            DataVersion.update_version(key)
-            # Add version to response
             if isinstance(result, dict):
                 current_version = DataVersion.get_version(key)
                 current_app.logger.info(f'Adding new version {current_version} to response')
