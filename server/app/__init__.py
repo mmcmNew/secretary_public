@@ -44,12 +44,12 @@ def create_app(config_type='work'):
     socketio.init_app(app)
 
     with app.app_context():
-        if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):
-            engine = db.get_engine()
-            for schema in app.config.get('SCHEMAS', []):
-                with engine.connect() as conn:
-                    conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {schema}'))
-                    conn.commit()
+        # if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):
+        engine = db.get_engine()
+        for schema in app.config.get('SCHEMAS', []):
+            with engine.connect() as conn:
+                conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {schema}'))
+                conn.commit()
 
     # CSRF токен в cookie
     @app.after_request
@@ -106,23 +106,7 @@ def create_app(config_type='work'):
             # Создание таблиц только в test-режиме
             if config_type == 'test':
                 db.create_all()
-                from app.main.models import User
-                User.add_initial_users()
-                from app.tasks.models import Status, Priority, Interval
-                Status.add_initial_statuses()
-                Priority.add_initial_priorities()
-                Interval.add_initial_intervals()
-                from .init_subscription_data import init_subscription_data
-                init_subscription_data()
-            else:
-                # В work-режиме — предполагаем, что ты сделал flask db upgrade
-                from app.tasks.models import Status, Priority, Interval
-                try:
-                    Status.add_initial_statuses()
-                    Priority.add_initial_priorities()
-                    Interval.add_initial_intervals()
-                except Exception as e:
-                    app.logger.warning(f"Ошибка при инициализации данных: {e}")
+            # seed не вызывается автоматически!
 
         # SPA: отдача index.html и статики
         STATIC_EXCLUDES = (
@@ -144,4 +128,20 @@ def create_app(config_type='work'):
                 else send_from_directory(dist_folder, 'index.html')
             )
 
+    # Регистрируем CLI-команды
+    register_cli_commands(app)
+
     return app
+
+# CLI-команда для инициализации данных (seed)
+def register_cli_commands(app):
+    @app.cli.command("seed")
+    def seed():
+        """Инициализация базовых данных (статусы, приоритеты, интервалы, подписки и т.д.)"""
+        from app.tasks.models import Status, Priority, Interval
+        Status.add_initial_statuses()
+        Priority.add_initial_priorities()
+        Interval.add_initial_intervals()
+        from .init_subscription_data import init_subscription_data
+        init_subscription_data()
+        print("Данные успешно инициализированы.")
