@@ -15,6 +15,7 @@ def load_user_permissions():
             if user:
                 g.user_id = user_id
                 g.user_access_level = getattr(user, 'access_level_id', 1)
+                g.user_is_admin = getattr(user, 'is_admin', False)
                 
                 # Проверяем активную подписку
                 active_subscription = UserSubscription.query.filter_by(
@@ -32,8 +33,10 @@ def load_user_permissions():
                         g.user_access_level = 1
             else:
                 g.user_access_level = 1
+                g.user_is_admin = False
         else:
             g.user_access_level = 1
+            g.user_is_admin = False
             
-    except Exception as e:
-        g.user_access_level = 1
+    except Exception as e:        g.user_access_level = 1
+        g.user_is_admin = False
