@@ -1,5 +1,5 @@
 import { PropTypes } from 'prop-types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useTimer } from 'react-timer-hook';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
@@ -8,11 +8,13 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import CloseIcon from '@mui/icons-material/Close';
+import { AudioContext } from '../../contexts/AudioContext.jsx';
 
 
 export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resultText, isRunningProp=false, onExpireFunc=null, handleCloseTimer=null, handleUpdateTimers=null,  playSoundProp=true, soundUrl='/sounds/endTimer.mp3', currentActionId=null }) {
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [textToTts, setTextToTts] = useState(resultText || 'Таймер завершился');
+  const { playSound } = useContext(AudioContext);
   const initialTime = isRunningProp ?
     (initialEndTimeProp ? new Date(initialEndTimeProp) : new Date())
     : (initialTimeProp ? new Date(new Date().getTime() + initialTimeProp * 1000) : new Date());
@@ -38,7 +40,7 @@ export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resul
   }, [currentActionId]);
 
   function sendTextAndPlayAudio(text) {
-      fetch('/get_tts_audio', {
+      return fetch('/get_tts_audio', {
           method: 'POST',
           body: new URLSearchParams({text: text}),
           headers: {
@@ -52,12 +54,8 @@ export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resul
           return response.blob();
       })
       .then(blob => {
-          return new Promise((resolve) => {
-              const audioUrl = URL.createObjectURL(blob);
-              const audio = new Audio(audioUrl);
-              audio.onended = resolve;  // вызов resolve после окончания проигрывания
-              audio.play();
-          });
+          const audioUrl = URL.createObjectURL(blob);
+          return playSound(audioUrl);
       })
       .catch(error => {
           console.error('There has been a problem with your fetch operation:', error);
@@ -70,11 +68,7 @@ export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resul
     if (playSoundProp) {
       if (soundUrl) {
         // Сначала воспроизводим пользовательский или стандартный звук завершения
-        const audio = new Audio(soundUrl);
-        playAudioPromise = new Promise((resolve) => {
-          audio.onended = resolve; // Ждём завершения звука
-          audio.play();
-        });
+        playAudioPromise = playSound(soundUrl);
       }
     }
 

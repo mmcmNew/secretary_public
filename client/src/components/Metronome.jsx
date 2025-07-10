@@ -1,8 +1,9 @@
 import { PropTypes } from 'prop-types';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useContext } from 'react';
 import { Box, Button, TextField, Typography, Slider } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
+import { AudioContext } from '../contexts/AudioContext.jsx';
 
 export default function Metronome ({ id, initialName = "Metronome", initialBpm = 120, initialCount = 0, isRunningProp = false, onExpireFunc = null, currentActionId = null }) {
   console.log('Metronome', id, initialName, initialBpm, initialCount, isRunningProp);
@@ -12,7 +13,7 @@ export default function Metronome ({ id, initialName = "Metronome", initialBpm =
   const [isPlaying, setIsPlaying] = useState(isRunningProp);
   const intervalRef = useRef(null);
   const tickCountRef = useRef(0);
-  const audio = new Audio('/sounds/click1.mp3');
+  const { playSound } = useContext(AudioContext);
 
   useEffect(() => {
     if (isPlaying) {
@@ -34,7 +35,7 @@ export default function Metronome ({ id, initialName = "Metronome", initialBpm =
     const interval = (60 / bpm) * 1000;
     tickCountRef.current = 0; // Reset tick count when metronome starts
     intervalRef.current = setInterval(() => {
-      audio.play();
+      playSound('/sounds/click1.mp3');
       tickCountRef.current += 1;
       if (tickCountRef.current >= countTicks && countTicks > 1) {
         stopMetronome();

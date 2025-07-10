@@ -12,6 +12,7 @@ import MainContainerMobile from './components/MobileMain.jsx';
 import { ErrorProvider } from './contexts/ErrorContext';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { AccessControlProvider } from './contexts/AccessControlContext.jsx';
+import { AudioProvider } from './contexts/AudioContext.jsx';
 import SignInPage from './SignInPage.jsx';
 import AccountPage from './AccountPage.jsx';
 import RegisterPage from './RegisterPage.jsx';
@@ -48,13 +49,14 @@ function App() {
   return (
     <div className="App">
       <ErrorProvider>
-        <AuthProvider>
-          <AccessControlProvider>
-            <UpdateWebSocketProvider>
-              <ContainerProvider>
-                <TasksProvider>
-                  <AntiScheduleProvider>
-                    <Router future={{
+        <AudioProvider>
+          <AuthProvider>
+            <AccessControlProvider>
+              <UpdateWebSocketProvider>
+                <ContainerProvider>
+                  <TasksProvider>
+                    <AntiScheduleProvider>
+                      <Router future={{
                   v7_fetcherPersist: true,
                   v7_normalizeFormMethod: true,
                   v7_partialHydration: true,
@@ -62,14 +64,15 @@ function App() {
                   v7_skipActionErrorRevalidation: true,
                   v7_startTransition: true,
                 }}>
-                    <AppRoutes />
-                    </Router>
-                      </AntiScheduleProvider>
+                        <AppRoutes />
+                      </Router>
+                    </AntiScheduleProvider>
                   </TasksProvider>
-              </ContainerProvider>
-            </UpdateWebSocketProvider>
-          </AccessControlProvider>
-        </AuthProvider>
+                </ContainerProvider>
+              </UpdateWebSocketProvider>
+            </AccessControlProvider>
+          </AuthProvider>
+        </AudioProvider>
       </ErrorProvider>
     </div>
   );

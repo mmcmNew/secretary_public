@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, memo } from "react";
+import { useEffect, useState, useCallback, useMemo, memo, useContext } from "react";
 import {
     Box,
     TextField,
@@ -27,6 +27,7 @@ import NewRecordDialog from "../JournalEditor/NewRecordDialog";
 import TaskTypeDialog from "../TaskTypeManager/TaskTypeDialog.jsx";
 import PropTypes from "prop-types";
 import useTasks from "./hooks/useTasks";
+import { AudioContext } from "../../contexts/AudioContext.jsx";
 
 
 function TaskDetails({
@@ -39,6 +40,7 @@ function TaskDetails({
     deleteTask = null,
     selectedListId = null,
 }) {
+    const { playSound } = useContext(AudioContext);
     const [fields, setFields] = useState({});
     const [subTasks, setSubTasks] = useState({});
     const [newSubTask, setNewSubTask] = useState("");
@@ -123,8 +125,7 @@ function TaskDetails({
         const payload = { taskId, status_id, listId };
         if (status_id === 2) {
             payload.completed_at = dayjs().toISOString();
-            const audio = new Audio("/sounds/isComplited.wav");
-            audio.play();
+            playSound("/sounds/isComplited.wav");
         }
         await changeTaskStatus(payload);
         if (fetchCalendarEvents) await fetchCalendarEvents();
