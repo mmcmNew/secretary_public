@@ -431,6 +431,10 @@ class Task(db.Model):
             'title': self.title,
             'end': self.end.isoformat() + 'Z' if self.end else None,
             'start': self.start.isoformat() + 'Z' if self.start else None,
+            'range': {
+                'start': self.start.isoformat() + 'Z' if self.start else None,
+                'end': self.end.isoformat() + 'Z' if self.end else None,
+            },
             'completed_at': self.completed_at.isoformat() + 'Z' if self.completed_at else None,
             'is_background': self.is_background,
             'attachments': self.attachments,
