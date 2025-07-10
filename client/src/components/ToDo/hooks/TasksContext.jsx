@@ -4,6 +4,10 @@ import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 import { AuthContext } from '../../../contexts/AuthContext';
 import useContainer from '../../DraggableComponents/useContainer';
 import api from '../../../utils/api';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 
 const TasksContext = createContext();
 
@@ -38,8 +42,16 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       }
     }
     try {
-      // console.log('fetchTasks: start', listId);
-      const data = await api(`/tasks/get_tasks?list_id=${listId}&time_zone=${new Date().getTimezoneOffset()}&version=${version || ''}`);
+      let url = '';
+      if (listId === 'my_day') {
+        const start = dayjs().startOf('day').utc().toISOString();
+        const end = dayjs().endOf('day').utc().toISOString();
+        const params = new URLSearchParams({ list_id: 'events', start, end, version: version || '' });
+        url = `/tasks/get_tasks?${params.toString()}`;
+      } else {
+        url = `/tasks/get_tasks?list_id=${listId}&time_zone=${new Date().getTimezoneOffset()}&version=${version || ''}`;
+      }
+      const data = await api(url);
       if (data.version_matches) {
         setVersion(data.version);
         if (!silent && setLoading) setLoading(false);
