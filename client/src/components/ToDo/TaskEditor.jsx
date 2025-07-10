@@ -49,7 +49,7 @@ function TaskEditor({
     const [typeDialogOpen, setTypeDialogOpen] = useState(false);
     const [newTypeData, setNewTypeData] = useState({ name: '', color: '#3788D8', description: '' });
     const updateNewTypeData = (field, value) => setNewTypeData(prev => ({ ...prev, [field]: value }));
-    const { fetchCalendarEvents, addTaskType } = useTasks();
+    const { addTaskType } = useTasks();
     const { playAudio } = useContext(AudioContext);
 
     const taskMap = useMemo(() => new Map(tasks.map(t => [t.id, t])), [tasks]);
@@ -86,7 +86,6 @@ function TaskEditor({
         }).filter(Boolean) || [];
         reset(initial);
     }, [task, taskFields, reset]);
-
 
     const lastSent = useRef({});
 
