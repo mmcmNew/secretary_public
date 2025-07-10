@@ -29,6 +29,7 @@ import TaskTypeDialog from "../TaskTypeManager/TaskTypeDialog.jsx";
 import PropTypes from "prop-types";
 import useTasks from "./hooks/useTasks";
 import { AudioContext } from "../../contexts/AudioContext.jsx";
+import DateTimeRangePickerField from "./DateTimeRangePicker.jsx";
 
 
 function TaskEditor({
@@ -205,6 +206,7 @@ function TaskEditor({
     return (
         <FormProvider {...methods}>
         <Box sx={{ width: '100%', height: '96%', pb: 2 }}>
+            <DateTimeRangePickerField />
             <Paper variant="outlined" sx={{ p: 1, my: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Checkbox

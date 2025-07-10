@@ -1,70 +1,143 @@
-// components/DateTimeRangePicker.jsx
-import { Grid, TextField, FormHelperText } from "@mui/material";
-import { DatePicker, TimePicker } from "@mui/x-date-pickers";
+import { useRef } from "react";
+import {
+    Box,
+    FormHelperText,
+    IconButton,
+    InputAdornment
+} from "@mui/material";
+import { DateTimePicker } from "@mui/x-date-pickers";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { Controller } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
 import dayjs from "dayjs";
+import ClearIcon from "@mui/icons-material/Clear";
+import 'dayjs/locale/ru';
+dayjs.locale('ru');
 
-export default function DateTimeRangePickerField({ control, name = "startEnd" }) {
+export default function DateTimeRangePickerField({ name = "startEnd", onValidBlur }) {
+    const { control, trigger, getValues } = useFormContext();
+    const lastValidRef = useRef(null);
+
     return (
         <Controller
             name={name}
             control={control}
             rules={{
-                validate: ({ dateStart, dateEnd, timeStart, timeEnd }) => {
-                    if (!dateStart || !dateEnd) return "Выберите обе даты";
-                    if (!timeStart || !timeEnd) return "Укажите время начала и окончания";
-                    const start = dayjs(dateStart).hour(timeStart.hour()).minute(timeStart.minute());
-                    const end = dayjs(dateEnd).hour(timeEnd.hour()).minute(timeEnd.minute());
-                    if (!start.isBefore(end)) return "Дата окончания должна быть позже даты начала";
+                validate: (value = {}) => {
+                    const { start = null, end = null } = value;
+                    if (!start || !end) return "Выберите дату и время начала и окончания";
+                    
+                    const startDate = dayjs(start);
+                    const endDate = dayjs(end);
+                    if (!startDate.isValid() || !endDate.isValid()) return "Некорректная дата";
+                    if (!startDate.isBefore(endDate)) return "Дата окончания должна быть позже даты начала";
                     return true;
-                }
+                }                
             }}
             render={({ field: { value = {}, onChange }, fieldState: { error } }) => {
-                const { dateStart = null, dateEnd = null, timeStart = null, timeEnd = null } = value;
+                const { start = null, end = null } = value;
+
+                const handleAccept = async () => {
+                    const currentValue = getValues(name);
+
+                    let updatedValue = { ...currentValue };
+
+                    // Если есть только start — добавляем end = start + 1 час
+                    if (start && !end) {
+                        console.log(start)
+                        console.log(dayjs(start))
+                        const newEnd = dayjs(start).add(1, "hour");
+                        updatedValue.end = newEnd;
+                        onChange(updatedValue); // Обновляем, чтобы пользователь увидел сразу
+                    }
+
+                    const isValid = await trigger(name);
+                    console.log(isValid)
+                    if (isValid) {
+                        lastValidRef.current = updatedValue;
+                        onChange(updatedValue);
+                        onValidBlur?.(updatedValue);
+                    } else {
+                        if (JSON.stringify(currentValue) !== JSON.stringify(lastValidRef.current)) {
+                            lastValidRef.current = currentValue;
+                            onValidBlur?.(currentValue);
+                        }
+                    }
+                };
+
+                const handleStartChange = (newStart) => {
+                    onChange({ ...value, start: newStart });
+                };
+
+                const handleEndChange = (newEnd) => {
+                    onChange({ ...value, end: newEnd });
+                };
+
+                const clearStart = () => {
+                    onChange({ ...value, start: null });
+                };
+
+                const clearEnd = () => {
+                    onChange({ ...value, end: null });
+                };
 
                 return (
-                    <LocalizationProvider dateAdapter={AdapterDayjs}>
-                        <Grid container spacing={2}>
-                            <Grid item xs={6}>
-                                <DatePicker
-                                    label="Дата начала"
-                                    value={dateStart}
-                                    onChange={(newDate) => onChange({ ...value, dateStart: newDate })}
-                                    slotProps={{ textField: { fullWidth: true } }}
-                                />
-                            </Grid>
-                            <Grid item xs={6}>
-                                <TimePicker
-                                    label="Время начала"
-                                    value={timeStart}
-                                    onChange={(newTime) => onChange({ ...value, timeStart: newTime })}
-                                    slotProps={{ textField: { fullWidth: true } }}
-                                />
-                            </Grid>
-                            <Grid item xs={6}>
-                                <DatePicker
-                                    label="Дата окончания"
-                                    value={dateEnd}
-                                    onChange={(newDate) => onChange({ ...value, dateEnd: newDate })}
-                                    slotProps={{ textField: { fullWidth: true } }}
-                                />
-                            </Grid>
-                            <Grid item xs={6}>
-                                <TimePicker
-                                    label="Время окончания"
-                                    value={timeEnd}
-                                    onChange={(newTime) => onChange({ ...value, timeEnd: newTime })}
-                                    slotProps={{ textField: { fullWidth: true } }}
-                                />
-                            </Grid>
+                    <LocalizationProvider 
+                        dateAdapter={AdapterDayjs}
+                        adapterLocale="ru">
+                        <Box display="flex" gap={2} flexWrap="wrap" width="100%">
+                            <DateTimePicker
+                                label="Начало"
+                                format="DD.MM.YYYY HH:mm"
+                                value={start}
+                                onChange={handleStartChange}
+                                onAccept={handleAccept}
+                                slotProps={{
+                                    textField: {
+                                        fullWidth: true,
+                                        error: !!error,
+                                        onBlur: handleAccept,
+                                        InputProps: {
+                                            endAdornment: start ? (
+                                                <InputAdornment position="end">
+                                                    <IconButton onClick={clearStart} size="small">
+                                                        <ClearIcon />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ) : null
+                                        }
+                                    }
+                                }}
+                            />
+                            <DateTimePicker
+                                label="Окончание"
+                                format="DD.MM.YYYY HH:mm"
+                                value={end}
+                                onChange={handleEndChange}
+                                onAccept={handleAccept}
+                                slotProps={{
+                                    textField: {
+                                        fullWidth: true,
+                                        error: !!error,
+                                        onBlur: handleAccept,
+                                        InputProps: {
+                                            endAdornment: end ? (
+                                                <InputAdornment position="end">
+                                                    <IconButton onClick={clearEnd} size="small">
+                                                        <ClearIcon />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ) : null
+                                        }
+                                    }
+                                }}
+                            />
                             {error?.message && (
-                                <Grid item xs={12}>
+                                <Box width="100%">
                                     <FormHelperText error>{error.message}</FormHelperText>
-                                </Grid>
+                                </Box>
                             )}
-                        </Grid>
+                        </Box>
                     </LocalizationProvider>
                 );
             }}
