@@ -272,6 +272,8 @@ def get_fields_config():
     }
 
     task_types = TaskType.query.filter_by(user_id=current_user.id, is_active=True).all()
+    groups = TaskTypeGroup.query.filter_by(user_id=current_user.id).all()
+    group_map = {g.id: g.name for g in groups}
     types_list = [
         {
             "value": t.id,
@@ -279,6 +281,7 @@ def get_fields_config():
             "color": t.color,
             "description": t.description,
             "group_id": t.group_id,
+            "groupLabel": group_map.get(t.group_id, "Без группы"),
         }
         for t in task_types
     ]
