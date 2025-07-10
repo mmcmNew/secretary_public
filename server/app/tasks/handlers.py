@@ -424,19 +424,66 @@ def change_task_status(data, user_id=None):
     task_id = data.get('taskId')
     status_id = data.get('status_id', 2)
 
-    task = Task.query.options(db.joinedload(Task.subtasks)).filter_by(id=task_id, user_id=user_id).first()
+    task = Task.query.options(db.joinedload(Task.subtasks),
+                              db.joinedload(Task.lists)).filter_by(id=task_id, user_id=user_id).first()
     status = Status.query.get(status_id)
 
     if not task:
         return {'success': False, 'message': 'Task not found'}, 404
 
     if status_id == 2:
-        task.status_id = 2
         completed_at = data.get('completed_at')
         if completed_at:
-            task.completed_at = _parse_iso_datetime(completed_at)
+            completed_dt = _parse_iso_datetime(completed_at)
         else:
-            task.completed_at = datetime.now(timezone.utc)
+            completed_dt = datetime.now(timezone.utc)
+
+        if task.interval_id and task.start:
+            rule = task.build_rrule()
+            next_start = rule.after(task.start) if rule else None
+            has_next = False
+            if next_start:
+                if task.is_infinite:
+                    has_next = True
+                elif task.end:
+                    has_next = next_start <= task.end
+
+            if has_next:
+                # create completed copy
+                completed_task = Task(
+                    user_id=task.user_id,
+                    title=task.title,
+                    start=task.start,
+                    end=task.end,
+                    is_background=task.is_background,
+                    attachments=task.attachments,
+                    note=task.note,
+                    childes_order=task.childes_order,
+                    color=task.color,
+                    type_id=task.type_id,
+                    status_id=2,
+                    priority_id=task.priority_id,
+                    interval_id=None,
+                    is_infinite=False,
+                    completed_at=completed_dt
+                )
+                db.session.add(completed_task)
+                db.session.flush()
+                for lst in task.lists:
+                    lst.tasks.append(completed_task)
+                    order = lst.childes_order.copy() or []
+                    if completed_task.id not in order:
+                        order.insert(0, completed_task.id)
+                        lst.childes_order = order
+                    db.session.add(lst)
+
+                task.start = next_start
+                db.session.add(task)
+                db.session.commit()
+                return {'success': True, 'task': task.to_dict()}, 200
+
+        task.status_id = 2
+        task.completed_at = completed_dt
         set_subtask_status(task, status, completed_at)
         # Собираем id всех изменённых задач (родительская + все подзадачи)
         all_subtasks = collect_all_subtasks(task)
