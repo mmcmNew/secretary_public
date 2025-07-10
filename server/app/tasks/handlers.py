@@ -165,13 +165,12 @@ def get_tasks(list_id, client_timezone=0, start=None, end=None, user_id=None):
     client_timezone = int(client_timezone)
     start_dt = _parse_iso_datetime(start) if start else None
     end_dt = _parse_iso_datetime(end) if end else None
-    seen_tasks = set()  # Множество для отслеживания уникальных идентификаторов задач
-    load_options = [db.joinedload(Task.lists),
-                    db.joinedload(Task.subtasks),
-                    db.joinedload(Task.status),
-                    db.joinedload(Task.priority),
-                    db.joinedload(Task.interval),
-                    ]
+    load_options = [
+        db.joinedload(Task.lists),
+        db.joinedload(Task.status),
+        db.joinedload(Task.priority),
+        db.joinedload(Task.interval),
+    ]
 
     match list_id:
         case 'my_day':
@@ -206,15 +205,7 @@ def get_tasks(list_id, client_timezone=0, start=None, end=None, user_id=None):
 
     # current_app.logger.info(f'get_tasks: total_time_query: {datetime.now(timezone.utc) - start_time}')
 
-    def collect_subtasks(task):
-        """Рекурсивно собирает все подзадачи данной задачи."""
-        subtasks = []
-        if task.id not in seen_tasks:
-            seen_tasks.add(task.id)
-            subtasks.append(task.to_dict())
-            for subtask in task.subtasks:
-                subtasks.extend(collect_subtasks(subtask))
-        return subtasks
+
 
     def task_in_range(task):
         if start_dt or end_dt:
@@ -232,16 +223,39 @@ def get_tasks(list_id, client_timezone=0, start=None, end=None, user_id=None):
                 return False
         return True
 
-    # Сбор всех задач и их подзадач
+    # Сбор задач без подзадач
     for task in tasks_query:
         if task_in_range(task):
-            tasks_data.extend(collect_subtasks(task))
+            tasks_data.append(task.to_dict())
 
     # end_time = datetime.now(timezone.utc)
     # total_time = end_time - start_time
     # current_app.logger.info(f'get_tasks: start_time: {start_time}, end_time: {end_time},'
     #                         f'total_time: {total_time}')
     return {'tasks': tasks_data}, 200
+
+
+def get_tasks_by_ids(task_ids, user_id=None):
+    """Return tasks for given list of ids."""
+    if user_id is None:
+        raise ValueError("user_id must be provided for get_tasks_by_ids")
+
+    if not task_ids:
+        return {'tasks': []}, 200
+
+    load_options = [
+        db.joinedload(Task.lists),
+        db.joinedload(Task.status),
+        db.joinedload(Task.priority),
+        db.joinedload(Task.interval),
+    ]
+
+    tasks = (
+        Task.query.options(*load_options)
+        .filter(Task.id.in_(task_ids), Task.user_id == user_id)
+        .all()
+    )
+    return {'tasks': [t.to_dict() for t in tasks]}, 200
 
 
 def add_object(data, user_id=None):

@@ -2,10 +2,25 @@
 from . import to_do_app
 from flask import request, jsonify, current_app
 from flask_jwt_extended import jwt_required
-from .handlers import (get_lists_and_groups_data, add_object, add_task, edit_list,
-                       add_subtask, edit_task, change_task_status, get_tasks, del_task,
-                       link_group_list, delete_from_childes, link_task, get_anti_schedule,
-                       add_anti_task, edit_anti_task, del_anti_task)
+from .handlers import (
+    get_lists_and_groups_data,
+    add_object,
+    add_task,
+    edit_list,
+    add_subtask,
+    edit_task,
+    change_task_status,
+    get_tasks,
+    get_tasks_by_ids,
+    del_task,
+    link_group_list,
+    delete_from_childes,
+    link_task,
+    get_anti_schedule,
+    add_anti_task,
+    edit_anti_task,
+    del_anti_task,
+)
 from .versioning import check_version
 from .models import DataVersion, TaskTypeGroup, TaskType
 from app import db
@@ -131,6 +146,21 @@ def get_tasks_route():
     user_id = current_user.id
     # current_app.logger.info(f'get_tasks, list_id: {list_id}')
     result, status_code = get_tasks(list_id, client_timezone, start, end, user_id=user_id)
+    if status_code == 200:
+        result['tasksVersion'] = DataVersion.get_version('tasksVersion')
+    return jsonify(result), status_code
+
+
+@to_do_app.route('/tasks/get_tasks_by_ids', methods=['GET'])
+@jwt_required()
+def get_tasks_by_ids_route():
+    ids_param = request.args.get('ids', '')
+    try:
+        ids = [int(i) for i in ids_param.split(',') if i.strip()]
+    except ValueError:
+        return jsonify({'error': 'Invalid ids'}), 400
+    user_id = current_user.id
+    result, status_code = get_tasks_by_ids(ids, user_id=user_id)
     if status_code == 200:
         result['tasksVersion'] = DataVersion.get_version('tasksVersion')
     return jsonify(result), status_code

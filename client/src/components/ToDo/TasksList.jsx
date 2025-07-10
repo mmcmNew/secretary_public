@@ -45,7 +45,7 @@ export default function TasksList({
     const [open, setOpen] = useState({});
     const [completedOpen, setCompletedOpen] = useState(true);
     const { anchorEl, openMenu, closeMenu } = useContextMenu();
-    const { fetchCalendarEvents } = useTasks();
+    const { fetchCalendarEvents, fetchTasksByIds } = useTasks();
     const [listsMenuAnchorEl, setListsMenuAnchorEl] = useState(null);
     const [actionType, setActionType] = useState(null);
     const [targetItemId, setTargetItemId] = useState(null);
@@ -106,11 +106,23 @@ export default function TasksList({
 
     // const isDefaultList = (listId) => defaultLists.some(list => list.id === listId);
 
-    function handleClick(id) {
+    async function handleClick(id) {
+        const willOpen = !open[id];
         setOpen((prevOpen) => ({
             ...prevOpen,
-            [id]: !prevOpen[id],
+            [id]: willOpen,
         }));
+        if (willOpen && typeof fetchTasksByIds === "function") {
+            const task = tasks.find((t) => t.id === id);
+            if (task && task.childes_order?.length) {
+                const missing = task.childes_order.filter(
+                    (cid) => !tasks.some((t) => t.id === cid)
+                );
+                if (missing.length) {
+                    await fetchTasksByIds(missing);
+                }
+            }
+        }
     }
 
     function handleAdditionalButtonClick(task) {
