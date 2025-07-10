@@ -17,7 +17,8 @@ from app.socketio_utils import notify_data_update, notify_task_change
 @jwt_required()
 def get_lists_and_groups():
     client_timezone = int(request.args.get('time_zone', 0))
-    data = get_lists_and_groups_data(client_timezone)
+    user_id = current_user.id
+    data = get_lists_and_groups_data(client_timezone, user_id=user_id)
     if isinstance(data, dict) and 'error' in data:
         return jsonify(data), 500
     data['tasksVersion'] = DataVersion.get_version('tasksVersion')
@@ -28,7 +29,8 @@ def get_lists_and_groups():
 @jwt_required()
 def add_object_route():
     data = request.get_json()
-    result, status_code = add_object(data)
+    user_id = current_user.id
+    result, status_code = add_object(data, user_id)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
@@ -39,13 +41,14 @@ def add_object_route():
 @jwt_required()
 def add_task_route():
     data = request.get_json()
-    result, status_code = add_task(data)
+    user_id = current_user.id
+    result, status_code = add_task(data, user_id)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
         if 'task' in result:
             # Получаем актуальные списки
-            lists_data = get_lists_and_groups_data()
+            lists_data = get_lists_and_groups_data(user_id=user_id)
             # Для календаря: просто отправляем новую задачу
             calendar_events = [result['task']]
             notify_task_change('added', result['task'], data.get('listId'), lists_data=lists_data, calendar_events=calendar_events)
@@ -70,7 +73,8 @@ def edit_list_route():
 @jwt_required()
 def add_subtask_route():
     data = request.get_json()
-    result, status_code = add_subtask(data)
+    user_id = current_user.id
+    result, status_code = add_subtask(data, user_id)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
@@ -81,12 +85,13 @@ def add_subtask_route():
 @jwt_required()
 def edit_task_route():
     data = request.get_json()
-    result, status_code = edit_task(data)
+    user_id = current_user.id
+    result, status_code = edit_task(data, user_id=user_id)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
         if 'task' in result:
-            lists_data = get_lists_and_groups_data()
+            lists_data = get_lists_and_groups_data(user_id=user_id)
             # Для календаря: отправляем изменённую задачу
             calendar_events = [result['task']]
             notify_task_change('updated', result['task'], data.get('listId'), lists_data=lists_data, calendar_events=calendar_events)
@@ -97,11 +102,12 @@ def edit_task_route():
 @jwt_required()
 def change_task_status_route():
     data = request.get_json()
-    result, status_code = change_task_status(data)
+    user_id = current_user.id
+    result, status_code = change_task_status(data, user_id=user_id)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
-        lists_data = get_lists_and_groups_data()
+        lists_data = get_lists_and_groups_data(user_id=user_id)
         # Для календаря: если есть changed_ids, отправляем задачи по этим id
         calendar_events = None
         if 'changed_ids' in result:
@@ -122,8 +128,9 @@ def get_tasks_route():
     start = request.args.get('start')
     end = request.args.get('end')
     client_timezone = int(request.args.get('time_zone', 0))
+    user_id = current_user.id
     # current_app.logger.info(f'get_tasks, list_id: {list_id}')
-    result, status_code = get_tasks(list_id, client_timezone, start, end)
+    result, status_code = get_tasks(list_id, client_timezone, start, end, user_id=user_id)
     if status_code == 200:
         result['tasksVersion'] = DataVersion.get_version('tasksVersion')
     return jsonify(result), status_code
@@ -133,7 +140,8 @@ def get_tasks_route():
 @jwt_required()
 def get_anti_schedule_route():
     current_app.logger.info('get_anti_schedule')
-    result, status_code = get_anti_schedule()
+    user_id = current_user.id
+    result, status_code = get_anti_schedule(user_id)
     if status_code == 200:
         result['tasksVersion'] = DataVersion.get_version('tasksVersion')
     return jsonify(result), status_code
@@ -143,7 +151,8 @@ def get_anti_schedule_route():
 @jwt_required()
 def add_anti_task_route():
     data = request.get_json()
-    result, status_code = add_anti_task(data)
+    user_id = current_user.id
+    result, status_code = add_anti_task(data, user_id)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
@@ -176,11 +185,12 @@ def del_anti_task_route():
 @jwt_required()
 def del_task_route():
     data = request.get_json()
-    result, status_code = del_task(data)
+    user_id = current_user.id
+    result, status_code = del_task(data, user_id=user_id)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
-        lists_data = get_lists_and_groups_data()
+        lists_data = get_lists_and_groups_data(user_id=user_id)
         # Для календаря: просто отправляем id удалённой задачи
         calendar_events = [{'id': data.get('taskId'), 'deleted': True}]
         notify_task_change('deleted', {'id': data.get('taskId')}, data.get('listId'), lists_data=lists_data, calendar_events=calendar_events)
@@ -191,7 +201,8 @@ def del_task_route():
 @jwt_required()
 def link_group_list_route():
     data = request.get_json()
-    result, status_code = link_group_list(data)
+    user_id = current_user.id
+    result, status_code = link_group_list(data, user_id=user_id)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
@@ -202,7 +213,8 @@ def link_group_list_route():
 @jwt_required()
 def delete_from_childes_route():
     data = request.get_json()
-    result, status_code = delete_from_childes(data)
+    user_id = current_user.id
+    result, status_code = delete_from_childes(data, user_id=user_id)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
@@ -213,7 +225,8 @@ def delete_from_childes_route():
 @jwt_required()
 def link_task_route():
     data = request.get_json()
-    result, status_code = link_task(data)
+    user_id = current_user.id
+    result, status_code = link_task(data, user_id=user_id)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)

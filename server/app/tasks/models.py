@@ -7,6 +7,7 @@ import hashlib
 import json
 import random
 import uuid
+from sqlalchemy import or_, and_
 
 from app import db
 
@@ -498,20 +499,13 @@ class Task(db.Model):
 
     @staticmethod
     def get_myday_tasks(client_timezone=0, user_id=None):
-        client_timezone_offset = timedelta(minutes=-int(client_timezone))
-
         if user_id is None:
-            try:
-                user_id = current_user.id
-            except Exception:
-                user_id = None
+            raise ValueError("user_id must be provided for get_myday_tasks")
 
-        # Локальное «сегодня» в UTC
+        client_timezone_offset = timedelta(minutes=-int(client_timezone))
         now_local = datetime.now(timezone.utc) + client_timezone_offset
         start_of_day = datetime.combine(now_local.date(), datetime.min.time())
         end_of_day = datetime.combine(now_local.date(), datetime.max.time())
-
-        # Смещение обратно в UTC
         start_utc = start_of_day - client_timezone_offset
         end_utc = end_of_day - client_timezone_offset
 
@@ -523,27 +517,39 @@ class Task(db.Model):
             joinedload(Task.subtasks)
         ]
 
-        # Обычные задачи на сегодня
+        # Один запрос: обычные задачи или потенциально повторяющиеся
         query = Task.query.options(*load_options).filter(
-            Task.start >= start_utc,
-            Task.start < end_utc
+            Task.user_id == user_id,
+            or_(
+                # Обычные задачи на сегодня
+                and_(
+                    Task.start >= start_utc,
+                    Task.start < end_utc
+                ),
+                # Повторяющиеся задачи, которые могли бы быть сегодня
+                and_(
+                    Task.interval_id.isnot(None),
+                    Task.start.isnot(None),
+                    Task.start <= end_utc,
+                    or_(
+                        Task.end == None,
+                        Task.end >= start_utc
+                    ),
+                    Task.status_id != 2
+                )
+            )
         )
-        if user_id:
-            query = query.filter(Task.user_id == user_id)
 
-        today_tasks = query.all()
+        all_tasks = query.all()
 
-        # Повторяющиеся задачи
-        recurring_query = Task.query.options(*load_options).filter(
-            Task.interval_id.isnot(None),
-            Task.start.isnot(None),
-            Task.status_id != 2
-        )
-        if user_id:
-            recurring_query = recurring_query.filter(Task.user_id == user_id)
+        # Обычные задачи
+        today_tasks = [task for task in all_tasks if task.interval_id is None and task.start and start_utc <= task.start < end_utc]
 
-        recurring_tasks = recurring_query.all()
-
+        # Повторяющиеся задачи (фильтруем через rrule)
+        recurring_tasks = [
+            task for task in all_tasks
+            if task.interval_id is not None and task.start is not None and task.status_id != 2
+        ]
         for task in recurring_tasks:
             rule = task.build_rrule()
             if rule and rule.between(start_utc, end_utc, inc=True):
@@ -551,10 +557,7 @@ class Task(db.Model):
 
         # Удалить дубли
         unique_tasks = list({task.id: task for task in today_tasks}.values())
-
-        # Сортировка по времени начала
         unique_tasks.sort(key=lambda t: t.start.time() if t.start else datetime.min.time())
-
         return unique_tasks
 
     def get_rrule(self):
@@ -635,21 +638,12 @@ class AntiTask(db.Model):
         return task_dict
 
     @staticmethod
-    def get_anti_schedule(user_id=None):
-        if user_id is None:
-            try:
-                user_id = current_user.id
-            except Exception:
-                user_id = None
+    def get_anti_schedule(user_id):
         load_options = [
             joinedload(AntiTask.task),
             joinedload(AntiTask.status)
         ]
-
-        query = AntiTask.query.options(*load_options)
-        if user_id is not None:
-            query = query.filter_by(user_id=user_id)
+        query = AntiTask.query.options(*load_options).filter_by(user_id=user_id)
         anti_tasks = query.order_by(AntiTask.start).all()
         schedule = [task.to_dict() for task in anti_tasks]
-
         return schedule

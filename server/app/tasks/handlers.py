@@ -2,7 +2,6 @@
 from flask import current_app, jsonify
 
 from .models import *
-from flask_jwt_extended import current_user
 from datetime import datetime, timezone, timedelta
 from flask import current_app
 from sqlalchemy import func
@@ -84,10 +83,11 @@ def get_unfinished_tasks_count_per_project(user_id):
     return unfinished_per_project
 
 
-def get_lists_and_groups_data(client_timezone=0):
+def get_lists_and_groups_data(client_timezone=0, user_id=None):
     from collections import defaultdict
 
-    user_id = current_user.id
+    if user_id is None:
+        raise ValueError("user_id must be provided for get_lists_and_groups_data")
     client_timezone = int(client_timezone)
 
     # --- Предзагрузка данных
@@ -157,10 +157,11 @@ def get_lists_and_groups_data(client_timezone=0):
     }
 
 
-def get_tasks(list_id, client_timezone=0, start=None, end=None):
+def get_tasks(list_id, client_timezone=0, start=None, end=None, user_id=None):
     # start_time = datetime.now(timezone.utc)
     tasks_data = []
-    user_id = current_user.id
+    if user_id is None:
+        raise ValueError("user_id must be provided for get_tasks")
     client_timezone = int(client_timezone)
     start_dt = _parse_iso_datetime(start) if start else None
     end_dt = _parse_iso_datetime(end) if end else None
@@ -174,7 +175,7 @@ def get_tasks(list_id, client_timezone=0, start=None, end=None):
 
     match list_id:
         case 'my_day':
-            tasks_query = [t for t in Task.get_myday_tasks(client_timezone) if t.user_id == user_id]
+            tasks_query = Task.get_myday_tasks(client_timezone, user_id=user_id)
         case 'tasks':
             tasks_query = (
                 Task.query.options(*load_options)
@@ -243,9 +244,12 @@ def get_tasks(list_id, client_timezone=0, start=None, end=None):
     return {'tasks': tasks_data}, 200
 
 
-def add_object(data):
+def add_object(data, user_id=None):
     object_type = data.get('type', '')
     object_order = data.get('order', -1)
+
+    if user_id is None:
+        raise ValueError("user_id must be provided for add_object")      
     
     # Устанавливаем дефолтные названия если title пустой
     object_title = data.get('title', '').strip()
@@ -253,7 +257,6 @@ def add_object(data):
         default_names = {'list': 'Новый список', 'group': 'Новая группа', 'project': 'Новый проект'}
         object_title = default_names.get(object_type, 'Новый объект')
 
-    user_id = current_user.id
     match object_type:
         case 'list':
             new_object = List(title=object_title, order=object_order, user_id=user_id)
@@ -271,9 +274,11 @@ def add_object(data):
             'new_object': new_object.to_dict()}, 200
 
 
-def add_task(data):
+def add_task(data, user_id=None):
     current_app.logger.info(f'add_task: {data}')
     task_title = data.get('title', '')
+    if user_id is None:
+        raise ValueError("user_id must be provided for add_task")
     if not task_title or not task_title.strip():
         return {'success': False, 'message': 'Не передан title задачи'}, 400
 
@@ -299,11 +304,11 @@ def add_task(data):
             is_background = True
 
     new_task = Task(title=task_title, end=end, start=start, priority_id=priority_id,
-                    is_background=is_background, user_id=current_user.id)
+                    is_background=is_background, user_id=user_id)
     db.session.add(new_task)
 
     if list_id and str(list_id).isdigit():
-        updated_list = List.query.filter_by(id=int(list_id), user_id=current_user.id).first()
+        updated_list = List.query.filter_by(id=int(list_id), user_id=user_id).first()
 
         if updated_list:
             updated_list.tasks.append(new_task)
@@ -321,8 +326,10 @@ def add_task(data):
                 'task_list': updated_list_dict}, 200
 
 
-def edit_list(data):
+def edit_list(data, user_id=None):
     current_app.logger.info(f'edit_list: data: {data}')
+    if user_id is None:
+        raise ValueError("user_id must be provided for edit_list")
     if not isinstance(data, dict):
         current_app.logger.error(f'edit_list: Expected dict, got {type(data)}: {data}')
         return {'success': False, 'message': 'Invalid data format'}, 400
@@ -353,16 +360,19 @@ def edit_list(data):
     return {'success': True, 'updated_list': updated_list.to_dict()}, 200
 
 
-def add_subtask(data):
+def add_subtask(data, user_id=None):
     task_title = data.get('title', '')
     parent_task_id = data.get('parentTaskId', None)
 
+    if user_id is None:
+        raise ValueError("user_id must be provided for add_subtask")
+
     if parent_task_id:
-        parent_task = Task.query.filter_by(id=parent_task_id, user_id=current_user.id).first()
+        parent_task = Task.query.filter_by(id=parent_task_id, user_id=user_id).first()
         if not parent_task:
             return {'success': False, 'message': 'Родительская задача не найдена'}, 404
 
-        new_task = Task(title=task_title, user_id=current_user.id)
+        new_task = Task(title=task_title, user_id=user_id)
 
         db.session.add(new_task)
         db.session.commit()
@@ -383,14 +393,15 @@ def add_subtask(data):
         return {'success': False, 'message': 'Недостаточно данных для создания подзадачи'}, 404
 
 
-def edit_task(data):
-    # current_app.logger.info(f'edit_task: data: {data}')
+def edit_task(data, user_id=None):
+    if user_id is None:
+        raise ValueError("user_id must be provided for edit_task")
     task_id = data.get('taskId')
     updated_fields = {key: value for key, value in data.items() if key not in ['taskId', 'subtasks']}
 
     # print(f'edit_task: updated_fields: {updated_fields}')
 
-    task = Task.query.get(task_id)
+    task = Task.query.filter_by(id=task_id, user_id=user_id).first()
 
     if not task:
         return {'success': False, 'message': 'Task not found'}, 404
@@ -407,11 +418,13 @@ def edit_task(data):
     return {'success': True, 'task': task.to_dict()}, 200
 
 
-def change_task_status(data):
+def change_task_status(data, user_id=None):
+    if user_id is None:
+        raise ValueError("user_id must be provided for change_task_status")
     task_id = data.get('taskId')
     status_id = data.get('status_id', 2)
 
-    task = Task.query.options(db.joinedload(Task.subtasks)).get(task_id)
+    task = Task.query.options(db.joinedload(Task.subtasks)).filter_by(id=task_id, user_id=user_id).first()
     status = Status.query.get(status_id)
 
     if not task:
@@ -462,12 +475,14 @@ def collect_all_subtasks(root_task):
     return collected
 
 
-def get_anti_schedule():
-    anti_schedule = AntiTask.get_anti_schedule(current_user.id)
+def get_anti_schedule(user_id=None):
+    if user_id is None:
+        raise ValueError("user_id must be provided for get_anti_schedule")
+    anti_schedule = AntiTask.get_anti_schedule(user_id)
     return {'anti_schedule': anti_schedule}, 200
 
 
-def add_anti_task(data):
+def add_anti_task(data, user_id=None):
     # print(f'add_anti_task: data: {data}')
     title = data.get('title').strip()
     start = data.get('start')
@@ -475,10 +490,13 @@ def add_anti_task(data):
     updated_fields = {key: value for key, value in data.items() if key not in ['taskId', 'id', 'subtasks', 'start',
                                                                                'end', 'title', 'type']}
 
+    if user_id is None:
+        raise ValueError("user_id must be provided for add_anti_task")
+
     if start and end and title:
         start = _parse_iso_datetime(start)
         end = _parse_iso_datetime(end)
-        anti_task = AntiTask(title=title, start=start, end=end, user_id=current_user.id)
+        anti_task = AntiTask(title=title, start=start, end=end, user_id=user_id)
         for key, value in updated_fields.items():
             if hasattr(anti_task, key):
                 setattr(anti_task, key, value)
@@ -522,54 +540,18 @@ def edit_anti_task(data):
     return {'success': True, 'task': anti_task.to_dict()}, 200
 
 
-# def upgrade_task_interval(task, interval_id, status_id):
-#     sign = 1 if status_id == 2 else -1
-#     # print(f'upgrade_task_interval: task: {task}, interval_id: {interval_id}, status_id: {status_id}')
-#     try:
-#         match interval_id:
-#             case 1:  # Daily
-#                 delta = timedelta(days=1 * sign)
-#                 task.start += delta
-#                 task.deadline += delta
-#             case 2:  # Weekly
-#                 delta = timedelta(weeks=1 * sign)
-#                 task.start += delta
-#                 task.deadline += delta
-#             case 3:  # Monthly
-#                 task.start += relativedelta(months=1 * sign)
-#                 task.deadline += relativedelta(months=1 * sign)
-#                 # print(f'upgrade_task_interval: task.start: {task.start}, task.deadline: {task.deadline}')
-#             case 4:  # Yearly
-#                 task.start += relativedelta(years=1 * sign)
-#                 task.deadline += relativedelta(years=1 * sign)
-#             case 5:  # Workdays (Monday to Friday)
-#                 while True:
-#                     task.start += timedelta(days=sign)
-#                     task.deadline += timedelta(days=sign)
-#                     if task.start.weekday() < 5 and task.deadline.weekday() < 5:
-#                         break
-#
-#         if status_id != 2:
-#             task.status = Status.query.get(status_id)
-#
-#         db.session.add(task)
-#         result = {'success': True, 'task': task.to_dict()}
-#     except Exception as e:
-#         current_app.logger.error(f'Ошибка при обновлении интервала задачи {e}')
-#         result = {'success': False, 'message': f'Ошибка при обновлении интервала задачи {e}'}
-#
-#     return result
 
-
-def del_task(data):
+def del_task(data, user_id=None):
+    if user_id is None:
+        raise ValueError("user_id must be provided for del_task")
     task_id = data.get('taskId')
-    task = Task.query.get(task_id)
+    task = Task.query.filter_by(id=task_id, user_id=user_id).first()
 
     if not task:
         return {'error': 'Subtask not found'}, 404
 
     parent_tasks = Task.query.join(task_subtasks_relations, (Task.id == task_subtasks_relations.c.TaskID)).filter(
-        task_subtasks_relations.c.SubtaskID == task_id).all()
+        task_subtasks_relations.c.SubtaskID == task_id, Task.user_id == user_id).all()
 
     for parent_task in parent_tasks:
         if task_id in parent_task.childes_order:
@@ -578,7 +560,7 @@ def del_task(data):
             parent_task.childes_order = childes_order
             db.session.add(parent_task)
 
-    lists = List.query.filter(List.childes_order.contains([task_id])).all()
+    lists = List.query.filter(List.childes_order.contains([task_id]), List.user_id == user_id).all()
 
     for list_item in lists:
         if task_id in list_item.childes_order:
@@ -594,33 +576,35 @@ def del_task(data):
     return {'success': True, 'message': 'Subtask deleted successfully'}, 200
 
 
-def link_group_list(data):
+def link_group_list(data, user_id=None):
+    if user_id is None:
+        raise ValueError("user_id must be provided for link_group_list")
     try:
         source_id = data['source_id']
         target_id = data['target_id']
 
         if str(source_id).startswith('group_'):
-            source = Group.query.get(int(source_id.split('_')[1]))
+            source = Group.query.filter_by(id=int(source_id.split('_')[1]), user_id=user_id).first()
         elif str(source_id).startswith('project_'):
-            source = Project.query.get(int(source_id.split('_')[1]))
+            source = Project.query.filter_by(id=int(source_id.split('_')[1]), user_id=user_id).first()
         else:
-            source = List.query.get(int(source_id))
+            source = List.query.filter_by(id=int(source_id), user_id=user_id).first()
 
         if str(target_id).startswith('group_'):
-            target = Group.query.get(int(target_id.split('_')[1]))
+            target = Group.query.filter_by(id=int(target_id.split('_')[1]), user_id=user_id).first()
             if isinstance(source, List):
-                if target not in source.groups:
+                if target and target not in source.groups:
                     source.groups.append(target)
             elif isinstance(source, Group):
-                if target not in source.projects:
+                if target and target not in source.projects:
                     source.projects.append(target)
         elif str(target_id).startswith('project_'):
-            target = Project.query.get(int(target_id.split('_')[1]))
+            target = Project.query.filter_by(id=int(target_id.split('_')[1]), user_id=user_id).first()
             if isinstance(source, List):
-                if target not in source.projects:
+                if target and target not in source.projects:
                     source.projects.append(target)
             elif isinstance(source, Group):
-                if target not in source.projects:
+                if target and target not in source.projects:
                     source.projects.append(target)
         else:
             return {"error": "Invalid target ID"}, 400
@@ -644,7 +628,9 @@ def link_group_list(data):
         return {"error": str(e)}, 500
 
 
-def delete_from_childes(data):
+def delete_from_childes(data, user_id=None):
+    if user_id is None:
+        raise ValueError("user_id must be provided for delete_from_childes")
     # print(f'delete_from_childes: data: {data}')
     try:
         source_id = data['source_id']
@@ -656,11 +642,11 @@ def delete_from_childes(data):
             return {"success": True}, 200
 
         if str(source_id).startswith('task_'):
-            source = Task.query.get(int(source_id.split('_')[1]))
+            source = Task.query.filter_by(id=int(source_id.split('_')[1]), user_id=user_id).first()
         elif str(source_id).startswith('group_'):
-            source = Group.query.get(int(source_id.split('_')[1]))
+            source = Group.query.filter_by(id=int(source_id.split('_')[1]), user_id=user_id).first()
         else:
-            source = List.query.get(int(source_id))
+            source = List.query.filter_by(id=int(source_id), user_id=user_id).first()
 
         if (isinstance(source, List) or isinstance(source, Group) or isinstance(source, Project)) and group_id is None:
             source.in_general_list = False
@@ -669,21 +655,21 @@ def delete_from_childes(data):
             return {"success": True}, 200
 
         if str(group_id).startswith('task_'):
-            group = Task.query.get(int(group_id.split('_')[1]))
+            group = Task.query.filter_by(id=int(group_id.split('_')[1]), user_id=user_id).first()
         elif str(group_id).startswith('group_'):
-            group = Group.query.get(int(group_id.split('_')[1]))
+            group = Group.query.filter_by(id=int(group_id.split('_')[1]), user_id=user_id).first()
         elif str(group_id).startswith('project_'):
-            group = Project.query.get(int(group_id.split('_')[1]))
+            group = Project.query.filter_by(id=int(group_id.split('_')[1]), user_id=user_id).first()
         else:
-            group = List.query.get(int(group_id))
+            group = List.query.filter_by(id=int(group_id), user_id=user_id).first()
 
         if source and group:
             # Удаление элемента из списка детей
             if isinstance(source, Task):
-                source_id = int(source_id.split('_')[1])
-            if source_id in group.childes_order:
+                source_id_int = int(source_id.split('_')[1])
+            if source_id_int in group.childes_order:
                 updated_childes_order = group.childes_order.copy()
-                updated_childes_order.remove(source_id)
+                updated_childes_order.remove(source_id_int)
                 group.childes_order = updated_childes_order
 
             # Разрыв связи между source и group
@@ -713,25 +699,27 @@ def delete_from_childes(data):
         return {"error": str(e)}, 500
 
 
-def link_task(data):
+def link_task(data, user_id=None):
+    if user_id is None:
+        raise ValueError("user_id must be provided for link_task")
     try:
         task_id = data['task_id']
         target_id = data['list_id']
         action = data.get('action', 'link')
         source_list_id = data.get('source_list_id')
 
-        task = Task.query.get(task_id)
+        task = Task.query.filter_by(id=task_id, user_id=user_id).first()
         if str(target_id).startswith('task_'):
             if task_id == int(target_id.split('_')[1]) or task in task.parent_tasks or task in task.subtasks:
                 return {"error": "Task cannot be linked to itself"}, 400
-            target = Task.query.get(int(target_id.split('_')[1]))
-            if task_id not in target.subtasks:
+            target = Task.query.filter_by(id=int(target_id.split('_')[1]), user_id=user_id).first()
+            if task and target and task_id not in [t.id for t in target.subtasks]:
                 task.parent_tasks.append(target)
         else:
-            target = List.query.get(int(target_id))
-            if task_id not in target.tasks:
+            target = List.query.filter_by(id=int(target_id), user_id=user_id).first()
+            if task and target and task_id not in [t.id for t in target.tasks]:
                 task.lists.append(target)
-        if task_id not in target.childes_order:
+        if target and task and task_id not in target.childes_order:
             updated_childes_order = target.childes_order.copy() or []
             updated_childes_order.append(task_id)
             target.childes_order = updated_childes_order
@@ -741,7 +729,7 @@ def link_task(data):
         db.session.commit()
 
         if action == 'move' and source_list_id:
-            delete_from_childes({'source_id': f'task_{task_id}', 'group_id': source_list_id})
+            delete_from_childes({'source_id': f'task_{task_id}', 'group_id': source_list_id}, user_id=user_id)
 
         return {"success": True}, 200
 
