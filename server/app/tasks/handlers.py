@@ -211,10 +211,17 @@ def get_tasks(list_id, client_timezone=0, start=None, end=None, user_id=None):
         if start_dt or end_dt:
             if task.interval_id and task.start:
                 rule = task.build_rrule()
+                duration = (task.end - task.start) if (task.end and task.start) else timedelta(hours=1)
                 rng_start = start_dt or datetime.min.replace(tzinfo=None)
                 rng_end = end_dt or datetime.max.replace(tzinfo=None)
-                if rule and rule.between(rng_start, rng_end, inc=True):
-                    return True
+                # Получаем все экземпляры, которые могут пересекать диапазон
+                occurrences = rule.between(rng_start - duration, rng_end, inc=True) if rule else []
+                for occ in occurrences:
+                    occ_end = occ + duration
+                    # Если экземпляр задачи хотя бы частично попадает в диапазон
+                    if occ < rng_end and occ_end > rng_start:
+                        return True
+                return False
             st = task.start
             en = task.end or st
             if start_dt and en and en < start_dt:
