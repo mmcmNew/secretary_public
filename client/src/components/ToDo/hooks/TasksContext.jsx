@@ -71,11 +71,19 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
           loading: silent ? prev.loading : update.loading,
         }));
       } else {
-        setTasks(prev => ({
-          ...prev,
-          ...update,
-          loading: silent ? prev.loading : update.loading,
-        }));
+        setTasks(prev => {
+          const map = new Map(prev.data.map(t => [t.id, t]));
+          update.data.forEach(t => {
+            map.set(t.id, { ...map.get(t.id), ...t });
+          });
+          return {
+            ...prev,
+            data: Array.from(map.values()),
+            version: update.version,
+            loading: silent ? prev.loading : update.loading,
+            error: null,
+          };
+        });
       }
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
@@ -101,10 +109,13 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       const params = new URLSearchParams({ ids: ids.join(',') });
       const data = await api(`/tasks/get_tasks_by_ids?${params.toString()}`);
       if (Array.isArray(data.tasks)) {
-        setTasks(prev => ({
-          ...prev,
-          data: [...prev.data, ...data.tasks.filter(t => !prev.data.some(pt => pt.id === t.id))]
-        }));
+        setTasks(prev => {
+          const map = new Map(prev.data.map(t => [t.id, t]));
+          data.tasks.forEach(t => {
+            map.set(t.id, { ...map.get(t.id), ...t });
+          });
+          return { ...prev, data: Array.from(map.values()) };
+        });
         return data.tasks;
       }
       return [];
