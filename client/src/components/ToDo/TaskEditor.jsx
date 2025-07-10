@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, memo } from "react";
+import { useEffect, useState, useCallback, useMemo, memo, useContext } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
     Box,
@@ -28,6 +28,7 @@ import NewRecordDialog from "../JournalEditor/NewRecordDialog";
 import TaskTypeDialog from "../TaskTypeManager/TaskTypeDialog.jsx";
 import PropTypes from "prop-types";
 import useTasks from "./hooks/useTasks";
+import { AudioContext } from "../../contexts/AudioContext.jsx";
 
 
 function TaskDetails({
@@ -58,6 +59,7 @@ function TaskDetails({
     const [newTypeData, setNewTypeData] = useState({ name: '', color: '#3788D8', description: '' });
     const updateNewTypeData = (field, value) => setNewTypeData(prev => ({ ...prev, [field]: value }));
     const { fetchCalendarEvents, addTaskType } = useTasks();
+    const { playAudio } = useContext(AudioContext);
 
     const taskMap = useMemo(() => new Map(tasks.map(t => [t.id, t])), [tasks]);
     const task = taskMap.get(+selectedTaskId) || null;
@@ -147,8 +149,7 @@ function TaskDetails({
         const payload = { taskId, status_id, listId };
         if (status_id === 2) {
             payload.completed_at = dayjs().toISOString();
-            const audio = new Audio("/sounds/isComplited.wav");
-            audio.play();
+            playAudio("/sounds/isComplited.wav", { queued: false });
         }
         await changeTaskStatus(payload);
         if (fetchCalendarEvents) await fetchCalendarEvents();

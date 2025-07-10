@@ -1,5 +1,5 @@
 import { PropTypes } from 'prop-types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useTimer } from 'react-timer-hook';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
@@ -8,9 +8,11 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import CloseIcon from '@mui/icons-material/Close';
+import { AudioContext } from '../../contexts/AudioContext.jsx';
 
 
 export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resultText, isRunningProp=false, onExpireFunc=null, handleCloseTimer=null, handleUpdateTimers=null,  playSoundProp=true, soundUrl='/sounds/endTimer.mp3', currentActionId=null }) {
+  const { playAudio } = useContext(AudioContext);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [textToTts, setTextToTts] = useState(resultText || 'Таймер завершился');
   const initialTime = isRunningProp ?
@@ -37,50 +39,35 @@ export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resul
     }
   }, [currentActionId]);
 
-  function sendTextAndPlayAudio(text) {
-      fetch('/get_tts_audio', {
-          method: 'POST',
-          body: new URLSearchParams({text: text}),
-          headers: {
-              'Content-Type': 'application/x-www-form-urlencoded'
-          }
-      })
-      .then(response => {
-          if (!response.ok) {
-              throw new Error('Network response was not ok ' + response.statusText);
-          }
-          return response.blob();
-      })
-      .then(blob => {
-          return new Promise((resolve) => {
-              const audioUrl = URL.createObjectURL(blob);
-              const audio = new Audio(audioUrl);
-              audio.onended = resolve;  // вызов resolve после окончания проигрывания
-              audio.play();
-          });
-      })
-      .catch(error => {
-          console.error('There has been a problem with your fetch operation:', error);
+  async function sendTextAndPlayAudio(text) {
+    try {
+      const response = await fetch('/get_tts_audio', {
+        method: 'POST',
+        body: new URLSearchParams({ text }),
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
       });
+      if (!response.ok) {
+        throw new Error('Network response was not ok ' + response.statusText);
+      }
+      const blob = await response.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      await playAudio(audioUrl, { queued: true });
+    } catch (error) {
+      console.error('There has been a problem with your fetch operation:', error);
+    }
   }
 
   function onExpire() {
     let playAudioPromise = Promise.resolve();
 
-    if (playSoundProp) {
-      if (soundUrl) {
-        // Сначала воспроизводим пользовательский или стандартный звук завершения
-        const audio = new Audio(soundUrl);
-        playAudioPromise = new Promise((resolve) => {
-          audio.onended = resolve; // Ждём завершения звука
-          audio.play();
-        });
-      }
+    if (playSoundProp && soundUrl) {
+      playAudioPromise = playAudio(soundUrl, { queued: false });
     }
 
-    // После завершения звука проигрываем TTS
     playAudioPromise
-      .then(() => sendTextAndPlayAudio(textToTts)) // Воспроизведение текста после звука
+      .then(() => sendTextAndPlayAudio(textToTts))
       .then(() => {
         resetTime(); // Сбрасываем таймер
         if (onExpireFunc) {

@@ -1,6 +1,7 @@
 import { Box, Divider, IconButton, Icon, LinearProgress } from '@mui/material';
 import ChatMessage from './ChatMessage';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useContext } from 'react';
+import { AudioContext } from '../contexts/AudioContext.jsx';
 import { Virtuoso } from 'react-virtuoso';
 import useWebSocket from './hooks/useWebSocket';
 import useContainer from '../DraggableComponents/useContainer';
@@ -29,12 +30,13 @@ function MessagesList() {
   const virtuosoRef = useRef(null);
   const { messages, isNewMessage, setIsNewMessage } = useWebSocket();
   const {setIsSecretarySpeak} = useContainer();
+  const { playAudio } = useContext(AudioContext);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
 
   function handlePlay() {
-    if ( isPlaying || isLoading) {
+    if (isLoading) {
       return;
     }
     const lastMessage = messages[messages.length - 1];
@@ -42,16 +44,9 @@ function MessagesList() {
       return;
     }
     const audioUrl = `/temp/edge_audio_${lastMessage.message_id}.mp3`;
-    audioRef.current.src = audioUrl;
     if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsSecretarySpeak(false)
-      } else {
-        audioRef.current.play();
-        setIsSecretarySpeak(true)
-      }
-      setIsPlaying(!isPlaying);
+      playAudio(audioUrl, { queued: true, element: audioRef.current });
+      setIsSecretarySpeak(true);
     }
   }
 
