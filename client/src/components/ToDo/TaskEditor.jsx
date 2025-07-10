@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, memo, useContext } from "react";
+import { useEffect, useState, useCallback, useMemo, memo, useContext, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
     Box,
@@ -107,8 +107,11 @@ function TaskDetails({
         setSubTasks(subs);
     }, [task, taskMap]);
 
+    const lastSent = useRef({});
+
     const handleUpdate = useCallback(async (field, value) => {
         setValue(field, value);
+
         if (['start', 'end'].includes(field)) {
             const start = field === 'start' ? value : getValues('start');
             const end = field === 'end' ? value : getValues('end');
@@ -122,14 +125,20 @@ function TaskDetails({
             }
             clearErrors(['start', 'end']);
         }
-        if (task[field] !== value) {
+
+        const preparedValue = ['start', 'end'].includes(field) && dayjs(value).isValid()
+            ? dayjs(value).toISOString()
+            : value;
+
+        if (task && preparedValue !== lastSent.current[field] && preparedValue !== task[field]) {
+            lastSent.current[field] = preparedValue;
             let listId = null;
             if (Array.isArray(task.lists) && task.lists.length > 0) {
                 listId = task.lists[0].id;
             } else if (selectedListId) {
                 listId = selectedListId;
             }
-            await updateTask({ taskId: task.id, [field]: value, listId });
+            await updateTask({ taskId: task.id, [field]: preparedValue, listId });
             if (fetchCalendarEvents) await fetchCalendarEvents();
         }
     }, [task, updateTask, selectedListId, fetchCalendarEvents, setValue, getValues, setError, clearErrors]);
