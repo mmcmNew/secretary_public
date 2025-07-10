@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, memo, useContext, useRef } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray, FormProvider } from "react-hook-form";
 import {
     Box,
     TextField,
@@ -31,7 +31,7 @@ import useTasks from "./hooks/useTasks";
 import { AudioContext } from "../../contexts/AudioContext.jsx";
 
 
-function TaskDetails({
+function TaskEditor({
     taskFields,
     tasks = [],
     selectedTaskId = null,
@@ -41,26 +41,15 @@ function TaskDetails({
     deleteTask = null,
     selectedListId = null,
 }) {
-    const {
-        control,
-        getValues,
-        setValue,
-        reset,
-        watch,
-        trigger,
-        setError,
-        clearErrors,
-        formState: { errors },
-    } = useForm({ defaultValues: {} });
+    const methods = useForm({ defaultValues: { subtasks: [] } });
+    const { control, getValues, setValue, reset, watch, setError, clearErrors, formState: { errors } } = methods;
     const fields = watch();
-    const [subTasks, setSubTasks] = useState({});
-    const [newSubTask, setNewSubTask] = useState("");
+    const { fields: subtaskFields, append, remove } = useFieldArray({ control, name: 'subtasks' });
     const [newRecordDialogOpen, setNewRecordDialogOpen] = useState(false);
     const [typeDialogOpen, setTypeDialogOpen] = useState(false);
     const [newTypeData, setNewTypeData] = useState({ name: '', color: '#3788D8', description: '' });
     const updateNewTypeData = (field, value) => setNewTypeData(prev => ({ ...prev, [field]: value }));
-    const { fetchCalendarEvents, addTaskType, fetchTasksByIds } = useTasks();
-    const [localDates, setLocalDates] = useState({ start: null, end: null });
+    const { addTaskType } = useTasks();
     const { playAudio } = useContext(AudioContext);
 
     const taskMap = useMemo(() => new Map(tasks.map(t => [t.id, t])), [tasks]);
@@ -89,27 +78,14 @@ function TaskDetails({
             }
         });
         initial.title = task.title;
+        initial.start = task.start ? dayjs(task.start).toISOString() : null;
+        initial.end = task.end ? dayjs(task.end).toISOString() : null;
+        initial.subtasks = task.childes_order?.map(id => {
+            const st = taskMap.get(id);
+            return st ? { id: st.id, title: st.title, status_id: st.status_id } : null;
+        }).filter(Boolean) || [];
         reset(initial);
-        setLocalDates({
-            start: task.start ? dayjs(task.start) : null,
-            end: task.end ? dayjs(task.end) : null,
-        });
     }, [task, taskFields, reset]);
-
-    // Инициализация подзадач
-    useEffect(() => {
-        if (!task || !task.childes_order) return;
-        const missing = task.childes_order.filter(id => !taskMap.has(id));
-        if (missing.length && typeof fetchTasksByIds === 'function') {
-            fetchTasksByIds(missing);
-        }
-        const subs = task.childes_order.reduce((acc, subId) => {
-            const st = taskMap.get(subId);
-            if (st) acc[subId] = st.title;
-            return acc;
-        }, {});
-        setSubTasks(subs);
-    }, [task, taskMap, fetchTasksByIds]);
 
     const lastSent = useRef({});
 
@@ -174,61 +150,29 @@ function TaskDetails({
         if (fetchCalendarEvents) await fetchCalendarEvents();
     }, [changeTaskStatus, task, taskMap, selectedListId, fetchCalendarEvents]);
 
-    const handleSubBlur = useCallback(async (subId) => {
-        const title = subTasks[subId]?.trim();
-        const sub = taskMap.get(subId);
-        if (!sub || sub.title === title) return;
+    const handleSubBlur = useCallback(async (index) => {
+        const field = subtaskFields[index];
+        const title = getValues(`subtasks.${index}.title`).trim();
+        if (!title) return;
         let listId = null;
+        const sub = field.id ? taskMap.get(field.id) : null;
         if (Array.isArray(sub?.lists) && sub.lists.length > 0) {
             listId = sub.lists[0].id;
         } else if (selectedListId) {
             listId = selectedListId;
         }
-        await updateTask({ taskId: subId, title, listId });
-        if (fetchCalendarEvents) await fetchCalendarEvents();
-    }, [subTasks, taskMap, updateTask, selectedListId, fetchCalendarEvents]);
-
-    const submitDates = useCallback(async () => {
-        const { start, end } = localDates;
-        if (!start || !dayjs(start).isValid()) {
-            setError('start', { type: 'manual', message: 'Неверная дата' });
-            return;
-        }
-        if (!end || !dayjs(end).isValid()) {
-            setError('end', { type: 'manual', message: 'Неверная дата' });
-            return;
-        }
-        if (dayjs(start).isAfter(dayjs(end))) {
-            setError('end', { type: 'manual', message: 'Дата окончания должна быть позже даты начала' });
-            return;
-        }
-        clearErrors(['start', 'end']);
-
-        const changes = {};
-        if (!task.start || !dayjs(task.start).isSame(start)) {
-            changes.start = start.toISOString();
-            setValue('start', start.toISOString());
-        }
-        if (!task.end || !dayjs(task.end).isSame(end)) {
-            changes.end = end.toISOString();
-            setValue('end', end.toISOString());
-        }
-
-        if (Object.keys(changes).length > 0) {
-            let listId = null;
-            if (Array.isArray(task.lists) && task.lists.length > 0) {
-                listId = task.lists[0].id;
-            } else if (selectedListId) {
-                listId = selectedListId;
+        if (field.id) {
+            if (sub && sub.title !== title) {
+                await updateTask({ taskId: field.id, title, listId });
+                if (fetchCalendarEvents) await fetchCalendarEvents();
             }
-            await updateTask({ taskId: task.id, ...changes, listId });
+        } else {
+            await addSubTask({ title, parentTaskId: task.id, listId });
             if (fetchCalendarEvents) await fetchCalendarEvents();
+            remove(index);
         }
-    }, [localDates, task, selectedListId, updateTask, fetchCalendarEvents, setError, clearErrors, setValue]);
+    }, [subtaskFields, getValues, addSubTask, updateTask, task, selectedListId, taskMap, fetchCalendarEvents, remove]);
 
-    const handleDateBlur = useCallback(() => {
-        submitDates();
-    }, [submitDates]);
 
     const handleKeyDown = useCallback((e, field, subId = null) => {
         if (e.key === 'Enter') {
@@ -238,19 +182,6 @@ function TaskDetails({
         }
     }, [handleSubBlur, handleUpdate]);
 
-    const handleAddSubTask = useCallback(async () => {
-        if (newSubTask.trim()) {
-            let listId = null;
-            if (Array.isArray(task.lists) && task.lists.length > 0) {
-                listId = task.lists[0].id;
-            } else if (selectedListId) {
-                listId = selectedListId;
-            }
-            await addSubTask({ title: newSubTask, parentTaskId: task.id, listId });
-            if (fetchCalendarEvents) await fetchCalendarEvents();
-            setNewSubTask('');
-        }
-    }, [newSubTask, addSubTask, task, selectedListId, fetchCalendarEvents]);
 
     const handleDeleteSubTask = useCallback(async (subId) => {
         let listId = null;
@@ -278,6 +209,7 @@ function TaskDetails({
     if (!task) return null;
 
     return (
+        <FormProvider {...methods}>
         <Box sx={{ width: '100%', height: '96%', pb: 2 }}>
             <Paper variant="outlined" sx={{ p: 1, my: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -304,51 +236,44 @@ function TaskDetails({
                     />
                 </Box>
                 <Box sx={{ marginY: 0 }}>
-                    {task.childes_order?.map(id => {
-                        const sub = taskMap.get(id);
-                        if (!sub) return null;
-                        return (
-                            <Grid container alignItems="center" spacing={0.5} key={id} sx={{ marginY: 0.5 }}>
-                                <Grid item xs width="100%">
-                                    <Box component="form" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                                        <Checkbox
-                                            checked={sub.status_id === 2}
-                                            sx={{ m: 0, p: 0 }}
-                                            onChange={(e) => handleToggle(sub.id, e.target.checked)}
-                                        />
-                                        <InputBase
-                                            sx={{ ml: 1, flex: 1, textDecoration: sub.status_id === 2 ? 'line-through' : 'none', width: '100%' }}
-                                            placeholder="Подзадача"
-                                            value={subTasks[sub.id] || ''}
-                                            onChange={(e) => setSubTasks(s => ({ ...s, [sub.id]: e.target.value }))}
-                                            onBlur={() => handleSubBlur(sub.id)}
-                                            onKeyDown={(e) => handleKeyDown(e, 'title', sub.id)}
-                                            inputProps={{ 'aria-label': 'subtask' }}
-                                        />
-                                        <Divider sx={{ height: 15, m: 0.5 }} orientation="vertical" />
-                                        <IconButton sx={{ m: 0, p: 0 }} onClick={() => handleDeleteSubTask(sub.id)}>
-                                            <CloseIcon />
-                                        </IconButton>
-                                    </Box>
-                                    <Divider sx={{ m: 0.5 }} />
-                                </Grid>
+                    {subtaskFields.map((sub, idx) => (
+                        <Grid container alignItems="center" spacing={0.5} key={sub.id || idx} sx={{ marginY: 0.5 }}>
+                            <Grid item xs width="100%">
+                                <Box component="form" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                                    <Checkbox
+                                        checked={sub.status_id === 2}
+                                        sx={{ m: 0, p: 0 }}
+                                        onChange={(e) => sub.id && handleToggle(sub.id, e.target.checked)}
+                                    />
+                                    <Controller
+                                        name={`subtasks.${idx}.title`}
+                                        control={control}
+                                        render={({ field }) => (
+                                            <InputBase
+                                                sx={{ ml: 1, flex: 1, textDecoration: sub.status_id === 2 ? 'line-through' : 'none', width: '100%' }}
+                                                placeholder="Подзадача"
+                                                {...field}
+                                                onBlur={() => handleSubBlur(idx)}
+                                                onKeyDown={(e) => handleKeyDown(e, `subtasks.${idx}.title`, idx)}
+                                                inputProps={{ 'aria-label': 'subtask' }}
+                                            />
+                                        )}
+                                    />
+                                    <Divider sx={{ height: 15, m: 0.5 }} orientation="vertical" />
+                                    <IconButton sx={{ m: 0, p: 0 }} onClick={() => sub.id ? handleDeleteSubTask(sub.id) : remove(idx)}>
+                                        <CloseIcon />
+                                    </IconButton>
+                                </Box>
+                                <Divider sx={{ m: 0.5 }} />
                             </Grid>
-                        );
-                    })}
+                        </Grid>
+                    ))}
                 </Box>
                 <Grid item xs>
                     <Box component="form" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                        <IconButton sx={{ m: 0, p: 0 }} onClick={handleAddSubTask}>
+                        <IconButton sx={{ m: 0, p: 0 }} onClick={() => append({ id: null, title: '', status_id: 1 })}>
                             <AddIcon />
                         </IconButton>
-                        <InputBase
-                            sx={{ ml: 1, flex: 1 }}
-                            placeholder="Добавить подзадачу"
-                            value={newSubTask}
-                            onChange={(e) => setNewSubTask(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSubTask(); } }}
-                            inputProps={{ 'aria-label': 'add subtask' }}
-                        />
                     </Box>
                 </Grid>
             </Paper>
@@ -377,12 +302,14 @@ function TaskDetails({
                                                         viewRenderers={{ hours: renderTimeViewClock, minutes: renderTimeViewClock, seconds: renderTimeViewClock }}
                                                         ampm={false}
                                                         label={field.name}
-                                                        value={localDates[key] || null}
+                                                        value={ctrl.value ? dayjs(ctrl.value) : null}
                                                         format="DD/MM/YYYY HH:mm"
-                                                        onChange={(nv) => setLocalDates(prev => ({ ...prev, [key]: nv }))}
-                                                        onAccept={submitDates}
-                                                        slotProps={{ textField: { onBlur: handleDateBlur, inputProps: { readOnly: false }, error: !!errors[key], helperText: errors[key]?.message } }}
-                                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitDates(); } }}
+                                                        onChange={(nv) => {
+                                                            const iso = nv ? nv.toISOString() : null;
+                                                            ctrl.onChange(iso);
+                                                            handleUpdate(key, iso);
+                                                        }}
+                                                        slotProps={{ textField: { inputProps: { readOnly: false }, error: !!errors[key], helperText: errors[key]?.message } }}
                                                     />
                                                 </LocalizationProvider>
                                             )}
@@ -521,10 +448,11 @@ function TaskDetails({
                 </Button>
             </Box>
         </Box>
+        </FormProvider>
     );
 }
 
-TaskDetails.propTypes = {
+TaskEditor.propTypes = {
     taskFields: PropTypes.object,  // сюда передаётся TaskField.data
     tasks: PropTypes.array,
     selectedTaskId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -535,4 +463,4 @@ TaskDetails.propTypes = {
     selectedListId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 };
 
-export default TaskDetails;
+export default TaskEditor;
