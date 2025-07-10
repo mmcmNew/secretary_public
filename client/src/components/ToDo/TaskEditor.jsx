@@ -113,15 +113,12 @@ function TaskEditor({
         if (task && preparedValue !== lastSent.current[field] && preparedValue !== task[field]) {
             lastSent.current[field] = preparedValue;
             let listId = null;
-            if (Array.isArray(task.lists) && task.lists.length > 0) {
-                listId = task.lists[0].id;
-            } else if (selectedListId) {
+            if (selectedListId) {
                 listId = selectedListId;
             }
             await updateTask({ taskId: task.id, [field]: preparedValue, listId });
-            if (fetchCalendarEvents) await fetchCalendarEvents();
         }
-    }, [task, updateTask, selectedListId, fetchCalendarEvents, setValue, getValues, setError, clearErrors]);
+    }, [task, updateTask, selectedListId, setValue, getValues, setError, clearErrors]);
 
     const handleToggle = useCallback(async (taskId, checked) => {
         const status_id = checked ? 2 : 1;
@@ -147,8 +144,7 @@ function TaskEditor({
             playAudio("/sounds/isComplited.wav", { queued: false });
         }
         await changeTaskStatus(payload);
-        if (fetchCalendarEvents) await fetchCalendarEvents();
-    }, [changeTaskStatus, task, taskMap, selectedListId, fetchCalendarEvents]);
+    }, [changeTaskStatus, task, taskMap, selectedListId]);
 
     const handleSubBlur = useCallback(async (index) => {
         const field = subtaskFields[index];
@@ -164,14 +160,12 @@ function TaskEditor({
         if (field.id) {
             if (sub && sub.title !== title) {
                 await updateTask({ taskId: field.id, title, listId });
-                if (fetchCalendarEvents) await fetchCalendarEvents();
             }
         } else {
             await addSubTask({ title, parentTaskId: task.id, listId });
-            if (fetchCalendarEvents) await fetchCalendarEvents();
             remove(index);
         }
-    }, [subtaskFields, getValues, addSubTask, updateTask, task, selectedListId, taskMap, fetchCalendarEvents, remove]);
+    }, [subtaskFields, getValues, addSubTask, updateTask, task, selectedListId, taskMap, remove]);
 
 
     const handleKeyDown = useCallback((e, field, subId = null) => {
@@ -192,8 +186,7 @@ function TaskEditor({
             listId = selectedListId;
         }
         await deleteTask({ taskId: subId, listId });
-        if (fetchCalendarEvents) await fetchCalendarEvents();
-    }, [deleteTask, taskMap, selectedListId, fetchCalendarEvents]);
+    }, [deleteTask, taskMap, selectedListId]);
 
     const handleDeleteTask = useCallback(async () => {
         let listId = null;
@@ -203,8 +196,7 @@ function TaskEditor({
             listId = selectedListId;
         }
         await deleteTask({ taskId: task.id, listId });
-        if (fetchCalendarEvents) await fetchCalendarEvents();
-    }, [deleteTask, task, selectedListId, fetchCalendarEvents]);
+    }, [deleteTask, task, selectedListId]);
 
     if (!task) return null;
 
