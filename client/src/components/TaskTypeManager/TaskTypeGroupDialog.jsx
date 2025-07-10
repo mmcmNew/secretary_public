@@ -16,9 +16,9 @@ export default function TaskTypeGroupDialog({ open, onClose, data, onChange, onS
       </DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-          <TextField label="Название" value={data.name} onChange={handleChange('name')} required />
+          <TextField label="Название" value={data.name} onChange={e => onChange('name', e.target.value)} required />
           <ColorPicker fieldKey="color" fieldName="Цвет" selectedColorProp={data.color} onColorChange={(_, c) => onChange('color', c)} />
-          <TextField label="Описание" value={data.description} onChange={handleChange('description')} multiline rows={3} />
+          <TextField label="Описание" value={data.description} onChange={e => onChange('description', e.target.value)} multiline rows={3} />
         </Box>
       </DialogContent>
       <DialogActions>

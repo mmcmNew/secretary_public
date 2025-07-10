@@ -10,21 +10,21 @@ export default function UpdateWebSocketProvider({ children }) {
   const { user, isLoading } = useContext(AuthContext);
 
   useEffect(() => {
-    console.log('UpdateWebSocketProvider', user, isLoading);
+    // console.log('UpdateWebSocketProvider', user, isLoading);
     if (!user) return undefined;
     const socket = io('https://192.168.1.131:5100/updates', { transports: ['websocket'], secure: true, });
-    console.log(socket)
+    // console.log(socket)
     socket.on('connect', () => {
       console.log('Connected to updates WebSocket');
     });
 
     socket.on('data_updated', (data) => {
-      console.log('data_updated', data);
+      // console.log('data_updated', data);
       setVersions((prev) => ({ ...prev, ...data }));
     });
 
     socket.on('task_changed', (data) => {
-      console.log('task_changed', data);
+      // console.log('task_changed', data);
       setVersions((prev) => ({ ...prev, taskChange: data, timestamp: Date.now() }));
     });
 

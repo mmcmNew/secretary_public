@@ -108,11 +108,31 @@ def create_app(config_type='work'):
                 db.create_all()
             # seed не вызывается автоматически!
 
+        # Отдача manifest.webmanifest и sw.js из static
+        @app.route('/manifest.webmanifest')
+        def manifest():
+            current_app.logger.info('Serving manifest.webmanifest')
+            return send_from_directory(
+                current_app.static_folder,
+                'manifest.webmanifest',
+                mimetype='application/manifest+json'
+            )
+
+        @app.route('/sw.js')
+        def service_worker():
+            current_app.logger.info('Serving sw.js')
+            return send_from_directory(
+                current_app.static_folder,
+                'sw.js',
+                mimetype='application/javascript'
+            )
+
         # SPA: отдача index.html и статики
         STATIC_EXCLUDES = (
             'api/', 'static/', 'avatars/', 'sounds/', 'memory/',
             'audio/', 'temp/', 'upload_files/', 'dashboard/', 'tasks/',
-            'chat/', 'journals/', 'sw.js', 'manifest.webmanifest'
+            'chat/', 'journals/', 
+            # 'sw.js', 'manifest.webmanifest'
         )
 
         @app.route('/', defaults={'path': ''})

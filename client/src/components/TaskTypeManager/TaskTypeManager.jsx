@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Button, Typography, List, ListItem, Card, CardContent, IconButton } from '@mui/material';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, DragIndicator as DragIndicatorIcon } from '@mui/icons-material';
 import TaskTypeDialog from './TaskTypeDialog.jsx';
 import useTasks from '../ToDo/hooks/useTasks';
 
@@ -150,21 +150,31 @@ export default function TaskTypeManager() {
                 <Draggable draggableId={`group-${g.id}`} index={idx} key={g.id}>
                   {(p) => (
                     <div ref={p.innerRef} {...p.draggableProps}>
-                      <Box sx={{ mb: 2 }} {...p.dragHandleProps}>
-                        <Typography variant="h6" sx={{ backgroundColor: g.color || '#eee', p: 1 }}>
-                          {g.name}
-                        </Typography>
+                      <Box sx={{ mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {/* Drag handle icon for group */}
+                          <IconButton {...p.dragHandleProps} size="small" sx={{ cursor: 'grab' }}>
+                            <DragIndicatorIcon fontSize="small" />
+                          </IconButton>
+                          <Typography variant="h6" sx={{ backgroundColor: g.color || '#eee', p: 1, flex: 1 }}>
+                            {g.name}
+                          </Typography>
+                        </Box>
                         <Droppable droppableId={String(g.id)} type="type">
                           {(pr) => (
                             <List ref={pr.innerRef} {...pr.droppableProps}>
                               {(groupedTypes[g.id || 'null'] || []).map((t, i) => (
                                 <Draggable key={t.id} draggableId={`type-${t.id}`} index={i}>
                                   {(pp) => (
-                                    <ListItem ref={pp.innerRef} {...pp.draggableProps} {...pp.dragHandleProps} sx={{ p: 0, mb: 1 }}>
+                                    <ListItem ref={pp.innerRef} {...pp.draggableProps} sx={{ p: 0, mb: 1 }}>
                                       <Card sx={{ width: '100%' }}>
                                         <CardContent>
                                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                              {/* Drag handle icon */}
+                                              <IconButton {...pp.dragHandleProps} size="small" sx={{ cursor: 'grab' }}>
+                                                <DragIndicatorIcon fontSize="small" />
+                                              </IconButton>
                                               <Box sx={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: t.color }} />
                                               <Typography variant="body1">{t.name}</Typography>
                                             </Box>

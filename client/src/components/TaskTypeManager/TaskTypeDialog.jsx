@@ -12,7 +12,7 @@ export default function TaskTypeDialog({ open, onClose, data, onChange, onSave, 
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [groupForm, setGroupForm] = useState({ name: '', color: '#3788D8', description: '' });
 
-  const handleGroupChange = (field) => (v) => setGroupForm(prev => ({ ...prev, [field]: v.target ? v.target.value : v }));
+  const handleGroupChange = (field, value) => setGroupForm(prev => ({ ...prev, [field]: value }));
 
   useEffect(() => {
     if (open) fetchGroups();

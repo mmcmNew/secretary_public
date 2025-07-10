@@ -150,7 +150,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const fetchCalendarEvents = useCallback(async (range) => {
     const finalRange = range || calendarRange;
     if (range) setCalendarRange(range);
-    console.log('fetchCalendarEvents: ', range, finalRange)
+    // console.log('fetchCalendarEvents: ', range, finalRange)
     if (!finalRange.start || !finalRange.end) return [];
     fetching.current = true;
     setCalendarEvents(prev => ({ ...prev, loading: true, error: null }));
@@ -158,7 +158,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       const params = new URLSearchParams({ list_id: 'events', version: version || '' });
       params.append('start', finalRange.start);
       params.append('end', finalRange.end);
-      console.log('fetchCalendarEvents: ', params.toString())
+      // console.log('fetchCalendarEvents: ', params.toString())
       const data = await api(`/tasks/get_tasks?${params.toString()}`);
       if (data.version_matches) {
         setVersion(data.version);

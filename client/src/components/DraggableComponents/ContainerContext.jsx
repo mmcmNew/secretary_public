@@ -146,7 +146,7 @@ const ContainerProvider = ({ children }) => {
             setThemeMode("light");
             return;
         }
-        console.log("ContainerProvider: старт загрузки dashboard");
+        // console.log("ContainerProvider: старт загрузки dashboard");
         const fetchDashboard = async () => {
             try {
                 const token = getCookie('access_token');
