@@ -27,6 +27,7 @@ export default function CalendarLayout({
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [dialogScroll, setDialogScroll] = useState("paper");
   const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [selectedTaskStart, setSelectedTaskStart] = useState(null);
 
   const [calendarSettings, setCalendarSettings] = useState(
     () => calendarSettingsProp || defaultCalendarSettings
@@ -105,12 +106,23 @@ export default function CalendarLayout({
 
   const handleDialogClose = useCallback(() => {
     setTaskDialogOpen(false);
+    setSelectedTaskStart(null);
     setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
   }, [setUpdates]);
 
   const handleEventClick = useCallback(
     async (event) => {
       setSelectedTaskId(event?.event?.id || null);
+      if (event?.event?.start) {
+        try {
+          setSelectedTaskStart(event.event.start.toISOString());
+        } catch (e) {
+          console.error('Error parsing event start:', e);
+          setSelectedTaskStart(null);
+        }
+      } else {
+        setSelectedTaskStart(null);
+      }
       try {
         handleDialogOpen("paper");
       } catch (error) {
@@ -217,6 +229,7 @@ export default function CalendarLayout({
         setSelectedTaskId={setSelectedTaskId}
         tasks={calendarEvents.data}
         selectedTaskId={selectedTaskId}
+        clickedStart={selectedTaskStart}
         taskFields={taskFields}
         addSubTask={addSubTask}
         updateTask={updateTask}

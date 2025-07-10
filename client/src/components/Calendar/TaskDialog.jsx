@@ -15,6 +15,7 @@ export default function TaskDialog({
     setSelectedTaskId,
     tasks,
     selectedTaskId,
+    clickedStart = null,
     taskFields,
     addSubTask = null,
     updateTask = null,
@@ -63,6 +64,7 @@ export default function TaskDialog({
                 <TaskEditor
                     tasks={tasks}
                     selectedTaskId={selectedTaskId}
+                    clickedStart={clickedStart}
                     taskFields={taskFields}
                     addSubTask={addSubTask}
                     updateTask={updateTask}
@@ -86,6 +88,7 @@ TaskDialog.propTypes = {
     setSelectedTaskId: PropTypes.func,
     tasks: PropTypes.array,
     selectedTaskId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    clickedStart: PropTypes.string,
     taskFields: PropTypes.object,
     addSubTask: PropTypes.func,
     updateTask: PropTypes.func,
