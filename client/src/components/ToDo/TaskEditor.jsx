@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, memo, useContext } from "react";
+import { useForm, Controller } from "react-hook-form";
 import {
     Box,
     TextField,
@@ -40,7 +41,17 @@ function TaskDetails({
     deleteTask = null,
     selectedListId = null,
 }) {
-    const [fields, setFields] = useState({});
+    const {
+        control,
+        getValues,
+        setValue,
+        reset,
+        watch,
+        trigger,
+        setError,
+        clearErrors,
+    } = useForm({ defaultValues: {} });
+    const fields = watch();
     const [subTasks, setSubTasks] = useState({});
     const [newSubTask, setNewSubTask] = useState("");
     const [newRecordDialogOpen, setNewRecordDialogOpen] = useState(false);
@@ -76,8 +87,8 @@ function TaskDetails({
             }
         });
         initial.title = task.title;
-        setFields(initial);
-    }, [task, taskFields]);
+        reset(initial);
+    }, [task, taskFields, reset]);
 
     // Инициализация подзадач
     useEffect(() => {
@@ -91,7 +102,20 @@ function TaskDetails({
     }, [task, taskMap]);
 
     const handleUpdate = useCallback(async (field, value) => {
-        setFields(prev => ({ ...prev, [field]: value }));
+        setValue(field, value);
+        if (['start', 'end'].includes(field)) {
+            const start = field === 'start' ? value : getValues('start');
+            const end = field === 'end' ? value : getValues('end');
+            if (!start || !end || !dayjs(start).isValid() || !dayjs(end).isValid()) {
+                setError(field, { type: 'manual', message: 'Неверная дата' });
+                return;
+            }
+            if (dayjs(start).isAfter(dayjs(end))) {
+                setError('end', { type: 'manual', message: 'Дата окончания должна быть позже даты начала' });
+                return;
+            }
+            clearErrors(['start', 'end']);
+        }
         if (task[field] !== value) {
             let listId = null;
             if (Array.isArray(task.lists) && task.lists.length > 0) {
@@ -102,7 +126,7 @@ function TaskDetails({
             await updateTask({ taskId: task.id, [field]: value, listId });
             if (fetchCalendarEvents) await fetchCalendarEvents();
         }
-    }, [task, updateTask, selectedListId, fetchCalendarEvents]);
+    }, [task, updateTask, selectedListId, fetchCalendarEvents, setValue, getValues, setError, clearErrors]);
 
     const handleToggle = useCallback(async (taskId, checked) => {
         const status_id = checked ? 2 : 1;
@@ -201,15 +225,21 @@ function TaskDetails({
                         sx={{ mr: 1, p: 0 }}
                         onChange={(e) => handleToggle(task.id, e.target.checked)}
                     />
-                    <TextField
-                        label="Название задачи"
-                        sx={{ width: '100%', my: 1 }}
-                        value={fields.title || ''}
-                        onChange={(e) => setFields(f => ({ ...f, title: e.target.value }))}
-                        onBlur={(e) => handleUpdate('title', e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(e, 'title')}
-                        multiline maxRows={3}
-                        variant="outlined"
+                    <Controller
+                        name="title"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                label="Название задачи"
+                                sx={{ width: '100%', my: 1 }}
+                                {...field}
+                                onBlur={(e) => handleUpdate('title', e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, 'title')}
+                                multiline
+                                maxRows={3}
+                                variant="outlined"
+                            />
+                        )}
                     />
                 </Box>
                 <Box sx={{ marginY: 0 }}>
@@ -273,97 +303,135 @@ function TaskDetails({
                     .map(([key, field]) => {
                         if (!field) return null;
                         if (field.type === 'divider') return <Divider key={key} sx={{ my: 0.5 }} />;
-                        const value = field.type === 'datetime' && fields[key]
-                            ? dayjs(fields[key])
-                            : null;
                         return (
                             <Box key={key} sx={{ mt: 1 }}>
                                 {field.type === 'datetime' ? (
                                     <FormControl fullWidth>
-                                        <LocalizationProvider dateAdapter={AdapterDayjs}>
-                                            <DateTimePicker
-                                                viewRenderers={{ hours: renderTimeViewClock, minutes: renderTimeViewClock, seconds: renderTimeViewClock }}
-                                                ampm={false}
-                                                label={field.name}
-                                                value={value}
-                                                format="DD/MM/YYYY HH:mm"
-                                                onChange={(nv) => { if (nv && nv.isValid()) handleUpdate(key, nv.toISOString()); }}
-                                                onAccept={(nv) => { if (nv && nv.isValid()) handleUpdate(key, nv.toISOString()); }}
-                                                slotProps={{ textField: { onBlur: () => handleUpdate(key, fields[key]) } }}
-                                                onKeyDown={(e) => handleKeyDown(e, key)}
-                                            />
-                                        </LocalizationProvider>
+                                        <Controller
+                                            name={key}
+                                            control={control}
+                                            render={({ field: ctrl }) => (
+                                                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                                                    <DateTimePicker
+                                                        viewRenderers={{ hours: renderTimeViewClock, minutes: renderTimeViewClock, seconds: renderTimeViewClock }}
+                                                        ampm={false}
+                                                        label={field.name}
+                                                        value={ctrl.value ? dayjs(ctrl.value) : null}
+                                                        format="DD/MM/YYYY HH:mm"
+                                                        onChange={(nv) => { if (nv && nv.isValid()) setValue(key, nv.toISOString()); }}
+                                                        onAccept={(nv) => { if (nv && nv.isValid()) handleUpdate(key, nv.toISOString()); }}
+                                                        slotProps={{ textField: { onBlur: () => handleUpdate(key, getValues(key)) } }}
+                                                        onKeyDown={(e) => handleKeyDown(e, key)}
+                                                    />
+                                                </LocalizationProvider>
+                                            )}
+                                        />
                                     </FormControl>
                                 ) : field.type === 'select' ? (
-                                    <Autocomplete
-                                        options={(key === 'type_id' ? [...field.options, { value: '__add__', label: 'Добавить тип...' }] : field.options).sort((a, b) => {
-                                            const ga = a.groupLabel || '';
-                                            const gb = b.groupLabel || '';
-                                            if (ga !== gb) return ga.localeCompare(gb);
-                                            return (a.label || '').localeCompare(b.label || '');
-                                        })}
-                                        groupBy={field.groupBy ? opt => opt.groupLabel || 'Без группы' : undefined}
-                                        getOptionLabel={opt => opt.label || ''}
-                                        value={field.options.find(opt => opt.value === fields[key]) || null}
-                                        onChange={(e, nv) => {
-                                            if (key === 'type_id' && nv && nv.value === '__add__') {
-                                                setTypeDialogOpen(true);
-                                            } else {
-                                                handleUpdate(key, nv ? nv.value : null);
-                                            }
-                                        }}
-                                        renderInput={(params) => <TextField {...params} label={field.name} />}
+                                    <Controller
+                                        name={key}
+                                        control={control}
+                                        render={({ field: ctrl }) => (
+                                            <Autocomplete
+                                                options={(key === 'type_id' ? [...field.options, { value: '__add__', label: 'Добавить тип...' }] : field.options).sort((a, b) => {
+                                                    const ga = a.groupLabel || '';
+                                                    const gb = b.groupLabel || '';
+                                                    if (ga !== gb) return ga.localeCompare(gb);
+                                                    return (a.label || '').localeCompare(b.label || '');
+                                                })}
+                                                groupBy={field.groupBy ? opt => opt.groupLabel || 'Без группы' : undefined}
+                                                getOptionLabel={opt => opt.label || ''}
+                                                value={field.options.find(opt => opt.value === ctrl.value) || null}
+                                                onChange={(e, nv) => {
+                                                    if (key === 'type_id' && nv && nv.value === '__add__') {
+                                                        setTypeDialogOpen(true);
+                                                    } else {
+                                                        handleUpdate(key, nv ? nv.value : null);
+                                                    }
+                                                }}
+                                                renderInput={(params) => <TextField {...params} label={field.name} />}
+                                            />
+                                        )}
                                     />
                                 ) : field.type === 'text' ? (
-                                    <TextField
-                                        fullWidth
-                                        label={field.name}
-                                        multiline rows={5}
-                                        value={fields[key] || ''}
-                                        onChange={(e) => setFields(f => ({ ...f, [key]: e.target.value }))}
-                                        onBlur={(e) => handleUpdate(key, e.target.value)}
-                                        variant="outlined"
+                                    <Controller
+                                        name={key}
+                                        control={control}
+                                        render={({ field: ctrl }) => (
+                                            <TextField
+                                                fullWidth
+                                                label={field.name}
+                                                multiline
+                                                rows={5}
+                                                {...ctrl}
+                                                onBlur={(e) => handleUpdate(key, e.target.value)}
+                                                variant="outlined"
+                                            />
+                                        )}
                                     />
                                 ) : field.type === 'toggle' ? (
                                     <FormControl fullWidth>
-                                        <ToggleButton
-                                            value="check"
-                                            size="small"
-                                            selected={!!fields[key]}
-                                            onChange={() => handleUpdate(key, !fields[key])}
-                                            sx={{ border: '1px solid', borderColor: fields[key] ? 'darkgrey' : 'grey.400', justifyContent: 'flex-start', p: 0 }}
-                                        >
-                                            <Checkbox checked={!!fields[key]} />
-                                            <Typography sx={{ ml: 1, textTransform: 'none' }}>{field.name}</Typography>
-                                        </ToggleButton>
+                                        <Controller
+                                            name={key}
+                                            control={control}
+                                            render={({ field: ctrl }) => (
+                                                <ToggleButton
+                                                    value="check"
+                                                    size="small"
+                                                    selected={!!ctrl.value}
+                                                    onChange={() => handleUpdate(key, !ctrl.value)}
+                                                    sx={{ border: '1px solid', borderColor: ctrl.value ? 'darkgrey' : 'grey.400', justifyContent: 'flex-start', p: 0 }}
+                                                >
+                                                    <Checkbox checked={!!ctrl.value} />
+                                                    <Typography sx={{ ml: 1, textTransform: 'none' }}>{field.name}</Typography>
+                                                </ToggleButton>
+                                            )}
+                                        />
                                     </FormControl>
                                 ) : field.type === 'color' ? (
-                                    <ColorPicker
-                                        fieldKey={key}
-                                        fieldName={field.name}
-                                        selectedColorProp={fields[key] || ''}
-                                        onColorChange={(_, color) => handleUpdate(key, color)}
+                                    <Controller
+                                        name={key}
+                                        control={control}
+                                        render={({ field: ctrl }) => (
+                                            <ColorPicker
+                                                fieldKey={key}
+                                                fieldName={field.name}
+                                                selectedColorProp={ctrl.value || ''}
+                                                onColorChange={(_, color) => handleUpdate(key, color)}
+                                            />
+                                        )}
                                     />
                                 ) : field.type === 'multiselect' ? (
-                                    <Autocomplete
-                                        multiple
-                                        options={field.options}
-                                        getOptionLabel={opt => opt.title}
-                                        isOptionEqualToValue={(opt, val) => opt.id === val.id}
-                                        value={Array.isArray(fields[key]) ? fields[key] : []}
-                                        onChange={(e, nv) => handleUpdate(key, nv)}
-                                        renderInput={(params) => <TextField {...params} label={field.name} />}
-                                        renderTags={(val, getTagProps) => val.map((opt, idx) => <Chip key={opt.id} label={opt.title} {...getTagProps({ idx })} />)}
+                                    <Controller
+                                        name={key}
+                                        control={control}
+                                        render={({ field: ctrl }) => (
+                                            <Autocomplete
+                                                multiple
+                                                options={field.options}
+                                                getOptionLabel={opt => opt.title}
+                                                isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                                                value={Array.isArray(ctrl.value) ? ctrl.value : []}
+                                                onChange={(e, nv) => handleUpdate(key, nv)}
+                                                renderInput={(params) => <TextField {...params} label={field.name} />}
+                                                renderTags={(val, getTagProps) => val.map((opt, idx) => <Chip key={opt.id} label={opt.title} {...getTagProps({ idx })} />)}
+                                            />
+                                        )}
                                     />
                                 ) : (
-                                    <TextField
-                                        fullWidth
-                                        label={field.name}
-                                        type={field.type}
-                                        value={fields[key] || ''}
-                                        onChange={(e) => setFields(f => ({ ...f, [key]: e.target.value }))}
-                                        onBlur={(e) => handleUpdate(key, e.target.value)}
-                                        variant="outlined"
+                                    <Controller
+                                        name={key}
+                                        control={control}
+                                        render={({ field: ctrl }) => (
+                                            <TextField
+                                                fullWidth
+                                                label={field.name}
+                                                type={field.type}
+                                                {...ctrl}
+                                                onBlur={(e) => handleUpdate(key, e.target.value)}
+                                                variant="outlined"
+                                            />
+                                        )}
                                     />
                                 )}
                             </Box>
