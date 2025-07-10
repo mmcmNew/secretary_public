@@ -268,16 +268,15 @@ def link_task_route():
 def get_fields_config():
     # Заглушка полей задач
     fields = {
-        "start": {"id": 1, "type": "datetime", "name": "Дата начала"},
-        "end": {"id": 2, "type": "datetime", "name": "Дата завершения"},
+        "range": {"id": 1, "type": "range", "name": "Срок"},
         "completed_at": {"id": 17, "type": "datetime", "name": "Дата выполнения"},
         "divider1": {"id": 3, "type": "divider"},
         "is_background": {"id": 4, "type": "toggle", "name": "Фоновая задача"},
         "color": {"id": 5, "type": "color", "name": "Цвет на календаре"},
-        "divider1": {"id": 6, "type": "divider"},
+        "divider2": {"id": 6, "type": "divider"},
         "reward": {"id": 7, "type": "toggle", "name": "Награда"},
         "cost": {"id": 8, "type": "number", "name": "Добавить файл"},
-        "divider2": {"id": 9, "type": "divider"},
+        "divider3": {"id": 9, "type": "divider"},
         "priority_id": {
             "id": 10,
             "type": "select",
@@ -302,7 +301,7 @@ def get_fields_config():
             ]
         },
         "is_infinite": {"id": 12, "type": "toggle", "name": "Бесконечно повторять на календаре"},
-        "divider3": {"id": 13, "type": "divider"},
+        "divider4": {"id": 13, "type": "divider"},
         "type_id": {
             "id": 14,
             "type": "select",

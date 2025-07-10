@@ -1,10 +1,4 @@
-import { useRef } from "react";
-import {
-    Box,
-    FormHelperText,
-    IconButton,
-    InputAdornment
-} from "@mui/material";
+import { Box, FormHelperText, IconButton, InputAdornment } from "@mui/material";
 import { DateTimePicker } from "@mui/x-date-pickers";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -16,7 +10,6 @@ dayjs.locale('ru');
 
 export default function DateTimeRangePickerField({ name = "startEnd", onValidBlur }) {
     const { control, trigger, getValues } = useFormContext();
-    const lastValidRef = useRef(null);
 
     return (
         <Controller
@@ -36,32 +29,28 @@ export default function DateTimeRangePickerField({ name = "startEnd", onValidBlu
             }}
             render={({ field: { value = {}, onChange }, fieldState: { error } }) => {
                 const { start = null, end = null } = value;
+                const parsedStart = start ? dayjs(start) : null;
+                const parsedEnd = end ? dayjs(end) : null;
 
                 const handleAccept = async () => {
-                    const currentValue = getValues(name);
+                    let currentValue = getValues(name) || {};
+                    const { start, end } = currentValue;
 
-                    let updatedValue = { ...currentValue };
-
-                    // Если есть только start — добавляем end = start + 1 час
                     if (start && !end) {
-                        console.log(start)
-                        console.log(dayjs(start))
                         const newEnd = dayjs(start).add(1, "hour");
-                        updatedValue.end = newEnd;
-                        onChange(updatedValue); // Обновляем, чтобы пользователь увидел сразу
+                        currentValue = { ...currentValue, end: newEnd };
+                        onChange(currentValue);
                     }
 
-                    const isValid = await trigger(name);
-                    console.log(isValid)
-                    if (isValid) {
-                        lastValidRef.current = updatedValue;
-                        onChange(updatedValue);
-                        onValidBlur?.(updatedValue);
-                    } else {
-                        if (JSON.stringify(currentValue) !== JSON.stringify(lastValidRef.current)) {
-                            lastValidRef.current = currentValue;
-                            onValidBlur?.(currentValue);
-                        }
+                    if (await trigger(name)) {
+                        onValidBlur?.({
+                            start: currentValue.start
+                                ? dayjs(currentValue.start).toISOString()
+                                : null,
+                            end: currentValue.end
+                                ? dayjs(currentValue.end).toISOString()
+                                : null,
+                        });
                     }
                 };
 
@@ -89,7 +78,7 @@ export default function DateTimeRangePickerField({ name = "startEnd", onValidBlu
                             <DateTimePicker
                                 label="Начало"
                                 format="DD.MM.YYYY HH:mm"
-                                value={start}
+                                value={parsedStart}
                                 onChange={handleStartChange}
                                 onAccept={handleAccept}
                                 slotProps={{
@@ -112,7 +101,7 @@ export default function DateTimeRangePickerField({ name = "startEnd", onValidBlu
                             <DateTimePicker
                                 label="Окончание"
                                 format="DD.MM.YYYY HH:mm"
-                                value={end}
+                                value={parsedEnd}
                                 onChange={handleEndChange}
                                 onAccept={handleAccept}
                                 slotProps={{

@@ -75,6 +75,11 @@ function TaskEditor({
                 initial[key] = typeof task[key] === 'string' ? task[key] : '';
             } else if (field.type === 'multiselect') {
                 initial[key] = Array.isArray(task[key]) ? task[key] : [];
+            } else if (field.type === 'range') {
+                initial[key] = {
+                    start: task.start ? dayjs(task.start).toISOString() : null,
+                    end: task.end ? dayjs(task.end).toISOString() : null,
+                };
             } else {
                 initial[key] = task[key] ?? '';
             }
@@ -94,33 +99,21 @@ function TaskEditor({
     const handleUpdate = useCallback(async (field, value) => {
         setValue(field, value);
 
-        if (['start', 'end'].includes(field)) {
-            const start = field === 'start' ? value : getValues('start');
-            const end = field === 'end' ? value : getValues('end');
-            if (!start || !end || !dayjs(start).isValid() || !dayjs(end).isValid()) {
-                setError(field, { type: 'manual', message: 'Неверная дата' });
-                return;
-            }
-            if (dayjs(start).isAfter(dayjs(end))) {
-                setError('end', { type: 'manual', message: 'Дата окончания должна быть позже даты начала' });
-                return;
-            }
-            clearErrors(['start', 'end']);
-        }
 
-        const preparedValue = ['start', 'end'].includes(field) && dayjs(value).isValid()
-            ? dayjs(value).toISOString()
-            : value;
-
-        if (task && preparedValue !== lastSent.current[field] && preparedValue !== task[field]) {
-            lastSent.current[field] = preparedValue;
+        if (task && value !== lastSent.current[field] && value !== task[field]) {
+            lastSent.current[field] = value;
             let listId = null;
             if (selectedListId) {
                 listId = selectedListId;
             }
-            await updateTask({ taskId: task.id, [field]: preparedValue, listId });
+            await updateTask({ taskId: task.id, [field]: value, listId });
         }
-    }, [task, updateTask, selectedListId, setValue, getValues, setError, clearErrors]);
+    }, [task, updateTask, selectedListId, setValue]);
+
+    const handleRangeUpdate = useCallback((val) => {
+        handleUpdate('start', val?.start || null);
+        handleUpdate('end', val?.end || null);
+    }, [handleUpdate]);
 
     const handleToggle = useCallback(async (taskId, checked) => {
         const status_id = checked ? 2 : 1;
@@ -206,7 +199,6 @@ function TaskEditor({
     return (
         <FormProvider {...methods}>
         <Box sx={{ width: '100%', height: '96%', pb: 2 }}>
-            <DateTimeRangePickerField />
             <Paper variant="outlined" sx={{ p: 1, my: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Checkbox
@@ -287,7 +279,9 @@ function TaskEditor({
                         if (field.type === 'divider') return <Divider key={key} sx={{ my: 0.5 }} />;
                         return (
                             <Box key={key} sx={{ mt: 1 }}>
-                                {field.type === 'datetime' ? (
+                                {field.type === 'range' ? (
+                                    <DateTimeRangePickerField name={key} onValidBlur={handleRangeUpdate} />
+                                ) : field.type === 'datetime' ? (
                                     <FormControl fullWidth>
                                         <Controller
                                             name={key}
