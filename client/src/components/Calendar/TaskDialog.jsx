@@ -5,7 +5,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
-import TaskDetails from "../ToDo/TaskEditor";
+import TaskEditor from "../ToDo/TaskEditor";
 
 export default function TaskDialog({
     open,
@@ -60,7 +60,7 @@ export default function TaskDialog({
         >
             <DialogTitle id="scroll-dialog-title">Изменить задачу</DialogTitle>
             <DialogContent dividers={scroll === "paper"} style={{ width: "500px", maxWidth: "100%" }}>
-                <TaskDetails
+                <TaskEditor
                     tasks={tasks}
                     selectedTaskId={selectedTaskId}
                     taskFields={taskFields}
