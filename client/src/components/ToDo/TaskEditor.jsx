@@ -50,6 +50,7 @@ function TaskDetails({
         trigger,
         setError,
         clearErrors,
+        formState: { errors },
     } = useForm({ defaultValues: {} });
     const fields = watch();
     const [subTasks, setSubTasks] = useState({});
@@ -168,6 +169,10 @@ function TaskDetails({
         await updateTask({ taskId: subId, title, listId });
         if (fetchCalendarEvents) await fetchCalendarEvents();
     }, [subTasks, taskMap, updateTask, selectedListId, fetchCalendarEvents]);
+
+    const handleDateBlur = useCallback((field) => {
+        handleUpdate(field, getValues(field));
+    }, [handleUpdate, getValues]);
 
     const handleKeyDown = useCallback((e, field, subId = null) => {
         if (e.key === 'Enter') {
@@ -318,9 +323,9 @@ function TaskDetails({
                                                         label={field.name}
                                                         value={ctrl.value ? dayjs(ctrl.value) : null}
                                                         format="DD/MM/YYYY HH:mm"
-                                                        onChange={(nv) => { if (nv && nv.isValid()) setValue(key, nv.toISOString()); }}
+                                                        onChange={(nv) => { ctrl.onChange(nv && nv.isValid() ? nv.toISOString() : ctrl.value); }}
                                                         onAccept={(nv) => { if (nv && nv.isValid()) handleUpdate(key, nv.toISOString()); }}
-                                                        slotProps={{ textField: { onBlur: () => handleUpdate(key, getValues(key)) } }}
+                                                        slotProps={{ textField: { onBlur: () => handleDateBlur(key), inputProps: { readOnly: false }, error: !!errors[key], helperText: errors[key]?.message } }}
                                                         onKeyDown={(e) => handleKeyDown(e, key)}
                                                     />
                                                 </LocalizationProvider>
