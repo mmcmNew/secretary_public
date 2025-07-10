@@ -238,24 +238,28 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const updateTask = useCallback(async (params) => {
     const res = await api("/tasks/edit_task", "PUT", params);
     if (fetchLists) await fetchLists({ silent: true });
-    // Локальное обновление задачи
-    if (res.task && params.listId === 'my_day') {
-      setMyDayTasks(prev => ({
-        ...prev,
-        data: prev.data.map(task =>
-          task.id == params.taskId ? { ...task, ...res.task } : task
-        )
-      }));
-    } else if (res.task && (params.listId === selectedListId || !params.listId)) {
-      setTasks(prev => ({
-        ...prev,
-        data: prev.data.map(task =>
-          task.id == params.taskId ? { ...task, ...res.task } : task
-        )
-      }));
+    if (res.task) {
+      setMyDayTasks(prev => {
+        if (!prev.data.some(task => task.id == params.taskId)) return prev;
+        return {
+          ...prev,
+          data: prev.data.map(task =>
+            task.id == params.taskId ? { ...task, ...res.task } : task
+          )
+        };
+      });
+      setTasks(prev => {
+        if (!prev.data.some(task => task.id == params.taskId)) return prev;
+        return {
+          ...prev,
+          data: prev.data.map(task =>
+            task.id == params.taskId ? { ...task, ...res.task } : task
+          )
+        };
+      });
     }
     return res;
-  }, [fetchLists, selectedListId]);
+  }, [fetchLists]);
 
   const changeTaskStatus = useCallback(async (params) => {
     const res = await api("/tasks/change_status", "PUT", params);
