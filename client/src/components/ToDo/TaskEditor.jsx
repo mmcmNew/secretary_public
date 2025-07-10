@@ -59,7 +59,7 @@ function TaskDetails({
     const [typeDialogOpen, setTypeDialogOpen] = useState(false);
     const [newTypeData, setNewTypeData] = useState({ name: '', color: '#3788D8', description: '' });
     const updateNewTypeData = (field, value) => setNewTypeData(prev => ({ ...prev, [field]: value }));
-    const { fetchCalendarEvents, addTaskType } = useTasks();
+    const { fetchCalendarEvents, addTaskType, fetchTasksByIds } = useTasks();
     const { playAudio } = useContext(AudioContext);
 
     const taskMap = useMemo(() => new Map(tasks.map(t => [t.id, t])), [tasks]);
@@ -94,13 +94,17 @@ function TaskDetails({
     // Инициализация подзадач
     useEffect(() => {
         if (!task || !task.childes_order) return;
+        const missing = task.childes_order.filter(id => !taskMap.has(id));
+        if (missing.length && typeof fetchTasksByIds === 'function') {
+            fetchTasksByIds(missing);
+        }
         const subs = task.childes_order.reduce((acc, subId) => {
             const st = taskMap.get(subId);
             if (st) acc[subId] = st.title;
             return acc;
         }, {});
         setSubTasks(subs);
-    }, [task, taskMap]);
+    }, [task, taskMap, fetchTasksByIds]);
 
     const lastSent = useRef({});
 
