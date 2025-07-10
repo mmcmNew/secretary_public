@@ -20,6 +20,7 @@ from .handlers import (
     add_anti_task,
     edit_anti_task,
     del_anti_task,
+    get_subtasks_by_parent_id,
 )
 from .versioning import check_version
 from .models import DataVersion, TaskTypeGroup, TaskType
@@ -77,7 +78,7 @@ def edit_list_route():
     if not isinstance(data, dict):
         current_app.logger.error(f'edit_list_route: Invalid data type: {type(data)}, data: {data}')
         return jsonify({'success': False, 'message': 'Invalid JSON data'}), 400
-    result, status_code = edit_list(data)
+    result, status_code = edit_list(data, user_id=current_user.user_id)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
@@ -441,3 +442,12 @@ def delete_task_type_route(type_id):
     db.session.delete(task_type)
     db.session.commit()
     return jsonify({'result': 'deleted'})
+
+
+@to_do_app.route('/tasks/get_subtasks', methods=['GET'])
+@jwt_required()
+def get_subtasks_route():
+    parent_task_id = request.args.get('parent_task_id', type=int)
+    user_id = current_user.id
+    result, status_code = get_subtasks_by_parent_id(parent_task_id, user_id=user_id)
+    return jsonify(result), status_code
