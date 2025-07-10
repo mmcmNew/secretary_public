@@ -7,6 +7,7 @@ import useTasks from './hooks/useTasks';
 export default function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId }) {
   const {
     tasks,
+    myDayTasks,
     selectedTaskId,
     taskFields,
     addSubTask,
@@ -44,7 +45,7 @@ export default function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId 
         ) : (
           <TaskEditor
             key={selectedTaskId}
-            tasks={tasks.data}
+            tasks={selectedListId === 'my_day' ? myDayTasks.data : tasks.data}
             selectedTaskId={selectedTaskId}
             taskFields={taskFields}
             addSubTask={addSubTask}
