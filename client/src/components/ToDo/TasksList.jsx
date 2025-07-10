@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
     List,
     ListItem,
@@ -21,6 +21,7 @@ import PropTypes from "prop-types";
 import { Draggable } from "@fullcalendar/interaction";
 import useContextMenu from "./hooks/useContextMenu";
 import useTasks from "./hooks/useTasks";
+import { AudioContext } from "../../contexts/AudioContext.jsx";
 
 export default function TasksList({
     containerId,
@@ -40,6 +41,7 @@ export default function TasksList({
     onSuccess = null,
     onError = null,
 }) {
+    const { playAudio } = useContext(AudioContext);
     const [open, setOpen] = useState({});
     const [completedOpen, setCompletedOpen] = useState(true);
     const { anchorEl, openMenu, closeMenu } = useContextMenu();
@@ -91,8 +93,7 @@ export default function TasksList({
     async function handleToggle(task_id, checked) {
         const status_id = checked ? 2 : 1;
         if (status_id == 2) {
-            const audio = new Audio("/sounds/isComplited.wav");
-            audio.play();
+            playAudio("/sounds/isComplited.wav", { queued: false });
         }
         const updatedFields = { status_id };
         if (status_id == 2) {

@@ -18,6 +18,7 @@ import RegisterPage from './RegisterPage.jsx';
 import RequireAuth from './RequireAuth.jsx';
 import AdminPanel from './components/Admin/AdminPanel.jsx';
 import PricingPlans from './components/Subscription/PricingPlans.jsx';
+import { AudioProvider } from './contexts/AudioContext.jsx';
 // import ReactGridLayout from "./components/GridLayout";
 
 // Memoize routes to prevent unnecessary re-renders
@@ -51,9 +52,10 @@ function App() {
         <AuthProvider>
           <AccessControlProvider>
             <UpdateWebSocketProvider>
-              <ContainerProvider>
-                <TasksProvider>
-                  <AntiScheduleProvider>
+              <AudioProvider>
+                <ContainerProvider>
+                  <TasksProvider>
+                    <AntiScheduleProvider>
                     <Router future={{
                   v7_fetcherPersist: true,
                   v7_normalizeFormMethod: true,
@@ -66,7 +68,8 @@ function App() {
                     </Router>
                       </AntiScheduleProvider>
                   </TasksProvider>
-              </ContainerProvider>
+                </ContainerProvider>
+              </AudioProvider>
             </UpdateWebSocketProvider>
           </AccessControlProvider>
         </AuthProvider>
