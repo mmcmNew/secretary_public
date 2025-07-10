@@ -35,6 +35,7 @@ function TaskEditor({
     taskFields,
     tasks = [],
     selectedTaskId = null,
+    clickedStart = null,
     updateTask = null,
     changeTaskStatus = null,
     addSubTask = null,
@@ -141,6 +142,7 @@ function TaskEditor({
         const payload = { taskId, status_id, listId };
         if (status_id === 2) {
             payload.completed_at = dayjs().toISOString();
+            if (clickedStart) payload.current_start = clickedStart;
             playAudio("/sounds/isComplited.wav", { queued: false });
         }
         await changeTaskStatus(payload);
@@ -448,6 +450,7 @@ TaskEditor.propTypes = {
     taskFields: PropTypes.object,  // сюда передаётся TaskField.data
     tasks: PropTypes.array,
     selectedTaskId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    clickedStart: PropTypes.string,
     updateTask: PropTypes.func,
     changeTaskStatus: PropTypes.func,
     addSubTask: PropTypes.func,

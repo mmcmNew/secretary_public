@@ -444,6 +444,8 @@ def change_task_status(data, user_id=None):
         raise ValueError("user_id must be provided for change_task_status")
     task_id = data.get('taskId')
     status_id = data.get('status_id', 2)
+    current_start_str = data.get('current_start')
+    current_start = _parse_iso_datetime(current_start_str) if current_start_str else None
 
     task = Task.query.options(db.joinedload(Task.subtasks),
                               db.joinedload(Task.lists)).filter_by(id=task_id, user_id=user_id).first()
@@ -461,7 +463,8 @@ def change_task_status(data, user_id=None):
 
         if task.interval_id and task.start:
             rule = task.build_rrule()
-            next_start = rule.after(task.start) if rule else None
+            base_start = current_start or task.start
+            next_start = rule.after(base_start) if rule else None
             has_next = False
             if next_start:
                 if task.is_infinite:
@@ -474,7 +477,7 @@ def change_task_status(data, user_id=None):
                 completed_task = Task(
                     user_id=task.user_id,
                     title=task.title,
-                    start=task.start,
+                    start=base_start,
                     end=task.end,
                     is_background=task.is_background,
                     attachments=task.attachments,
