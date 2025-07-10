@@ -375,6 +375,36 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     [fetchTaskFields]
   );
 
+  // ----- Task type groups -----
+  const getTaskTypeGroups = useCallback(() => api('/tasks/task_type_groups'), []);
+
+  const addTaskTypeGroup = useCallback(
+    async (params) => {
+      const res = await api('/tasks/task_type_groups', 'POST', params);
+      if (fetchTaskFields) await fetchTaskFields();
+      return res;
+    },
+    [fetchTaskFields]
+  );
+
+  const updateTaskTypeGroup = useCallback(
+    async (id, params) => {
+      const res = await api(`/tasks/task_type_groups/${id}`, 'PUT', params);
+      if (fetchTaskFields) await fetchTaskFields();
+      return res;
+    },
+    [fetchTaskFields]
+  );
+
+  const deleteTaskTypeGroup = useCallback(
+    async (id) => {
+      const res = await api(`/tasks/task_type_groups/${id}`, 'DELETE');
+      if (fetchTaskFields) await fetchTaskFields();
+      return res;
+    },
+    [fetchTaskFields]
+  );
+
   const { user, isLoading } = useContext(AuthContext);
 
   useEffect(() => {
@@ -511,6 +541,10 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     addTaskType,
     updateTaskType,
     deleteTaskType,
+    getTaskTypeGroups,
+    addTaskTypeGroup,
+    updateTaskTypeGroup,
+    deleteTaskTypeGroup,
     addList,
     updateList,
     deleteList,
@@ -530,7 +564,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     version,
     setVersion,
     loading: tasks.loading,
-  }), [tasks, myDayTasks, myDayList, taskFields, lists, selectedListId, selectedList, calendarEvents, calendarRange, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, fetchTaskFields, getTaskTypes, addTaskType, updateTaskType, deleteTaskType, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, version]);
+  }), [tasks, myDayTasks, myDayList, taskFields, lists, selectedListId, selectedList, calendarEvents, calendarRange, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, fetchTaskFields, getTaskTypes, addTaskType, updateTaskType, deleteTaskType, getTaskTypeGroups, addTaskTypeGroup, updateTaskTypeGroup, deleteTaskTypeGroup, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, version]);
 
   return <TasksContext.Provider value={contextValue}>{children}</TasksContext.Provider>;
 };
