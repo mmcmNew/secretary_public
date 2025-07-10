@@ -548,7 +548,7 @@ class Task(db.Model):
         # Повторяющиеся задачи (фильтруем через rrule)
         recurring_tasks = [
             task for task in all_tasks
-            if task.interval_id is not None and task.start is not None and task.status_id != 2
+            if task.interval_id is not None and task.start is not None #and task.status_id != 2
         ]
         for task in recurring_tasks:
             rule = task.build_rrule()
