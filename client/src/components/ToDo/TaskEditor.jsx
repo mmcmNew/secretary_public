@@ -59,6 +59,7 @@ function TaskDetails({
     const [typeDialogOpen, setTypeDialogOpen] = useState(false);
     const [newTypeData, setNewTypeData] = useState({ name: '', color: '#3788D8', description: '' });
     const updateNewTypeData = (field, value) => setNewTypeData(prev => ({ ...prev, [field]: value }));
+    const [localDates, setLocalDates] = useState({ start: null, end: null });
     const { fetchCalendarEvents, addTaskType } = useTasks();
     const { playAudio } = useContext(AudioContext);
 
@@ -89,6 +90,10 @@ function TaskDetails({
         });
         initial.title = task.title;
         reset(initial);
+        setLocalDates({
+            start: task.start ? dayjs(task.start) : null,
+            end: task.end ? dayjs(task.end) : null,
+        });
     }, [task, taskFields, reset]);
 
     // Инициализация подзадач
@@ -179,9 +184,47 @@ function TaskDetails({
         if (fetchCalendarEvents) await fetchCalendarEvents();
     }, [subTasks, taskMap, updateTask, selectedListId, fetchCalendarEvents]);
 
-    const handleDateBlur = useCallback((field) => {
-        handleUpdate(field, getValues(field));
-    }, [handleUpdate, getValues]);
+    const submitDates = useCallback(async () => {
+        const { start, end } = localDates;
+        if (!start || !dayjs(start).isValid()) {
+            setError('start', { type: 'manual', message: 'Неверная дата' });
+            return;
+        }
+        if (!end || !dayjs(end).isValid()) {
+            setError('end', { type: 'manual', message: 'Неверная дата' });
+            return;
+        }
+        if (dayjs(start).isAfter(dayjs(end))) {
+            setError('end', { type: 'manual', message: 'Дата окончания должна быть позже даты начала' });
+            return;
+        }
+        clearErrors(['start', 'end']);
+
+        const changes = {};
+        if (!task.start || !dayjs(task.start).isSame(start)) {
+            changes.start = start.toISOString();
+            setValue('start', start.toISOString());
+        }
+        if (!task.end || !dayjs(task.end).isSame(end)) {
+            changes.end = end.toISOString();
+            setValue('end', end.toISOString());
+        }
+
+        if (Object.keys(changes).length > 0) {
+            let listId = null;
+            if (Array.isArray(task.lists) && task.lists.length > 0) {
+                listId = task.lists[0].id;
+            } else if (selectedListId) {
+                listId = selectedListId;
+            }
+            await updateTask({ taskId: task.id, ...changes, listId });
+            if (fetchCalendarEvents) await fetchCalendarEvents();
+        }
+    }, [localDates, task, selectedListId, updateTask, fetchCalendarEvents, setError, clearErrors, setValue]);
+
+    const handleDateBlur = useCallback(() => {
+        submitDates();
+    }, [submitDates]);
 
     const handleKeyDown = useCallback((e, field, subId = null) => {
         if (e.key === 'Enter') {
@@ -330,12 +373,12 @@ function TaskDetails({
                                                         viewRenderers={{ hours: renderTimeViewClock, minutes: renderTimeViewClock, seconds: renderTimeViewClock }}
                                                         ampm={false}
                                                         label={field.name}
-                                                        value={ctrl.value ? dayjs(ctrl.value) : null}
+                                                        value={localDates[key] || null}
                                                         format="DD/MM/YYYY HH:mm"
-                                                        onChange={(nv) => { ctrl.onChange(nv); }}
-                                                        onAccept={() => handleDateBlur(key)}
-                                                        slotProps={{ textField: { onBlur: () => handleDateBlur(key), inputProps: { readOnly: false }, error: !!errors[key], helperText: errors[key]?.message } }}
-                                                        onKeyDown={(e) => handleKeyDown(e, key)}
+                                                        onChange={(nv) => setLocalDates(prev => ({ ...prev, [key]: nv }))}
+                                                        onAccept={submitDates}
+                                                        slotProps={{ textField: { onBlur: handleDateBlur, inputProps: { readOnly: false }, error: !!errors[key], helperText: errors[key]?.message } }}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitDates(); } }}
                                                     />
                                                 </LocalizationProvider>
                                             )}
