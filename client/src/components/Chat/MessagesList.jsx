@@ -1,7 +1,7 @@
 import { Box, Divider, IconButton, Icon, LinearProgress } from '@mui/material';
 import ChatMessage from './ChatMessage';
 import { useEffect, useRef, useState, useContext } from 'react';
-import { AudioContext } from '../contexts/AudioContext.jsx';
+import { AudioContext } from '../../contexts/AudioContext';
 import { Virtuoso } from 'react-virtuoso';
 import useWebSocket from './hooks/useWebSocket';
 import useContainer from '../DraggableComponents/useContainer';

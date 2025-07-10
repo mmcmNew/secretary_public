@@ -530,12 +530,6 @@ class Task(db.Model):
                 and_(
                     Task.interval_id.isnot(None),
                     Task.start.isnot(None),
-                    Task.start <= end_utc,
-                    or_(
-                        Task.end == None,
-                        Task.end >= start_utc
-                    ),
-                    Task.status_id != 2
                 )
             )
         )
