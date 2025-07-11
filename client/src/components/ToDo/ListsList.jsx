@@ -12,6 +12,7 @@ import ContextMenu from './ListsList/ContextMenu';
 
 import useTasks from './hooks/useTasks';
 import useContextMenu from './hooks/useContextMenu'
+import { clearAllCache } from '../../utils/api';
 
 export default function ListsList({
   listsList = [],
@@ -62,6 +63,14 @@ export default function ListsList({
   async function handleUpdateAll() {
     if (typeof fetchLists === 'function') await fetchLists();
     else if (typeof fetchListsHook === 'function') await fetchListsHook();
+    if (typeof fetchTasks === 'function' && selectedListId) await fetchTasks(selectedListId);
+    if (typeof fetchCalendarEvents === 'function') await fetchCalendarEvents();
+  }
+
+  async function handleFullRefresh() {
+    await clearAllCache();
+    if (typeof fetchLists === 'function') await fetchLists({ id: 'get-lists' });
+    else if (typeof fetchListsHook === 'function') await fetchListsHook({ id: 'get-lists' });
     if (typeof fetchTasks === 'function' && selectedListId) await fetchTasks(selectedListId);
     if (typeof fetchCalendarEvents === 'function') await fetchCalendarEvents();
   }
@@ -325,7 +334,7 @@ export default function ListsList({
 
   return (
     <>
-      <Button variant="outlined" onClick={handleUpdateAll} sx={{ mb: 1 }}>Обновить</Button>
+      <Button variant="outlined" onClick={handleFullRefresh} sx={{ mb: 1 }}>ОБНОВИТЬ</Button>
         <Box sx={{
           height: 'calc(100% - 50px)', // Вычитаем высоту кнопки
           overflowY: 'auto'
