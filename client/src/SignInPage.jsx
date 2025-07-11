@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Avatar, Button, TextField, Box, Typography, Container } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useNavigate } from 'react-router-dom';
-import { useSignIn } from 'react-auth-kit';
+import useSignIn from 'react-auth-kit/hooks/useSignIn';
 import api from './utils/api.js';
 
 export default function SignInPage() {
@@ -17,12 +17,12 @@ export default function SignInPage() {
     try {
       const data = await api('/api/login', 'POST', { username, password });
       const success = signIn({
-        token: data.access_token,
-        expiresIn: 3600,
-        tokenType: 'Bearer',
-        authState: data.user,
-        refreshToken: data.refresh_token,
-        refreshTokenExpireIn: 86400,
+        auth: {
+          token: data.access_token,
+          type: 'Bearer',
+        },
+        refresh: data.refresh_token,
+        userState: data.user,
       });
       if (success) {
         navigate('/');

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useSignOut, useAuthUser } from 'react-auth-kit';
+import useSignOut from 'react-auth-kit/hooks/useSignOut';
+import useAuthUser from 'react-auth-kit/hooks/useAuthUser';
 import { Button, Container, Typography, Box, Card, CardContent, Chip, Tabs, Tab } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
