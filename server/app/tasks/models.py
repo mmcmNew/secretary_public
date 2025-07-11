@@ -66,6 +66,9 @@ class DataVersion(db.Model):
             version_record = cls(version_metadata={})
             db.session.add(version_record)
             db.session.commit()
+        # Исправление: если version_metadata None, сделать его словарём
+        if version_record.version_metadata is None:
+            version_record.version_metadata = {}
         if key not in version_record.version_metadata:
             version_record.version_metadata[key] = str(uuid.uuid4())
             db.session.commit()

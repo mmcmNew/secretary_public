@@ -1,13 +1,25 @@
 import axios from 'axios';
 import { setupCache, buildWebStorage } from 'axios-cache-interceptor';
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) prom.reject(error);
+    else prom.resolve(token);
+  });
+  failedQueue = [];
+};
+
 const cachedAxios = setupCache(axios.create(), {
   storage: buildWebStorage(window.localStorage),
   interpretHeader: true,
-  ttl:0
+  ttl: 0, // отключено TTL, ты сам управляешь кешем
 });
 
-cachedAxios.interceptors.response.use(response => {
+// Уведомления о кэше
+cachedAxios.interceptors.response.use((response) => {
   if (response.cached) {
     console.log('CLIENT: Ответ из КЭША для', response.config.url);
   } else {
@@ -16,54 +28,47 @@ cachedAxios.interceptors.response.use(response => {
   return response;
 });
 
-function getCookie(name) {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  return match ? decodeURIComponent(match[2]) : null;
-}
+// Обработка 401 и обновление токена
+cachedAxios.interceptors.response.use(null, async (error) => {
+  const originalRequest = error.config;
 
-export default async function api(url, method = 'GET', body = null) {
-  if (method !== 'GET') {
-    await cachedAxios.storage.clear();
-  }
-  const token = getCookie('access_token');
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const config = { url, method, headers };
-  if (body) config.data = body;
-  const { data } = await cachedAxios(config);
-  return data;
-}
+  if (
+    error.response?.status === 401 &&
+    !originalRequest._retry &&
+    localStorage.getItem('refresh_token')
+  ) {
+    originalRequest._retry = true;
 
-export const apiGet = (url) => api(url);
-export const apiPost = (url, body) => api(url, 'POST', body);
-export const apiPut = (url, body) => api(url, 'PUT', body);
-export const apiDelete = (url, body) => api(url, 'DELETE', body);
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      }).then((token) => {
+        originalRequest.headers['Authorization'] = 'Bearer ' + token;
+        return cachedAxios(originalRequest);
+      });
+    }
 
-export async function clearAllCache() {
-  await cachedAxios.storage.clear();
-}
+    isRefreshing = true;
 
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      const { data } = await axios.post('/api/refresh', {}, {
+        headers: { Authorization: `Bearer ${refreshToken}` }
+      });
 
-export function logAxiosCacheStorage() {
-  const prefix = 'axios-cache:';
-  const cacheEntries = [];
-
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(prefix)) {
-      const raw = localStorage.getItem(key);
-      try {
-        const parsed = JSON.parse(raw);
-        cacheEntries.push({ key, value: parsed });
-      } catch (e) {
-        cacheEntries.push({ key, value: raw });
-      }
+      localStorage.setItem('access_token', data.access_token);
+      processQueue(null, data.access_token);
+      originalRequest.headers['Authorization'] = 'Bearer ' + data.access_token;
+      return cachedAxios(originalRequest);
+    } catch (err) {
+      processQueue(err, null);
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      return Promise.reject(err);
+    } finally {
+      isRefreshing = false;
     }
   }
 
-  if (cacheEntries.length === 0) {
-    console.log('Кэш axios пуст.');
-  } else {
-    console.log('Содержимое кэша axios:', cacheEntries);
-  }
-}
+  return Promise.reject(error);
+});

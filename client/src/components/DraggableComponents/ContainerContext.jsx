@@ -5,10 +5,6 @@ import { AuthContext } from "../../contexts/AuthContext.jsx";
 
 const ContainerContext = createContext();
 
-function getCookie(name) {
-    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-    return match ? decodeURIComponent(match[2]) : null;
-}
 
 const ContainerProvider = ({ children }) => {
     const [dashboardData, setDashboardData] = useState({ id: 0, name: "dashboard 1" });
@@ -24,7 +20,7 @@ const ContainerProvider = ({ children }) => {
 
     function generateUniqueId() {
         const timePart = Date.now().toString();
-        const randomPart = Math.floor(1000 + Math.random() * 9000).toString(); // Генерация 4 случайных чисел
+        const randomPart = Math.floor(1000 + Math.random() * 9000).toString();
         return timePart + randomPart;
     }
 
@@ -61,39 +57,27 @@ const ContainerProvider = ({ children }) => {
             componentProps: props,
             content: !Component ? componentConfig.content : null,
         };
-        // console.log(newContainer)
         return newContainer;
     }
 
     function addContainer(type, props = {}) {
         if (containers.length >= 20) {
-            console.log("Maximum number of containers (20) reached");
             return;
         }
 
         const newId = generateUniqueId();
 
         if (type === "timersToolbar") {
-            // console.log(props)
             if (Object.keys(props).length === 0) {
-                // Check if props is an empty object
-                console.log("Props are empty");
                 props = { isRunningProp: false, initialTimeProp: 1 };
             }
-            // console.log(props)
-            // console.log(type, newId, { containerId: newId, ...props })
-            // console.log('timers:', timers)
             const newTimers = [...timers, { id: newId, ...props }];
-            // console.log('newTimers:', newTimers)
             setTimers(newTimers);
             sendTimersToServer(newTimers);
-            // console.log(newTimers)
             return;
         }
 
-        // console.log(type, newId, { containerId: newId, ...props })
         const newContainer = createComponentFromType(type, newId, { containerId: newId, ...props });
-        // console.log(newContainer)
 
         if (newContainer) {
             setContainers((prevContainers) => {
@@ -137,7 +121,6 @@ const ContainerProvider = ({ children }) => {
 
     const { user, isLoading } = useContext(AuthContext);
 
-    // загрузка списка dashboard'ов и выбор последнего
     useEffect(() => {
         if (!user) {
             setDashboardData({ id: 0, name: "dashboard 1" });
@@ -146,10 +129,9 @@ const ContainerProvider = ({ children }) => {
             setThemeMode("light");
             return;
         }
-        // console.log("ContainerProvider: старт загрузки dashboard");
         const fetchDashboard = async () => {
             try {
-                const token = getCookie('access_token');
+                const token = localStorage.getItem('access_token');
                 const response = await fetch(`/dashboard/last`, {
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
@@ -157,7 +139,6 @@ const ContainerProvider = ({ children }) => {
                     throw new Error("Network response was not ok");
                 }
                 const data = await response.json();
-                // console.log("ContainerProvider: dashboard загружен", data, Date.now() - (window.mainStart || 0), "мс с начала main.jsx");
                 setDashboardData({ id: data.id, name: data.name });
 
                     const loadedTimers = data.timers || [];
@@ -184,9 +165,8 @@ const ContainerProvider = ({ children }) => {
         // console.log('[ContainerContext] sendContainersToServer called');
         // отправляем все контейнеры кроме таймеров
         const sendingContainers = containers.filter((container) => container.type !== "timersToolbar");
-        // console.log('[ContainerContext] Containers to send:', sendingContainers);
         try {
-            const token = getCookie('access_token');
+            const token = localStorage.getItem('access_token');
             const response = await fetch("/dashboard", {
                 method: "POST",
                 headers: {
@@ -197,7 +177,6 @@ const ContainerProvider = ({ children }) => {
                     dashboard_data: dashboardData,
                     containers: sendingContainers.map(c => {
                         const { componentType, content, componentProps, ...serializableContainer } = c;
-                        // console.log('[ContainerContext] Container props to send:', serializableContainer, 'componentProps:', componentProps);
                         return serializableContainer;
                     }),
                     themeMode: themeMode,
@@ -228,8 +207,6 @@ const ContainerProvider = ({ children }) => {
     };
 
     const handleContainerResize = (id, newSize = {}, newPosition = {}) => {
-        // console.log("Container resized:", id, newSize, newPosition);
-
         setContainers(
             containers.map((container) =>
                 container.id === id
@@ -249,47 +226,17 @@ const ContainerProvider = ({ children }) => {
 
     // Функция для обновления данных содержимого контейнера
     const handleUpdateContent = (id, updatedData) => {
-        console.log('[ContainerContext] handleUpdateContent called:', id, updatedData);
         setContainers((prevContainers) =>
             prevContainers.map((container) => {
                 if (container.id === id) {
                     const newProps = { ...container.componentProps, ...updatedData };
                     const updatedContainer = { ...container, ...updatedData, componentProps: newProps };
-                    // console.log('[ContainerContext] Updated container:', updatedContainer);
                     return updatedContainer;
                 }
                 return container;
             }),
         );
     };
-
-    //audio context
-    const audioReducer = (state, action) => {
-        switch (action.type) {
-            case "SET_QUEUE":
-                return { ...state, queue: action.queue };
-            case "PLAY":
-                return { ...state, isPlaying: true };
-            case "PAUSE":
-                return { ...state, isPlaying: false };
-            case "NEXT_TRACK":
-                return {
-                    ...state,
-                    currentTrackIndex: (state.currentTrackIndex + 1) % state.queue.length,
-                    isPlaying: true,
-                };
-            default:
-                return state;
-        }
-    };
-
-    const initialState = {
-        queue: ["track1.mp3", "track2.mp3", "track3.mp3"],
-        currentTrackIndex: 0,
-        isPlaying: false,
-    };
-
-    const [state, dispatch] = useReducer(audioReducer, initialState);
 
     function sendTimersToServer(updatedTimers) {
         // отправляем таймеры на сервер
@@ -307,14 +254,6 @@ const ContainerProvider = ({ children }) => {
             .catch((error) => console.error("Failed to save timers:", error));
     }
 
-    useEffect(() => {
-        // Логика для воспроизведения или паузы аудио в зависимости от состояния
-        if (state.queue.length > 0) {
-            const audio = new Audio(state.queue[state.currentTrackIndex]);
-            state.isPlaying ? audio.play() : audio.pause();
-        }
-    }, [state.queue, state.currentTrackIndex, state.isPlaying]);
-
     return (
         <ContainerContext.Provider
             value={{
@@ -327,10 +266,8 @@ const ContainerProvider = ({ children }) => {
                 setTimers,
                 sendTimersToServer,
                 themeMode,
-                state,
                 updates,
                 setUpdates,
-                dispatch,
                 setThemeMode,
                 addContainer,
                 handleActive,

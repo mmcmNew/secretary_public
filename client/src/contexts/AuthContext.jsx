@@ -1,138 +1,78 @@
-import React, { createContext, useCallback, useState, useEffect } from 'react';
-import axios from 'axios';
-
-function getCookie(name) {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  return match ? decodeURIComponent(match[2]) : null;
-}
-
-const storedToken = getCookie('access_token');
-if (storedToken) {
-  axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-}
+import React, { createContext, useState, useEffect, useCallback } from 'react';
+import { api, apiPost } from './api';
+import { useContext } from 'react';
+import { ErrorContext } from './ErrorContext';
 
 export const AuthContext = createContext({
   user: null,
-  login: async () => false,
-  register: async () => false,
+  isLoading: true,
+  login: async () => {},
+  register: async () => {},
   logout: async () => {},
   fetchCurrentUser: async () => {},
 });
 
-// Удаляю функции и обращения к getCookie, csrf_token, ensureCsrfToken
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const refreshToken = useCallback(async () => {
-    try {
-      const { data } = await axios.post('/api/refresh', {}, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('refresh_token')}` }
-      });
-      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
-      return true;
-    } catch (err) {
-      delete axios.defaults.headers.common['Authorization'];
-      return false;
-    }
-  }, []);
+  const { setError } = useContext(ErrorContext);
 
   const fetchCurrentUser = useCallback(async () => {
-    const token = getCookie('access_token');
-    if (!token) {
-      setIsLoading(false);
-      setUser(null);
-      return null;
-    }
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    console.log('AuthContext: Checking user authentication...');
     try {
-      const { data } = await axios.get('/api/user', { timeout: 5000 });
-      console.log('AuthContext: User authenticated:', data);
+      const data = await api('/api/user');
       setUser(data);
-      setIsLoading(false);
       return data;
     } catch (err) {
-      if (err.response?.status === 401) {
-        console.log('Token expired, trying to refresh...');
-        const refreshed = await refreshToken();
-        if (refreshed) {
-          return fetchCurrentUser();
-        }
-      }
-      console.log('AuthContext: Auth check failed:', err.response?.status, err.message);
+      console.warn('fetchCurrentUser failed:', err?.response?.status || err.message);
       setUser(null);
-      setIsLoading(false);
       return null;
+    } finally {
+      setIsLoading(false);
     }
-  }, [refreshToken]);
+  }, []);
 
   const login = useCallback(async (username, password) => {
     try {
-      const { data } = await axios.post(
-        '/api/login',
-        { username, password }
-      );
-      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
+      const data = await apiPost('/api/login', { username, password });
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
       setUser(data.user);
       return null;
     } catch (err) {
-      const status = err?.response?.status;
-      let errorMsg = 'Login failed';
-      if (status === 401) {
-        errorMsg = 'Invalid username or password';
-      } else if (err?.response?.data?.error) {
-        errorMsg = err.response.data.error;
-      }
-      return errorMsg;
+      const msg =
+        err?.response?.data?.error ||
+        (err?.response?.status === 401 ? 'Invalid username or password' : 'Login failed');
+      setError(msg);
+      return msg;
     }
-  }, []);
+  }, [setError]);
 
   const register = useCallback(async (username, email, password) => {
     try {
-      const { data } = await axios.post(
-        '/api/register',
-        { username, email, password }
-      );
-      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
+      const data = await apiPost('/api/register', { username, email, password });
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
       setUser(data.user);
       return null;
     } catch (err) {
-      const errorMsg = err?.response?.data?.error || 'Registration failed';
-      return errorMsg;
+      const msg = err?.response?.data?.error || 'Registration failed';
+      setError(msg);
+      return msg;
     }
-  }, []);
+  }, [setError]);
 
   const logout = useCallback(async () => {
     try {
-      await axios.post('/api/logout');
+      await apiPost('/api/logout');
+    } catch (err) {
+      setError('Ошибка выхода из аккаунта');
     } finally {
-      delete axios.defaults.headers.common['Authorization'];
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
       setUser(null);
     }
-  }, []);
+  }, [setError]);
 
-  // Настраиваем axios interceptor для автоматического обновления токенов
-  useEffect(() => {
-    const interceptor = axios.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        if (error.response?.status === 401 && !error.config._retry) {
-          error.config._retry = true;
-          const refreshed = await refreshToken();
-          if (refreshed) {
-            return axios(error.config);
-          }
-        }
-        return Promise.reject(error);
-      }
-    );
-    
-    return () => axios.interceptors.response.eject(interceptor);
-  }, [refreshToken]);
-
-  // Проверяем авторизацию при загрузке
   useEffect(() => {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
@@ -143,4 +83,3 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
-
