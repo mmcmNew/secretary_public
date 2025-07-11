@@ -108,7 +108,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
 
   // Получить все списки
   const fetchLists = useCallback(async ({ silent = false } = {}) => {
-    if (fetching.current) return;
+    // if (fetching.current) return;
     if (!silent && setLoading) setLoading(true);
     fetching.current = true;
     if (!silent) setLists(prev => ({ ...prev, loading: true, error: null }));

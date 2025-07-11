@@ -60,13 +60,6 @@ export default function ListsList({
     }));
   }
 
-  async function handleUpdateAll() {
-    if (typeof fetchLists === 'function') await fetchLists();
-    else if (typeof fetchListsHook === 'function') await fetchListsHook();
-    if (typeof fetchTasks === 'function' && selectedListId) await fetchTasks(selectedListId);
-    if (typeof fetchCalendarEvents === 'function') await fetchCalendarEvents();
-  }
-
   async function handleFullRefresh() {
     await clearAllCache();
     if (typeof fetchLists === 'function') await fetchLists({ id: 'get-lists' });
