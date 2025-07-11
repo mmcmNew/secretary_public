@@ -517,8 +517,7 @@ class Task(db.Model):
             joinedload(Task.lists),
             joinedload(Task.status),
             joinedload(Task.priority),
-            joinedload(Task.interval),
-            joinedload(Task.subtasks)
+            joinedload(Task.interval)
         ]
 
         # Один запрос: обычные задачи или потенциально повторяющиеся

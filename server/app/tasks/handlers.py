@@ -136,7 +136,7 @@ def get_lists_and_groups_data(client_timezone=0, user_id=None):
     ]
 
     lists_dict = [
-        {**lst.to_dict(), 'unfinished_tasks_count': unfinished_per_list.get(lst.id, 0)}
+        {**lst.to_dict(), 'unfinished_tasks_count': lst.unfinished_tasks_count(tasks_map)}
         for lst in lists_list
     ]
 
@@ -178,7 +178,7 @@ def get_tasks(list_id, client_timezone=0, start=None, end=None, user_id=None):
         case 'tasks':
             tasks_query = (
                 Task.query.options(*load_options)
-                .filter(~Task.lists.any(), ~Task.parent_tasks.any(), Task.user_id == user_id)
+                .filter(~Task.lists.any(), Task.user_id == user_id)
                 .all()
             )
         case 'important':
@@ -197,7 +197,7 @@ def get_tasks(list_id, client_timezone=0, start=None, end=None, user_id=None):
                 .filter(
                     List.id == list_id,
                     Task.user_id == user_id,
-                    ~Task.parent_tasks.any()
+                    # ~Task.parent_tasks.any()
                 )
                 .options(*load_options)
                 .all()
@@ -871,3 +871,18 @@ def create_daily_scenario():
         actions = []
 
     return scenario
+
+
+def get_subtasks_by_parent_id(parent_task_id, user_id=None):
+    """Возвращает подзадачи для задачи строго по порядку из childes_order."""
+    if user_id is None:
+        raise ValueError("user_id must be provided for get_subtasks_by_parent_id")
+    parent_task = Task.query.filter_by(id=parent_task_id, user_id=user_id).first()
+    if not parent_task:
+        return {'success': False, 'message': 'Task not found'}, 404
+    if not parent_task.childes_order:
+        return {'subtasks': []}, 200
+    subtasks = Task.query.filter(Task.id.in_(parent_task.childes_order), Task.user_id == user_id).all()
+    subtasks_map = {t.id: t for t in subtasks}
+    subtasks_sorted = [subtasks_map[tid] for tid in parent_task.childes_order if tid in subtasks_map]
+    return {'subtasks': [t.to_dict() for t in subtasks_sorted]}, 200

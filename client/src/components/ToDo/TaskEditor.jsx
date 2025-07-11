@@ -51,8 +51,16 @@ function TaskEditor({
     const [typeDialogOpen, setTypeDialogOpen] = useState(false);
     const [newTypeData, setNewTypeData] = useState({ name: '', color: '#3788D8', description: '' });
     const updateNewTypeData = (field, value) => setNewTypeData(prev => ({ ...prev, [field]: value }));
-    const { addTaskType } = useTasks();
+    const { addTaskType, getSubtasksByParentId } = useTasks();
     const { playAudio } = useContext(AudioContext);
+    const [subtasks, setSubtasks] = useState([]);
+
+    useEffect(() => {
+        if (!selectedTaskId) return;
+        getSubtasksByParentId(selectedTaskId)
+            .then(setSubtasks)
+            .catch(() => setSubtasks([]));
+    }, [selectedTaskId, getSubtasksByParentId]);
 
     const taskMap = useMemo(() => new Map(tasks.map(t => [t.id, t])), [tasks]);
     const task = taskMap.get(+selectedTaskId) || null;
@@ -87,12 +95,10 @@ function TaskEditor({
         initial.title = task.title;
         initial.start = task.start ? dayjs(task.start).toISOString() : null;
         initial.end = task.end ? dayjs(task.end).toISOString() : null;
-        initial.subtasks = task.childes_order?.map(id => {
-            const st = taskMap.get(id);
-            return st ? { id: st.id, title: st.title, status_id: st.status_id } : null;
-        }).filter(Boolean) || [];
+        // Используем подзадачи, полученные с сервера
+        initial.subtasks = subtasks.map(st => ({ id: st.id, title: st.title, status_id: st.status_id }));
         reset(initial);
-    }, [task, taskFields, reset]);
+    }, [task, taskFields, reset, subtasks]);
 
     const lastSent = useRef({});
 

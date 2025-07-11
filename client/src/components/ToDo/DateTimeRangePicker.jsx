@@ -18,6 +18,7 @@ export default function DateTimeRangePickerField({ name = "startEnd", onValidBlu
             rules={{
                 validate: (value = {}) => {
                     const { start = null, end = null } = value;
+                    if (!start && !end) return true;
                     if (!start || !end) return "Выберите дату и время начала и окончания";
                     
                     const startDate = dayjs(start);

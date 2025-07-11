@@ -416,6 +416,17 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     [fetchTaskFields]
   );
 
+  // Получить подзадачи по parent_task_id
+  const getSubtasksByParentId = useCallback(async (parent_task_id) => {
+    try {
+      const res = await api(`/tasks/get_subtasks?parent_task_id=${parent_task_id}`);
+      return res.subtasks || [];
+    } catch (err) {
+      if (onError) onError(err);
+      return [];
+    }
+  }, [onError]);
+
   const { user, isLoading } = useContext(AuthContext);
 
   useEffect(() => {
@@ -573,7 +584,8 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     deleteTask,
     linkTaskList,
     loading: tasks.loading,
-  }), [tasks, myDayTasks, myDayList, taskFields, lists, selectedListId, selectedList, calendarEvents, calendarRange, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, fetchTaskFields, getTaskTypes, addTaskType, updateTaskType, deleteTaskType, getTaskTypeGroups, addTaskTypeGroup, updateTaskTypeGroup, deleteTaskTypeGroup, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, fetchTasksByIds, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList]);
+    getSubtasksByParentId,
+  }), [tasks, myDayTasks, myDayList, taskFields, lists, selectedListId, selectedList, calendarEvents, calendarRange, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, fetchTaskFields, getTaskTypes, addTaskType, updateTaskType, deleteTaskType, getTaskTypeGroups, addTaskTypeGroup, updateTaskTypeGroup, deleteTaskTypeGroup, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, fetchTasksByIds, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, getSubtasksByParentId]);
 
   return <TasksContext.Provider value={contextValue}>{children}</TasksContext.Provider>;
 };

@@ -45,7 +45,7 @@ export default function TasksList({
     const [open, setOpen] = useState({});
     const [completedOpen, setCompletedOpen] = useState(true);
     const { anchorEl, openMenu, closeMenu } = useContextMenu();
-    const { fetchCalendarEvents, fetchTasksByIds } = useTasks();
+    const { fetchCalendarEvents, getSubtasksByParentId } = useTasks();
     const [listsMenuAnchorEl, setListsMenuAnchorEl] = useState(null);
     const [actionType, setActionType] = useState(null);
     const [targetItemId, setTargetItemId] = useState(null);
@@ -112,15 +112,10 @@ export default function TasksList({
             ...prevOpen,
             [id]: willOpen,
         }));
-        if (willOpen && typeof fetchTasksByIds === "function") {
+        if (willOpen && typeof getSubtasksByParentId === "function") {
             const task = tasks.find((t) => t.id === id);
             if (task && task.childes_order?.length) {
-                const missing = task.childes_order.filter(
-                    (cid) => !tasks.some((t) => t.id === cid)
-                );
-                if (missing.length) {
-                    await fetchTasksByIds(missing);
-                }
+                    await getSubtasksByParentId(task.id);
             }
         }
     }
