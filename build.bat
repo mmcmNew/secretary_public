@@ -1,8 +1,9 @@
-chcp 1251
+chcp 65001
 @echo off
 
 REM 1. Сборка клиента
 cd client
+call npm install
 call npm run build
 cd ..
 
@@ -21,4 +22,4 @@ REM 5. Сборка контейнера
 docker build -t secretary-app .
 
 REM 6. Запуск контейнера
-docker-compose up -d
+docker compose --env-file .env.docker up -d --build
