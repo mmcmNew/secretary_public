@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect, useReducer, useContext } from "react";
 import PropTypes from "prop-types";
+import axios from 'axios';
 import { containerTypes } from "./containerConfig";
 
 const ContainerContext = createContext();
@@ -121,11 +122,7 @@ const ContainerProvider = ({ children }) => {
     useEffect(() => {
         const fetchDashboard = async () => {
             try {
-                const response = await fetch(`/dashboard/last`);
-                if (!response.ok) {
-                    throw new Error("Network response was not ok");
-                }
-                const data = await response.json();
+                const { data } = await axios.get(`/dashboard/last`);
                 setDashboardData({ id: data.id, name: data.name });
 
                     const loadedTimers = data.timers || [];
@@ -153,24 +150,15 @@ const ContainerProvider = ({ children }) => {
         // отправляем все контейнеры кроме таймеров
         const sendingContainers = containers.filter((container) => container.type !== "timersToolbar");
         try {
-            const response = await fetch("/dashboard", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    dashboard_data: dashboardData,
-                    containers: sendingContainers.map(c => {
-                        const { componentType, content, componentProps, ...serializableContainer } = c;
-                        return serializableContainer;
-                    }),
-                    themeMode: themeMode,
-                    timers: timers
+            await axios.post("/dashboard", {
+                dashboard_data: dashboardData,
+                containers: sendingContainers.map(c => {
+                    const { componentType, content, componentProps, ...serializableContainer } = c;
+                    return serializableContainer;
                 }),
+                themeMode: themeMode,
+                timers: timers
             });
-            if (!response.ok) {
-                throw new Error("Network response was not ok");
-            }
             console.log("Dashboard сохранен");
         } catch (error) {
             console.error("Failed to send containers to server:", error);
@@ -225,15 +213,11 @@ const ContainerProvider = ({ children }) => {
 
     function sendTimersToServer(updatedTimers) {
         // отправляем таймеры на сервер
-        fetch("/post_timers", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ dashboardId: dashboardData.id, timers: updatedTimers }),
+        axios.post("/post_timers", {
+            dashboardId: dashboardData.id,
+            timers: updatedTimers
         })
-            .then((response) => response.json())
-            .then((data) => console.log("Timers saved:", data.message))
+            .then((response) => console.log("Timers saved:", response.data.message))
             .catch((error) => console.error("Failed to save timers:", error));
     }
 

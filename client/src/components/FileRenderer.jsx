@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Button, CircularProgress } from '@mui/material';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
+import axios from 'axios';
 import MDNotionEditor from './JournalEditor/MDNotionEditor';
 
 export default function FileRenderer({ url }) {
@@ -12,14 +13,12 @@ export default function FileRenderer({ url }) {
   useEffect(() => {
     let isMounted = true;
     if (['md', 'txt'].includes(extension)) {
-      fetch(url)
-        .then(r => r.text())
-        .then(text => { if (isMounted) setContent(text); })
+      axios.get(url, { responseType: 'text' })
+        .then(r => { if (isMounted) setContent(r.data); })
         .catch(() => { if (isMounted) setContent(''); });
     } else {
-      fetch(url)
-        .then(r => r.blob())
-        .then(b => { if (isMounted) setBlobUrl(URL.createObjectURL(b)); })
+      axios.get(url, { responseType: 'blob' })
+        .then(r => { if (isMounted) setBlobUrl(URL.createObjectURL(r.data)); })
         .catch(() => { if (isMounted) setBlobUrl(''); });
     }
     return () => {

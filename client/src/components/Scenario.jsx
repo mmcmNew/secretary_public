@@ -16,14 +16,11 @@ import PauseIcon from '@mui/icons-material/Pause';
 import TTSText from './Scenario/TTSText';
 import AudioPlayer from './Scenario/AudioPlayer';
 import Survey from './Scenario/Survey';
+import axios from 'axios';
 
 async function getScenario(name){
       try {
-        const response = await fetch(`/get_scenario/${name}`);
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const data = await response.json();
+        const { data } = await axios.get(`/get_scenario/${name}`);
         return data.scenario
       } catch (error) {
         console.error('Failed to fetch dashboard from server:', error);

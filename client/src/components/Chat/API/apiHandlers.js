@@ -1,25 +1,26 @@
 // utils/apiHandlers.js
+import axios from 'axios';
 
-// Централизованный обработчик fetch-запросов
+// Централизованный обработчик запросов
 async function apiRequest(url, { method = 'GET', body, headers = {} } = {}) {
-    const options = {
-        method,
-        headers: { 'Content-Type': 'application/json', ...headers },
-    };
-    if (body) options.body = JSON.stringify(body);
-
-    const response = await fetch(url, options);
-    if (!response.ok) {
-        let errorText = '';
-        try {
-            const err = await response.json();
-            errorText = err.message || JSON.stringify(err);
-        } catch {
-            errorText = response.statusText;
+    const config = { url, method, headers: { ...headers } };
+    if (body !== undefined) {
+        if (body instanceof FormData) {
+            config.data = body;
+        } else {
+            config.headers['Content-Type'] = 'application/json';
+            config.data = body;
         }
-        throw new Error(errorText || 'Ошибка запроса');
     }
-    return response.json();
+
+    try {
+        const response = await axios(config);
+        return response.data;
+    } catch (error) {
+        const err = error.response?.data || {};
+        const errorText = err.message || error.message || 'Ошибка запроса';
+        throw new Error(errorText);
+    }
 }
 
 export async function sendMessageToAI(payload) {

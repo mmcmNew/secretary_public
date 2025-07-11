@@ -9,6 +9,7 @@ import PauseIcon from '@mui/icons-material/Pause';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import CloseIcon from '@mui/icons-material/Close';
 import { AudioContext } from '../../contexts/AudioContext.jsx';
+import axios from 'axios';
 
 
 export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resultText, isRunningProp=false, onExpireFunc=null, handleCloseTimer=null, handleUpdateTimers=null,  playSoundProp=true, soundUrl='/sounds/endTimer.mp3', currentActionId=null }) {
@@ -41,17 +42,11 @@ export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resul
 
   async function sendTextAndPlayAudio(text) {
     try {
-      const response = await fetch('/get_tts_audio', {
-        method: 'POST',
-        body: new URLSearchParams({ text }),
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
+      const response = await axios.post('/get_tts_audio', new URLSearchParams({ text }), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        responseType: 'blob'
       });
-      if (!response.ok) {
-        throw new Error('Network response was not ok ' + response.statusText);
-      }
-      const blob = await response.blob();
+      const blob = response.data;
       const audioUrl = URL.createObjectURL(blob);
       await playAudio(audioUrl, { queued: true });
     } catch (error) {
