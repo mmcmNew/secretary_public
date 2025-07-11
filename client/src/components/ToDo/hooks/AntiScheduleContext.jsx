@@ -9,7 +9,6 @@ const AntiScheduleContext = createContext();
 
 export const AntiScheduleProvider = ({ children, onError, setLoading }) => {
   const [antiSchedule, setAntiSchedule] = useState({ data: [], loading: false, error: null });
-  const [version, setVersion] = useState(null);
   const fetching = useRef(false);
   const { draggingContainer } = useContainer();
 
@@ -19,16 +18,8 @@ export const AntiScheduleProvider = ({ children, onError, setLoading }) => {
     fetching.current = true;
     setAntiSchedule(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await api(`/tasks/get_anti_schedule?version=${version || ''}`);
-      if (data.version_matches) {
-        setVersion(data.version);
-        setAntiSchedule(prev => ({ ...prev, loading: false }));
-        fetching.current = false;
-        if (setLoading) setLoading(false);
-        return antiSchedule.data;
-      }
+      const data = await api('/tasks/get_anti_schedule');
       setAntiSchedule({ data: data.anti_schedule || data, loading: false, error: null });
-      setVersion(data.tasksVersion || data.version || version);
       if (setLoading) setLoading(false);
       fetching.current = false;
       return data.anti_schedule || data;
@@ -38,7 +29,7 @@ export const AntiScheduleProvider = ({ children, onError, setLoading }) => {
       if (setLoading) setLoading(false);
       fetching.current = false;
     }
-  }, [onError, setLoading, version]);
+  }, [onError, setLoading]);
 
   const addAntiTask = useCallback(async (params) => {
     const res = await api('/tasks/add_anti_task', 'POST', params);
@@ -81,7 +72,6 @@ export const AntiScheduleProvider = ({ children, onError, setLoading }) => {
     if (draggingContainer) return;
     if (wsVersion) {
       fetchAntiSchedule();
-      setVersion(wsVersion);
     }
   }, [wsVersion, fetchAntiSchedule, draggingContainer]);
 
@@ -91,10 +81,8 @@ export const AntiScheduleProvider = ({ children, onError, setLoading }) => {
     addAntiTask,
     updateAntiTask,
     deleteAntiTask,
-    version,
-    setVersion,
     loading: antiSchedule.loading,
-  }), [antiSchedule, fetchAntiSchedule, addAntiTask, updateAntiTask, deleteAntiTask, version]);
+  }), [antiSchedule, fetchAntiSchedule, addAntiTask, updateAntiTask, deleteAntiTask]);
 
   return (
     <AntiScheduleContext.Provider value={contextValue}>

@@ -22,23 +22,34 @@ from .handlers import (
     del_anti_task,
     get_subtasks_by_parent_id,
 )
-from .versioning import check_version
 from .models import DataVersion, TaskTypeGroup, TaskType
-from app import db
+from app import db, cache
 from flask_jwt_extended import current_user
 from app.socketio_utils import notify_data_update, notify_task_change
 
 
+def make_cache_key(prefix):
+    def _key():
+        version = DataVersion.get_version('tasksVersion')
+        return f"{prefix}:{current_user.id}:{version}:{request.full_path}"
+    return _key
+
+
 @to_do_app.route('/tasks/get_lists', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=60, key_prefix=make_cache_key('lists'))
 def get_lists_and_groups():
     client_timezone = int(request.args.get('time_zone', 0))
     user_id = current_user.id
     data = get_lists_and_groups_data(client_timezone, user_id=user_id)
     if isinstance(data, dict) and 'error' in data:
         return jsonify(data), 500
-    data['tasksVersion'] = DataVersion.get_version('tasksVersion')
-    return data
+    version = DataVersion.get_version('tasksVersion')
+    response = jsonify(data)
+    response.set_etag(version)
+    if request.if_none_match and version in request.if_none_match:
+        return '', 304
+    return response
 
 
 @to_do_app.route('/tasks/add_list', methods=['POST'])
@@ -47,10 +58,12 @@ def add_object_route():
     data = request.get_json()
     user_id = current_user.id
     result, status_code = add_object(data, user_id)
+    response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
-    return jsonify(result), status_code
+        response.set_etag(new_version)
+    return response, status_code
 
 
 @to_do_app.route('/tasks/add_task', methods=['POST'])
@@ -59,16 +72,16 @@ def add_task_route():
     data = request.get_json()
     user_id = current_user.id
     result, status_code = add_task(data, user_id)
+    response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
+        response.set_etag(new_version)
         if 'task' in result:
-            # Получаем актуальные списки
             lists_data = get_lists_and_groups_data(user_id=user_id)
-            # Для календаря: просто отправляем новую задачу
             calendar_events = [result['task']]
             notify_task_change('added', result['task'], data.get('listId'), lists_data=lists_data, calendar_events=calendar_events)
-    return jsonify(result), status_code
+    return response, status_code
 
 
 @to_do_app.route('/tasks/edit_list', methods=['PUT'])
@@ -79,10 +92,12 @@ def edit_list_route():
         current_app.logger.error(f'edit_list_route: Invalid data type: {type(data)}, data: {data}')
         return jsonify({'success': False, 'message': 'Invalid JSON data'}), 400
     result, status_code = edit_list(data, user_id=current_user.user_id)
+    response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
-    return jsonify(result), status_code
+        response.set_etag(new_version)
+    return response, status_code
 
 
 @to_do_app.route('/tasks/add_subtask', methods=['POST'])
@@ -91,10 +106,12 @@ def add_subtask_route():
     data = request.get_json()
     user_id = current_user.id
     result, status_code = add_subtask(data, user_id)
+    response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
-    return jsonify(result), status_code
+        response.set_etag(new_version)
+    return response, status_code
 
 
 @to_do_app.route('/tasks/edit_task', methods=['PUT'])
@@ -103,15 +120,16 @@ def edit_task_route():
     data = request.get_json()
     user_id = current_user.id
     result, status_code = edit_task(data, user_id=user_id)
+    response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
+        response.set_etag(new_version)
         if 'task' in result:
             lists_data = get_lists_and_groups_data(user_id=user_id)
-            # Для календаря: отправляем изменённую задачу
             calendar_events = [result['task']]
             notify_task_change('updated', result['task'], data.get('listId'), lists_data=lists_data, calendar_events=calendar_events)
-    return jsonify(result), status_code
+    return response, status_code
 
 
 @to_do_app.route('/tasks/change_status', methods=['PUT'])
@@ -120,9 +138,11 @@ def change_task_status_route():
     data = request.get_json()
     user_id = current_user.id
     result, status_code = change_task_status(data, user_id=user_id)
+    response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
+        response.set_etag(new_version)
         lists_data = get_lists_and_groups_data(user_id=user_id)
         # Для календаря: если есть changed_ids, отправляем задачи по этим id
         calendar_events = None
@@ -134,11 +154,12 @@ def change_task_status_route():
         elif 'task' in result:
             calendar_events = [result['task']]
             notify_task_change('status_changed', result['task'], data.get('listId'), lists_data=lists_data, calendar_events=calendar_events)
-    return jsonify(result), status_code
+    return response, status_code
 
 
 @to_do_app.route('/tasks/get_tasks', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=60, key_prefix=make_cache_key('tasks'))
 def get_tasks_route():
     list_id = request.args.get('list_id')
     start = request.args.get('start')
@@ -148,12 +169,18 @@ def get_tasks_route():
     # current_app.logger.info(f'get_tasks, list_id: {list_id}')
     result, status_code = get_tasks(list_id, client_timezone, start, end, user_id=user_id)
     if status_code == 200:
-        result['tasksVersion'] = DataVersion.get_version('tasksVersion')
+        version = DataVersion.get_version('tasksVersion')
+        response = jsonify(result)
+        response.set_etag(version)
+        if request.if_none_match and version in request.if_none_match:
+            return '', 304
+        return response
     return jsonify(result), status_code
 
 
 @to_do_app.route('/tasks/get_tasks_by_ids', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=60, key_prefix=make_cache_key('tasks_by_ids'))
 def get_tasks_by_ids_route():
     ids_param = request.args.get('ids', '')
     try:
@@ -163,18 +190,29 @@ def get_tasks_by_ids_route():
     user_id = current_user.id
     result, status_code = get_tasks_by_ids(ids, user_id=user_id)
     if status_code == 200:
-        result['tasksVersion'] = DataVersion.get_version('tasksVersion')
+        version = DataVersion.get_version('tasksVersion')
+        response = jsonify(result)
+        response.set_etag(version)
+        if request.if_none_match and version in request.if_none_match:
+            return '', 304
+        return response
     return jsonify(result), status_code
 
 
 @to_do_app.route('/tasks/get_anti_schedule', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=60, key_prefix=make_cache_key('anti'))
 def get_anti_schedule_route():
     current_app.logger.info('get_anti_schedule')
     user_id = current_user.id
     result, status_code = get_anti_schedule(user_id)
     if status_code == 200:
-        result['tasksVersion'] = DataVersion.get_version('tasksVersion')
+        version = DataVersion.get_version('tasksVersion')
+        response = jsonify(result)
+        response.set_etag(version)
+        if request.if_none_match and version in request.if_none_match:
+            return '', 304
+        return response
     return jsonify(result), status_code
 
 
@@ -184,10 +222,12 @@ def add_anti_task_route():
     data = request.get_json()
     user_id = current_user.id
     result, status_code = add_anti_task(data, user_id)
+    response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
-    return jsonify(result), status_code
+        response.set_etag(new_version)
+    return response, status_code
 
 
 @to_do_app.route('/tasks/edit_anti_task', methods=['PUT'])
@@ -195,10 +235,12 @@ def add_anti_task_route():
 def edit_anti_task_route():
     data = request.get_json()
     result, status_code = edit_anti_task(data)
+    response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
-    return jsonify(result), status_code
+        response.set_etag(new_version)
+    return response, status_code
 
 
 @to_do_app.route('/tasks/del_anti_task', methods=['DELETE'])
@@ -206,10 +248,12 @@ def edit_anti_task_route():
 def del_anti_task_route():
     data = request.get_json()
     result, status_code = del_anti_task(data)
+    response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
-    return jsonify(result), status_code
+        response.set_etag(new_version)
+    return response, status_code
 
 
 @to_do_app.route('/tasks/del_task', methods=['DELETE'])
@@ -218,14 +262,15 @@ def del_task_route():
     data = request.get_json()
     user_id = current_user.id
     result, status_code = del_task(data, user_id=user_id)
+    response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
+        response.set_etag(new_version)
         lists_data = get_lists_and_groups_data(user_id=user_id)
-        # Для календаря: просто отправляем id удалённой задачи
         calendar_events = [{'id': data.get('taskId'), 'deleted': True}]
         notify_task_change('deleted', {'id': data.get('taskId')}, data.get('listId'), lists_data=lists_data, calendar_events=calendar_events)
-    return jsonify(result), status_code
+    return response, status_code
 
 
 @to_do_app.route('/tasks/link_group_list', methods=['PUT'])
@@ -234,10 +279,12 @@ def link_group_list_route():
     data = request.get_json()
     user_id = current_user.id
     result, status_code = link_group_list(data, user_id=user_id)
+    response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
-    return jsonify(result), status_code
+        response.set_etag(new_version)
+    return response, status_code
 
 
 @to_do_app.route('/tasks/delete_from_childes', methods=['DELETE'])
@@ -246,10 +293,12 @@ def delete_from_childes_route():
     data = request.get_json()
     user_id = current_user.id
     result, status_code = delete_from_childes(data, user_id=user_id)
+    response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
-    return jsonify(result), status_code
+        response.set_etag(new_version)
+    return response, status_code
 
 
 @to_do_app.route('/tasks/link_task', methods=['PUT'])
@@ -258,10 +307,12 @@ def link_task_route():
     data = request.get_json()
     user_id = current_user.id
     result, status_code = link_task(data, user_id=user_id)
+    response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
-    return jsonify(result), status_code
+        response.set_etag(new_version)
+    return response, status_code
 
 
 @to_do_app.route('/tasks/fields_config', methods=['GET'])

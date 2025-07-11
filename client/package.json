@@ -38,6 +38,7 @@
     "@mui/x-tree-view": "^8.2.0",
     "@toolpad/core": "^0.16.0",
     "axios": "^1.9.0",
+    "axios-cache-interceptor": "^1.8.0",
     "dayjs": "^1.11.13",
     "mui": "^0.0.1",
     "prop-types": "^15.8.1",

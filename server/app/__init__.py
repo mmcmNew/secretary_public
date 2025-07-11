@@ -7,6 +7,7 @@ from flask_socketio import SocketIO
 from flask_cors import CORS
 from flask_wtf import CSRFProtect
 from flask_wtf.csrf import generate_csrf
+from flask_caching import Cache
 
 from .config import WorkConfig, TestingConfig
 from sqlalchemy import text
@@ -16,6 +17,7 @@ migrate = Migrate(render_as_batch=True)
 socketio = SocketIO(logger=False, engineio_logger=False, cors_allowed_origins="*", async_mode='eventlet', debug=False)
 jwt = JWTManager()
 csrf = CSRFProtect()
+cache = Cache()
 
 def create_app(config_type='work'):
     app = Flask(__name__, static_folder='static', static_url_path='/static', instance_relative_config=True)
@@ -42,6 +44,7 @@ def create_app(config_type='work'):
     migrate.init_app(app, db)
     jwt.init_app(app)
     socketio.init_app(app)
+    cache.init_app(app, config={'CACHE_TYPE': 'SimpleCache'})
 
     with app.app_context():
         # if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):
