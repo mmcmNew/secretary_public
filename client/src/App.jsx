@@ -16,7 +16,7 @@ import { AudioProvider } from './contexts/AudioContext.jsx';
 import SignInPage from './SignInPage.jsx';
 import RegisterPage from './RegisterPage.jsx';
 import AccountPage from './AccountPage.jsx';
-import { AuthProvider } from 'react-auth-kit';
+import AuthProvider from 'react-auth-kit';
 import createStore from 'react-auth-kit/createStore';
 import createRefresh from 'react-auth-kit/createRefresh';
 import RequireAuth from './components/RequireAuth.jsx';

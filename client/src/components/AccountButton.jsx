@@ -7,12 +7,11 @@ import useAuthUser from 'react-auth-kit/hooks/useAuthUser';
 import useSignOut from 'react-auth-kit/hooks/useSignOut';
 
 export default function AccountButton() {
-  const auth = useAuthUser();
   const signOut = useSignOut();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
-  const user = auth();
+  const user = useAuthUser();
 
   if (!user) return null;
 
