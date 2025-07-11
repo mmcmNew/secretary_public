@@ -497,8 +497,16 @@ def delete_task_type_route(type_id):
 
 @to_do_app.route('/tasks/get_subtasks', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=60, key_prefix=make_cache_key('subtasks'))
 def get_subtasks_route():
     parent_task_id = request.args.get('parent_task_id', type=int)
     user_id = current_user.id
     result, status_code = get_subtasks_by_parent_id(parent_task_id, user_id=user_id)
+    if status_code == 200:
+        version = DataVersion.get_version('tasksVersion')
+        response = jsonify(result)
+        response.set_etag(version)
+        if request.if_none_match and version in request.if_none_match:
+            return '', 304
+        return response
     return jsonify(result), status_code

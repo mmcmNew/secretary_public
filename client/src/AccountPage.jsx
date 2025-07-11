@@ -79,13 +79,13 @@ export default function AccountPage() {
                     color={subscription.is_active ? 'primary' : 'default'}
                     variant={subscription.is_active ? 'filled' : 'outlined'}
                   />
-                  <Button 
+                  {/* <Button 
                     variant="text" 
                     color="primary"
                     onClick={() => navigate('/pricing')}
                   >
                     Изменить тариф
-                  </Button>
+                  </Button> */}
                 </Box>
                 {subscription.end_date && (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>

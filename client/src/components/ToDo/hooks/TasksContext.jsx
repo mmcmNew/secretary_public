@@ -420,6 +420,14 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const getSubtasksByParentId = useCallback(async (parent_task_id) => {
     try {
       const res = await api(`/tasks/get_subtasks?parent_task_id=${parent_task_id}`);
+      //объеденить tasks.data с res.subtasks
+      if (res.subtasks) {
+        setTasks(prev => ({
+          ...prev,
+          data: [...prev.data, ...res.subtasks]
+        }));
+      }
+
       return res.subtasks || [];
     } catch (err) {
       if (onError) onError(err);

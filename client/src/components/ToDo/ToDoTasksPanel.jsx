@@ -127,9 +127,9 @@ export default function ToDoTasksPanel({ mobile = false, setSelectedListId, addi
               </Typography>
             )}
           </Box>
-          <Button variant="outlined" sx={{ flexShrink: 0, ml: 1 }}>
+          {/* <Button variant="outlined" sx={{ flexShrink: 0, ml: 1 }}>
             <PersonAddAltIcon />
-          </Button>
+          </Button> */}
         </Box>
       )}
       {/* Список задач */}
@@ -158,21 +158,23 @@ export default function ToDoTasksPanel({ mobile = false, setSelectedListId, addi
         />
       </Box>
       {/* Поле для добавления новой задачи (фиксировано внизу) */}
-      <Box sx={{ position: 'sticky', bottom: 0, left: 0, width: '100%', zIndex: 2, p: 1 }}>
-      <Paper component="form" sx={{ display: 'flex', flexDirection: 'row', flexGrow: 1, alignItems: 'center', mt: 1, mx: 1 }}>
-                <IconButton aria-label="menu" onClick={handleAddTask}>
-                  <AddIcon />
-                </IconButton>
-                <InputBase
-                  sx={{ flex: 1 }}
-                  placeholder="Добавить задачу"
-                  inputProps={{ 'aria-label': 'add task' }}
-                  value={newTask}
-                  onKeyDown={handleKeyDown}
-                  onChange={(e) => setNewTask(e.target.value)}
-                />
-              </Paper>
-      </Box>
+      {selectedListId && (
+        <Box sx={{ position: 'sticky', bottom: 0, left: 0, width: '100%', zIndex: 2, p: 1 }}>
+          <Paper component="form" sx={{ display: 'flex', flexDirection: 'row', flexGrow: 1, alignItems: 'center', mt: 1, mx: 1 }}>
+            <IconButton aria-label="menu" onClick={handleAddTask}>
+              <AddIcon />
+            </IconButton>
+            <InputBase
+              sx={{ flex: 1 }}
+              placeholder="Добавить задачу"
+              inputProps={{ 'aria-label': 'add task' }}
+              value={newTask}
+              onKeyDown={handleKeyDown}
+              onChange={(e) => setNewTask(e.target.value)}
+            />
+          </Paper>
+        </Box>
+      )}
     </Box>
   );
 } 
