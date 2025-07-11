@@ -1,4 +1,3 @@
-cat > src/SignInPage.jsx <<'EOF'
 import React, { useState } from 'react';
 import { Avatar, Button, TextField, Box, Typography, Container } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
@@ -84,5 +83,3 @@ export default function SignInPage() {
     </Container>
   );
 }
-EOF
-
