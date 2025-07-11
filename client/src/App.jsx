@@ -1,6 +1,7 @@
 // App.js
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { memo } from 'react';
+import axios from 'axios';
 import HomePage from './HomePage.jsx';
 import SecondPage from './SecondPage.jsx';
 import { ContainerProvider } from './components/DraggableComponents/ContainerContext';
@@ -31,14 +32,11 @@ const store = createStore({
     interval: 600,
     refreshApiCallback: async ({ refreshToken }) => {
       try {
-        const response = await fetch('/api/refresh', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${refreshToken}`,
-          },
+        const response = await axios.post('/api/refresh', null, {
+          headers: { Authorization: `Bearer ${refreshToken}` },
         });
-        if (response.ok) {
-          const data = await response.json();
+        if (response.status === 200) {
+          const data = response.data;
           return { isSuccess: true, newAuthToken: data.access_token };
         }
       } catch (e) {

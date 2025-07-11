@@ -3,6 +3,7 @@ import { PropTypes } from 'prop-types';
 import { Box, Typography, List, ListItem, ListItemText, IconButton } from '@mui/material';
 import { Download, Delete } from '@mui/icons-material';
 import FileRenderer from '../FileRenderer';
+import axios from 'axios';
 
 export default function JournalFilesList({ files, journalType, entryId, onFileDelete }) {
     if (!files || files.length === 0) {
@@ -16,18 +17,15 @@ export default function JournalFilesList({ files, journalType, entryId, onFileDe
 
     const handleDownload = async (file) => {
         try {
-            const response = await fetch(fileUrl(file, false));
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = file.original_filename;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            }
+            const response = await axios.get(fileUrl(file, false), { responseType: 'blob' });
+            const url = window.URL.createObjectURL(response.data);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.original_filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
         } catch (error) {
             console.error('Ошибка при скачивании файла:', error);
         }
@@ -36,10 +34,8 @@ export default function JournalFilesList({ files, journalType, entryId, onFileDe
     const handleDelete = async (file) => {
         if (window.confirm(`Удалить файл "${file.original_filename}"?`)) {
             try {
-                const response = await fetch(`/api/journals/${journalType}/${entryId}/files/${file.id}`, {
-                    method: 'DELETE'
-                });
-                if (response.ok && onFileDelete) {
+                await axios.delete(`/api/journals/${journalType}/${entryId}/files/${file.id}`);
+                if (onFileDelete) {
                     onFileDelete(file.id);
                 }
             } catch (error) {

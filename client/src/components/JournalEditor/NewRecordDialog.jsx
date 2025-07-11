@@ -10,18 +10,13 @@ import Survey from '../Scenario/Survey';
 import { Autocomplete, TextField } from '@mui/material';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import axios from 'axios';
 
 dayjs.extend(utc);
 
 async function fetchTablesList() {
     try {
-      const response = await fetch('/get_tables');
-    //   console.log(response);
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-      const data = await response.json();
-    //   console.log(data)
+      const { data } = await axios.get('/get_tables');
       return data.tables;
     } catch (error) {
       console.error('There was a problem with the fetch operation:', error);
@@ -35,15 +30,7 @@ async function fetchDatesList(tableName, month, year, timezone) {
   const formattedMonth = month < 10 ? `0${month}` : `${month}`;
 
   try {
-    const response = await fetch(`/get_days?table_name=${tableName}&month=${formattedMonth}&year=${year}&timezone=${timezone}`);
-    // console.log('Response:', response);
-
-    if (!response.ok) {
-      throw new Error(`Network response was not ok: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    // console.log('Data received:', data);
+    const { data } = await axios.get(`/get_days?table_name=${tableName}&month=${formattedMonth}&year=${year}&timezone=${timezone}`);
 
     if (data) {
       // console.log('Days:', data.days);

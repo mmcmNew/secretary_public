@@ -1,6 +1,7 @@
 // WebSocketContext.jsx
 
 import { createContext, useEffect, useState } from 'react';
+import axios from 'axios';
 import PropTypes from 'prop-types';
 import io from 'socket.io-client';
 import useContainer from '../DraggableComponents/useContainer';
@@ -90,12 +91,8 @@ export const WebSocketProvider = ({ children }) => {
     });
     // console.log(files)
     // console.log(formData.get('files'), formData.get('text'), formData.get('user_id'))
-    const response = await fetch('/chat/new_message', {
-      method: 'POST',
-      body: formData,
-    });
-
-    const result = await response.json();
+    const response = await axios.post('/chat/new_message', formData);
+    const result = response.data;
     if (result.status_code == 201) {
       setFiles([])
       setMessages(prevMessages => [...prevMessages, ...result.messages]);

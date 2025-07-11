@@ -7,20 +7,16 @@ import TTSText from './TTSText';
 import get_tts_audio_filename from '../Tools/getTTSText';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import FilesListComponent from '../Chat/FilesList';
+import axios from 'axios';
 
 
 async function sendNewRecord(table_name, record_info) {
     const url = `/api/journals/${table_name}`;
     try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(record_info),
+        const { data } = await axios.post(url, record_info, {
+            headers: { 'Content-Type': 'application/json' }
         });
-        if (!response.ok) {
-            throw new Error('Ошибка при отправке новой записи на сервер');
-        }
-        return await response.json();
+        return data;
     } catch (error) {
         console.error('Ошибка при создании записи:', error);
         return null;
@@ -30,14 +26,8 @@ async function sendNewRecord(table_name, record_info) {
 async function sendNewRecordWithFiles(table_name, formData) {
     const url = `/api/journals/${table_name}`;
     try {
-        const response = await fetch(url, {
-            method: 'POST',
-            body: formData,
-        });
-        if (!response.ok) {
-            throw new Error('Ошибка при отправке новой записи с файлами');
-        }
-        return await response.json();
+        const { data } = await axios.post(url, formData);
+        return data;
     } catch (error) {
         console.error('Ошибка при создании записи с файлами:', error);
         return null;
@@ -47,15 +37,10 @@ async function sendNewRecordWithFiles(table_name, formData) {
 async function updateRecord(table_name, record_info) {
     const url = `/api/journals/${table_name}/${record_info.id}`;
     try {
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(record_info),
+        const { data } = await axios.put(url, record_info, {
+            headers: { 'Content-Type': 'application/json' }
         });
-        if (!response.ok) {
-            throw new Error('Ошибка при отправке обновленной записи на сервер');
-        }
-        return await response.json();
+        return data;
     } catch (error) {
         console.error('Ошибка при обновлении записи:', error);
         return null;
@@ -65,14 +50,8 @@ async function updateRecord(table_name, record_info) {
 async function updateRecordWithFiles(table_name, record_id, formData) {
     const url = `/api/journals/${table_name}/${record_id}`;
     try {
-        const response = await fetch(url, {
-            method: 'PUT',
-            body: formData,
-        });
-        if (!response.ok) {
-            throw new Error('Ошибка при обновлении записи с файлами');
-        }
-        return await response.json();
+        const { data } = await axios.put(url, formData);
+        return data;
     } catch (error) {
         console.error('Ошибка при обновлении записи с файлами:', error);
         return null;
@@ -114,11 +93,8 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
     useEffect(() => {
         const loadFieldOptions = async () => {
             try {
-                const response = await fetch(`/get_tables_filters/${survey.table_name}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    setFieldOptions(data);
-                }
+                const { data } = await axios.get(`/get_tables_filters/${survey.table_name}`);
+                setFieldOptions(data);
             } catch (error) {
                 console.error('Error loading field options:', error);
             }

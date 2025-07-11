@@ -5,6 +5,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import { ExpandMore, PlayArrow, Pause, Replay, VolumeUp, VolumeOff, TextFields } from '@mui/icons-material';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation } from 'swiper/modules';
+import axios from 'axios';
 
 // Import Swiper styles
 import 'swiper/css';
@@ -25,15 +26,8 @@ async function sendNewRecord(table_name, record_info) {
     formData.append('time_zone', timeZone);
     formData.append('record_info', JSON.stringify(record_info));
     try {
-        const response = await fetch(url, {
-            method: 'POST',
-            body: formData,
-        });
-        if (!response.ok) {
-            throw new Error('Ошибка при отправке новой записи на сервер');
-        }
-        const data = await response.json();
-        sendResult = data;
+        const response = await axios.post(url, formData);
+        sendResult = response.data;
         console.log('Запись добавлена успешно');
     } catch (error) {
         console.error('Ошибка при создании записи:', error);
