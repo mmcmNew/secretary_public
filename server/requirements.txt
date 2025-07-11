@@ -20,3 +20,4 @@ flask_login
 flask_jwt_extended
 edge_tts
 psycopg2-binary
+Flask-Caching
