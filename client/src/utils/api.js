@@ -27,6 +27,9 @@ export default async function api(url, method = 'GET', body = null) {
   const config = { url, method, headers };
   if (body) config.data = body;
   const { data } = await cachedAxios(config);
+  if (method !== 'GET') {
+    await cachedAxios.storage.clear();
+  }
   return data;
 }
 

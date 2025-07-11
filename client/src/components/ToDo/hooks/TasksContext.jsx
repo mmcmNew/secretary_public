@@ -107,10 +107,12 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
 
 
   // Получить все списки
+  const listsFetching = useRef(false);
+
   const fetchLists = useCallback(async ({ silent = false } = {}) => {
-    if (fetching.current) return;
+    if (listsFetching.current) return;
     if (!silent && setLoading) setLoading(true);
-    fetching.current = true;
+    listsFetching.current = true;
     if (!silent) setLists(prev => ({ ...prev, loading: true, error: null }));
     try {
       const data = await api(`/tasks/get_lists?time_zone=${new Date().getTimezoneOffset()}`);
@@ -125,13 +127,13 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       const myDay = data.default_lists?.find(l => l.id === 'my_day');
       setMyDayList(myDay || null);
       if (!silent && setLoading) setLoading(false);
-      fetching.current = false;
+      listsFetching.current = false;
       return data;
     } catch (err) {
       if (onError) onError(err);
       setLists(prev => ({ ...prev, loading: silent ? prev.loading : false, error: err }));
       if (!silent && setLoading) setLoading(false);
-      fetching.current = false;
+      listsFetching.current = false;
     }
   }, [onError, setLoading]);
 
