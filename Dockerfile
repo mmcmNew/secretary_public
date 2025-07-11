@@ -12,6 +12,8 @@ COPY server/ ./
 RUN mkdir -p app/user_data logs
 
 ENV PYTHONPATH=/app
+ENV HOST=0.0.0.0
+ENV SERVER_PORT=5100
 
 EXPOSE 5100
 

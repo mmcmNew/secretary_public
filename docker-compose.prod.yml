@@ -3,16 +3,12 @@ version: '3.8'
 services:
   secretary-app:
     image: secretary-app:latest
+    env_file: .env.docker
     ports:
       - "80:5100"
     volumes:
       - secretary_user_data:/app/app/user_data
       - secretary_logs:/app/logs
-    environment:
-      - FLASK_ENV=production
-      - PYTHONPATH=/app
-      - CONFIG_TYPE=production
-      - DATABASE_URL=postgresql+psycopg2://secretary:secretary@postgres/secretary_db
     restart: unless-stopped
     depends_on:
       - postgres
@@ -37,13 +33,14 @@ services:
   postgres:
     image: postgres:16
     environment:
-      - POSTGRES_USER=secretary
-      - POSTGRES_PASSWORD=secretary
-      - POSTGRES_DB=secretary_db
+      POSTGRES_USER: secretary
+      POSTGRES_PASSWORD: secretary
+      POSTGRES_DB: secretary_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
 volumes:
-  secretary_user_data:  secretary_logs:
+  secretary_user_data:
+  secretary_logs:
   postgres_data:

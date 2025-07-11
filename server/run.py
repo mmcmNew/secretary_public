@@ -29,11 +29,14 @@ def main():
     parser.add_argument('--mode', choices=['development', 'production', 'docker', 'test'],
                         default=os.environ.get('MODE', 'development'),
                         help='Server mode')
-    parser.add_argument('--host', default='0.0.0.0', help='Host to listen on')
-    parser.add_argument('--port', type=int, default=5100, help='Port to listen on')
+    parser.add_argument('--host', default=os.environ.get('HOST', '0.0.0.0'),
+                        help='Host to listen on')
+    parser.add_argument('--port', type=int,
+                        default=int(os.environ.get('SERVER_PORT', 5100)),
+                        help='Port to listen on')
     args = parser.parse_args()
 
-    config_type = 'test' if args.mode == 'test' or 'development' else 'work'
+    config_type = 'test' if args.mode == 'test' else 'work'
     app = create_app(config_type)
 
     if args.mode in ['development', 'production']:
