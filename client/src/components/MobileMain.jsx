@@ -31,7 +31,7 @@ const componentsTypes = [
     { icon: <AccessTimeIcon />, name: "Режим фокусировки", type: "AntiSchedule" },
 ];
 
-function MaincomponentMobile() {
+function MainContainerMobile() {
     const [mode, setMode] = useState("light");
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [currentComponent, setCurrentComponent] = useState(null);
@@ -204,4 +204,4 @@ function MaincomponentMobile() {
     );
 }
 
-export default MaincomponentMobile;
+export default MainContainerMobile;
