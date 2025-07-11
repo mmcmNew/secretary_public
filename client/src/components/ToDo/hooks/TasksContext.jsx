@@ -1,7 +1,6 @@
 import { createContext, useState, useCallback, useMemo, useRef, useEffect, useContext } from "react";
 import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
-import { AuthContext } from '../../../contexts/AuthContext';
 import useContainer from '../../DraggableComponents/useContainer';
 import api from '../../../utils/api';
 import dayjs from 'dayjs';
@@ -435,14 +434,10 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     }
   }, [onError]);
 
-  const { user, isLoading } = useContext(AuthContext);
-
   useEffect(() => {
-    if (!isLoading && user) {
       fetchTaskFields();
       fetchLists();
-    }
-  }, [fetchTaskFields, fetchLists, user, isLoading]);
+  }, [fetchTaskFields, fetchLists]);
 
 
   const { tasksVersion: wsVersion, taskChange } = useUpdateWebSocket();

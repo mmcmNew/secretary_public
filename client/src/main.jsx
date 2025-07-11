@@ -16,14 +16,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Automatically attach JWT token stored in cookies to all fetch requests
-const originalFetch = window.fetch
-window.fetch = (input, init = {}) => {
-  const token = localStorage.getItem('access_token');
-  const headers = new Headers(init.headers || {})
-  if (token) headers.set('Authorization', `Bearer ${token}`)
-  return originalFetch(input, { ...init, headers })
-}
 
 // Performance monitoring
 if (process.env.NODE_ENV === 'development') {

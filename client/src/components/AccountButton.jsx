@@ -1,15 +1,19 @@
-import React, { useContext, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../contexts/AuthContext.jsx';
-import { Avatar, Menu, MenuItem, IconButton, Typography } from '@mui/material';
+import { Avatar, Menu, MenuItem, IconButton } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
+import { useAuthUser, useSignOut } from 'react-auth-kit';
 
 export default function AccountButton() {
-  const { user, logout } = useContext(AuthContext);
+  const auth = useAuthUser();
+  const signOut = useSignOut();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
+  const user = auth();
+
+  if (!user) return null;
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -24,13 +28,11 @@ export default function AccountButton() {
     handleClose();
   };
 
-  const handleLogout = async () => {
-    await logout();
+  const handleLogout = () => {
+    signOut();
     navigate('/login');
     handleClose();
   };
-
-  if (!user) return null;
 
   return (
     <>
@@ -39,12 +41,7 @@ export default function AccountButton() {
           {user.user_name?.charAt(0).toUpperCase()}
         </Avatar>
       </IconButton>
-      <Menu
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleClose}
-        onClick={handleClose}
-      >
+      <Menu anchorEl={anchorEl} open={open} onClose={handleClose} onClick={handleClose}>
         <MenuItem onClick={handleProfile}>
           <PersonIcon sx={{ mr: 1 }} />
           Профиль

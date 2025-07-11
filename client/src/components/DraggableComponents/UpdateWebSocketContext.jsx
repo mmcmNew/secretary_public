@@ -1,17 +1,13 @@
 import { createContext, useEffect, useState, useContext } from 'react';
 import PropTypes from 'prop-types';
 import io from 'socket.io-client';
-import { AuthContext } from '../../contexts/AuthContext.jsx';
 
 export const UpdateWebSocketContext = createContext({});
 
 export default function UpdateWebSocketProvider({ children }) {
   const [versions, setVersions] = useState({});
-  const { user, isLoading } = useContext(AuthContext);
 
   useEffect(() => {
-    // console.log('UpdateWebSocketProvider', user, isLoading);
-    if (!user) return undefined;
     const socket = io('/updates', { transports: ['websocket'], secure: true, });
     // console.log(socket)
     socket.on('connect', () => {
@@ -33,7 +29,7 @@ export default function UpdateWebSocketProvider({ children }) {
     });
 
     return () => socket.disconnect();
-  }, [user, isLoading]);
+  }, []);
 
   return (
     <UpdateWebSocketContext.Provider value={versions}>

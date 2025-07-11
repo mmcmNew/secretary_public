@@ -1,26 +1,23 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { AuthContext } from './contexts/AuthContext.jsx';
-import { useAccessControl } from './contexts/AccessControlContext.jsx';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useSignOut, useAuthUser } from 'react-auth-kit';
 import { Button, Container, Typography, Box, Card, CardContent, Chip, Tabs, Tab } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import JournalManager from './components/JournalManager/JournalManager.jsx';
 import TaskTypeManager from './components/TaskTypeManager/TaskTypeManager.jsx';
 
 export default function AccountPage() {
-  const { user, fetchCurrentUser, logout } = useContext(AuthContext);
-  const { hasAccess } = useAccessControl();
+  const auth = useAuthUser();
+  const signOut = useSignOut();
   const navigate = useNavigate();
   const [subscription, setSubscription] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
+  const user = auth();
 
   useEffect(() => {
-    if (!user) {
-      fetchCurrentUser();
-    }
     fetchUserSubscription();
-  }, [user, fetchCurrentUser]);
+  }, []);
 
   const fetchUserSubscription = async () => {
     try {
@@ -33,30 +30,26 @@ export default function AccountPage() {
 
   if (!user) return null;
 
-  const handleLogout = async () => {
-    await logout();
+  const handleLogout = () => {
+    signOut();
     navigate('/login');
   };
 
   return (
     <Container sx={{ mt: 8 }}>
       <Box sx={{ mb: 3 }}>
-        <Button 
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/')}
-          variant="outlined"
-        >
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/')} variant="outlined">
           Назад
         </Button>
       </Box>
-      
+
       <Typography variant="h4" gutterBottom>
         {user.user_name}
       </Typography>
       <Typography variant="subtitle1" gutterBottom>
         {user.email}
       </Typography>
-      
+
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 3 }}>
         <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
           <Tab label="Профиль" />
@@ -64,7 +57,7 @@ export default function AccountPage() {
           <Tab label="Типы задач" />
         </Tabs>
       </Box>
-      
+
       {activeTab === 0 && (
         <Box sx={{ mt: 3 }}>
           {subscription && (
@@ -74,18 +67,7 @@ export default function AccountPage() {
                   Текущий тариф
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Chip 
-                    label={subscription.plan_name}
-                    color={subscription.is_active ? 'primary' : 'default'}
-                    variant={subscription.is_active ? 'filled' : 'outlined'}
-                  />
-                  {/* <Button 
-                    variant="text" 
-                    color="primary"
-                    onClick={() => navigate('/pricing')}
-                  >
-                    Изменить тариф
-                  </Button> */}
+                  <Chip label={subscription.plan_name} color={subscription.is_active ? 'primary' : 'default'} variant={subscription.is_active ? 'filled' : 'outlined'} />
                 </Box>
                 {subscription.end_date && (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -95,25 +77,15 @@ export default function AccountPage() {
               </CardContent>
             </Card>
           )}
-          
+
           <Box sx={{ display: 'flex', gap: 2 }}>
-            {hasAccess('admin') && (
-              <Button 
-                variant="contained" 
-                color="primary"
-                onClick={() => navigate('/admin')}
-              >
-                Панель администратора
-              </Button>
-            )}
-            
             <Button variant="outlined" onClick={handleLogout}>
               Logout
             </Button>
           </Box>
         </Box>
       )}
-      
+
       {activeTab === 1 && (
         <Box sx={{ mt: 3 }}>
           <JournalManager />
@@ -128,4 +100,3 @@ export default function AccountPage() {
     </Container>
   );
 }
-
