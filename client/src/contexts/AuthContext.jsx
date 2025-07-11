@@ -19,25 +19,20 @@ export const AuthContext = createContext({
   fetchCurrentUser: async () => {},
 });
 
+// Удаляю функции и обращения к getCookie, csrf_token, ensureCsrfToken
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshToken = useCallback(async () => {
-    const refresh = getCookie('refresh_token');
-    if (!refresh) return false;
-    
     try {
       const { data } = await axios.post('/api/refresh', {}, {
-        headers: { 'Authorization': `Bearer ${refresh}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('refresh_token')}` }
       });
-      const newToken = getCookie('access_token');
-      if (newToken) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-      }
+      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
       return true;
     } catch (err) {
-      console.log('Token refresh failed:', err.message);
       delete axios.defaults.headers.common['Authorization'];
       return false;
     }
@@ -75,19 +70,11 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (username, password) => {
     try {
-      console.log('LOGIN: sending', { username, password });
       const { data } = await axios.post(
         '/api/login',
-        { username, password },
-        {
-          headers: { 'X-CSRFToken': getCookie('csrf_token') },
-        },
+        { username, password }
       );
-      console.log('LOGIN: response', data);
-      const token = getCookie('access_token');
-      if (token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      }
+      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
       setUser(data.user);
       return null;
     } catch (err) {
@@ -98,31 +85,21 @@ export function AuthProvider({ children }) {
       } else if (err?.response?.data?.error) {
         errorMsg = err.response.data.error;
       }
-      console.log('LOGIN: error', errorMsg);
       return errorMsg;
     }
   }, []);
 
   const register = useCallback(async (username, email, password) => {
     try {
-      console.log('REGISTER: sending', { username, email, password });
       const { data } = await axios.post(
         '/api/register',
-        { username, email, password },
-        {
-          headers: { 'X-CSRFToken': getCookie('csrf_token') },
-        },
+        { username, email, password }
       );
-      console.log('REGISTER: response', data);
-      const token = getCookie('access_token');
-      if (token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      }
+      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
       setUser(data.user);
       return null;
     } catch (err) {
       const errorMsg = err?.response?.data?.error || 'Registration failed';
-      console.log('REGISTER: error', errorMsg);
       return errorMsg;
     }
   }, []);

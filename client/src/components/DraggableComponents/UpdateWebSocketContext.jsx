@@ -12,7 +12,7 @@ export default function UpdateWebSocketProvider({ children }) {
   useEffect(() => {
     // console.log('UpdateWebSocketProvider', user, isLoading);
     if (!user) return undefined;
-    const socket = io('https://192.168.1.131:5100/updates', { transports: ['websocket'], secure: true, });
+    const socket = io('/updates', { transports: ['websocket'], secure: true, });
     // console.log(socket)
     socket.on('connect', () => {
       console.log('Connected to updates WebSocket');

@@ -33,6 +33,7 @@ def validate_password(password: str):
 @auth_bp.route("/api/login", methods=["POST"])
 def api_login():
     data = request.get_json() or {}
+    current_app.logger.warning(f"api/login. Data: {data}")
     username = data.get("username")
     password = data.get("password")
 
@@ -73,28 +74,17 @@ def api_login():
         ),
         200,
     )
-    response.set_cookie(
-        "access_token",
-        access_token,
-        secure=True,
-        samesite="Lax",
-    )
-    response.set_cookie(
-        "refresh_token",
-        refresh_token,
-        secure=True,
-        samesite="Lax",
-    )
     return response
 
 
 @auth_bp.route("/api/register", methods=["POST"])
 def api_register():
+    current_app.logger.warning("REGISTER: handler called")
     data = request.get_json() or {}
     username = data.get("username")
     email = data.get("email")
     password = data.get("password")
-
+    current_app.logger.warning(f"REGISTER: received data: {data}")
     if not username or not email or not password:
         current_app.logger.warning(
             f"REGISTER: missing username/email/password. Data: {data}"
@@ -140,18 +130,6 @@ def api_register():
         ),
         201,
     )
-    response.set_cookie(
-        "access_token",
-        access_token,
-        secure=True,
-        samesite="Lax",
-    )
-    response.set_cookie(
-        "refresh_token",
-        refresh_token,
-        secure=True,
-        samesite="Lax",
-    )
     return response
 
 
@@ -164,20 +142,12 @@ def api_refresh():
         jsonify({"access_token": new_access_token}),
         200,
     )
-    response.set_cookie(
-        "access_token",
-        new_access_token,
-        secure=True,
-        samesite="Lax",
-    )
     return response
 
 
 @auth_bp.route("/api/logout", methods=["POST"])
 def api_logout():
     response = make_response(jsonify({"result": "OK"}))
-    response.set_cookie("access_token", "", expires=0)
-    response.set_cookie("refresh_token", "", expires=0)
     return response
 
 

@@ -5,8 +5,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
 from flask_cors import CORS
-from flask_wtf import CSRFProtect
-from flask_wtf.csrf import generate_csrf
 from flask_caching import Cache
 
 from .config import WorkConfig, TestingConfig
@@ -16,7 +14,6 @@ db = SQLAlchemy()
 migrate = Migrate(render_as_batch=True)
 socketio = SocketIO(logger=False, engineio_logger=False, cors_allowed_origins="*", async_mode='eventlet', debug=False)
 jwt = JWTManager()
-csrf = CSRFProtect()
 cache = Cache()
 
 def create_app(config_type='work'):
@@ -39,7 +36,6 @@ def create_app(config_type='work'):
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
     # Инициализация расширений
-    csrf.init_app(app)
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
@@ -53,19 +49,6 @@ def create_app(config_type='work'):
             with engine.connect() as conn:
                 conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {schema}'))
                 conn.commit()
-
-    # CSRF токен в cookie
-    @app.after_request
-    def set_csrf_cookie(response):
-        if app.config.get('WTF_CSRF_ENABLED', True):
-            response.set_cookie(
-                'csrf_token',
-                generate_csrf(),
-                secure=True,
-                httponly=False,
-                samesite='Lax'
-            )
-        return response
 
     with app.app_context():
         from .auth_middleware import load_user_permissions
@@ -114,7 +97,7 @@ def create_app(config_type='work'):
         # Отдача manifest.webmanifest и sw.js из static
         @app.route('/manifest.webmanifest')
         def manifest():
-            current_app.logger.info('Serving manifest.webmanifest')
+            # current_app.logger.info('Serving manifest.webmanifest')
             return send_from_directory(
                 current_app.static_folder,
                 'manifest.webmanifest',
@@ -123,7 +106,7 @@ def create_app(config_type='work'):
 
         @app.route('/sw.js')
         def service_worker():
-            current_app.logger.info('Serving sw.js')
+            # current_app.logger.info('Serving sw.js')
             return send_from_directory(
                 current_app.static_folder,
                 'sw.js',

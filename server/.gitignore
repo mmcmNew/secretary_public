@@ -1,13 +1,11 @@
 /.venv
 /.idea
-/migrations
 /app/logs
 /create_structure.bat
 /app/backups/
 /app/temp/
 /docs/
 /logs/
-/migrations/
 /app/static/*
 /app/static/**
 !/app/static/default_settings/
@@ -32,4 +30,3 @@ app/modules/generate_memory_db_numbers.py
 app/modules/generate_memory_numbers.py
 app/modules/yandex_tts_free.py
 app/modules/youtube_downloader.py
-app/migrations

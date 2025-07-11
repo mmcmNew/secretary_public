@@ -45,7 +45,6 @@ __pycache__/
 *.so
 .coverage
 .pytest_cache/
-server/migrations/
 
 # Системные файлы
 .DS_Store

@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   secretary-app:
+  container_name: secretary-app-prod
     image: secretary-app:latest
     env_file: .env.docker
     ports:
@@ -18,17 +19,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - secretary-app
-    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.secretary.rule=Host(`tasks.ndomen.online`)"
+      - "traefik.http.routers.secretary.entrypoints=websecure"
+      - "traefik.http.routers.secretary.tls.certresolver=myresolver"
 
   postgres:
     image: postgres:16

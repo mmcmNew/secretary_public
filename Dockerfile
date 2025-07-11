@@ -17,4 +17,6 @@ ENV SERVER_PORT=5100
 
 EXPOSE 5100
 
-CMD ["python", "run.py", "--mode", "docker"]
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+CMD ["/entrypoint.sh"]
