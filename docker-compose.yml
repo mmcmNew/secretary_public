@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  secretary-app:
+    build: .
+    image: secretary-app
+    env_file: .env.docker
+    ports:
+      - "5100:5100"
+    volumes:
+      - ./data/user_data:/app/app/user_data
+      - ./data/logs:/app/logs
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: secretary
+      POSTGRES_PASSWORD: secretary
+      POSTGRES_DB: secretary_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
