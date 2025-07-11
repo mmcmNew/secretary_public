@@ -1,41 +1,48 @@
-import React, { useContext, useState } from 'react';
-import Avatar from '@mui/material/Avatar';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import Box from '@mui/material/Box';
+cat > src/SignInPage.jsx <<'EOF'
+import React, { useState } from 'react';
+import { Avatar, Button, TextField, Box, Typography, Container } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import Typography from '@mui/material/Typography';
-import Container from '@mui/material/Container';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from './contexts/AuthContext.jsx';
+import { useSignIn } from 'react-auth-kit';
+import api from './utils/api.js';
 
 export default function SignInPage() {
+  const signIn = useSignIn();
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate();
-  const { login } = useContext(AuthContext);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const error = await login(username, password);
-    if (!error) {
-      navigate('/');
-    } else {
-      setError(error);
+    try {
+      const data = await api('/api/login', 'POST', { username, password });
+      const success = signIn({
+        token: data.access_token,
+        expiresIn: 3600,
+        tokenType: 'Bearer',
+        authState: data.user,
+        refreshToken: data.refresh_token,
+        refreshTokenExpireIn: 86400,
+      });
+      if (success) {
+        navigate('/');
+      } else {
+        setError('Login failed');
+      }
+    } catch (err) {
+      setError(err.message || 'Login failed');
     }
   };
 
   return (
     <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
+      <Box sx={{
+        marginTop: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}>
         <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
           <LockOutlinedIcon />
         </Avatar>
@@ -69,12 +76,7 @@ export default function SignInPage() {
           <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
             Sign In
           </Button>
-          <Button
-            fullWidth
-            variant="outlined"
-            onClick={() => navigate('/register')}
-            sx={{ mb: 2 }}
-          >
+          <Button fullWidth variant="outlined" onClick={() => navigate('/register')} sx={{ mb: 2 }}>
             Register
           </Button>
         </Box>
@@ -82,4 +84,5 @@ export default function SignInPage() {
     </Container>
   );
 }
+EOF
 

@@ -3,12 +3,10 @@ import {
     Box, Paper, Typography, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Select, MenuItem
 } from '@mui/material';
-import { useAccessControl } from '../../contexts/AccessControlContext';
 import axios from 'axios';
 
 
 export default function AdminPanel() {
-    const { hasAccess } = useAccessControl();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [plans, setPlans] = useState([]);
@@ -69,19 +67,6 @@ export default function AdminPanel() {
 
 
     if (loading) return <Typography>Загрузка...</Typography>;
-
-    if (!hasAccess('admin')) {
-        return (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography variant="h5" color="error">
-                    Доступ запрещен
-                </Typography>
-                <Typography variant="body1">
-                    У вас нет прав для доступа к панели администратора
-                </Typography>
-            </Box>
-        );
-    }
 
     return (
         <Box sx={{ p: 3 }}>

@@ -1,42 +1,48 @@
-import React, { useContext, useState } from 'react';
-import Avatar from '@mui/material/Avatar';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import Box from '@mui/material/Box';
+import React, { useState } from 'react';
+import { Avatar, Button, TextField, Box, Typography, Container } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import Typography from '@mui/material/Typography';
-import Container from '@mui/material/Container';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from './contexts/AuthContext.jsx';
+import { useSignIn } from 'react-auth-kit';
+import api from './utils/api.js';
 
 export default function RegisterPage() {
+  const signIn = useSignIn();
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate();
-  const { register } = useContext(AuthContext);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const error = await register(username, email, password);
-    if (!error) {
-      navigate('/');
-    } else {
-      setError(error);
+    try {
+      const data = await api('/api/register', 'POST', { username, email, password });
+      const success = signIn({
+        token: data.access_token,
+        expiresIn: 3600,
+        tokenType: 'Bearer',
+        authState: data.user,
+        refreshToken: data.refresh_token,
+        refreshTokenExpireIn: 86400,
+      });
+      if (success) {
+        navigate('/');
+      } else {
+        setError('Registration failed');
+      }
+    } catch (err) {
+      setError(err.message || 'Registration failed');
     }
   };
 
   return (
     <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
+      <Box sx={{
+        marginTop: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}>
         <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
           <LockOutlinedIcon />
         </Avatar>

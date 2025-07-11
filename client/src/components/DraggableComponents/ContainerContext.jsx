@@ -1,7 +1,6 @@
 import { createContext, useState, useEffect, useReducer, useContext } from "react";
 import PropTypes from "prop-types";
 import { containerTypes } from "./containerConfig";
-import { AuthContext } from "../../contexts/AuthContext.jsx";
 
 const ContainerContext = createContext();
 
@@ -119,22 +118,10 @@ const ContainerProvider = ({ children }) => {
         });
     };
 
-    const { user, isLoading } = useContext(AuthContext);
-
     useEffect(() => {
-        if (!user) {
-            setDashboardData({ id: 0, name: "dashboard 1" });
-            setContainers([]);
-            setTimers([]);
-            setThemeMode("light");
-            return;
-        }
         const fetchDashboard = async () => {
             try {
-                const token = localStorage.getItem('access_token');
-                const response = await fetch(`/dashboard/last`, {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                });
+                const response = await fetch(`/dashboard/last`);
                 if (!response.ok) {
                     throw new Error("Network response was not ok");
                 }
@@ -159,19 +146,17 @@ const ContainerProvider = ({ children }) => {
             };
 
         fetchDashboard();
-    }, [user]);
+    }, []);
 
     const sendContainersToServer = async () => {
         // console.log('[ContainerContext] sendContainersToServer called');
         // отправляем все контейнеры кроме таймеров
         const sendingContainers = containers.filter((container) => container.type !== "timersToolbar");
         try {
-            const token = localStorage.getItem('access_token');
             const response = await fetch("/dashboard", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
                     dashboard_data: dashboardData,
@@ -240,12 +225,10 @@ const ContainerProvider = ({ children }) => {
 
     function sendTimersToServer(updatedTimers) {
         // отправляем таймеры на сервер
-        const token = getCookie('access_token');
         fetch("/post_timers", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                "Content-Type": "application/json"
             },
             body: JSON.stringify({ dashboardId: dashboardData.id, timers: updatedTimers }),
         })
