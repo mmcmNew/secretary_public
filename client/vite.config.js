@@ -137,10 +137,10 @@ export default defineConfig({
   },
   server: {
     host: true,
-    https: {
+    https: fs.existsSync('./localhost-key.pem') && fs.existsSync('./localhost.pem') ? {
       key: fs.readFileSync('./localhost-key.pem'),
       cert: fs.readFileSync('./localhost.pem')
-    },
+    } : false,
     proxy: {
       // Перенаправляем запросы, начинающиеся с '/api', на сервер Flask
       '/api': {

@@ -16,8 +16,38 @@ import { AudioProvider } from './contexts/AudioContext.jsx';
 import SignInPage from './SignInPage.jsx';
 import RegisterPage from './RegisterPage.jsx';
 import AccountPage from './AccountPage.jsx';
-import { AuthProvider, RequireAuth } from 'react-auth-kit';
+import { AuthProvider } from 'react-auth-kit';
+import createStore from 'react-auth-kit/createStore';
+import createRefresh from 'react-auth-kit/createRefresh';
+import RequireAuth from './components/RequireAuth.jsx';
 // import ReactGridLayout from "./components/GridLayout";
+
+const store = createStore({
+  authName: '_auth',
+  authType: 'localstorage',
+  cookieDomain: window.location.hostname,
+  cookieSecure: window.location.protocol === 'https:',
+  refresh: createRefresh({
+    interval: 600,
+    refreshApiCallback: async ({ refreshToken }) => {
+      try {
+        const response = await fetch('/api/refresh', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${refreshToken}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          return { isSuccess: true, newAuthToken: data.access_token };
+        }
+      } catch (e) {
+        console.error('Refresh token failed', e);
+      }
+      return { isSuccess: false };
+    },
+  }),
+});
 
 // Memoize routes to prevent unnecessary re-renders
 const AppRoutes = memo(() => (
@@ -47,13 +77,7 @@ function App() {
   return (
     <div className="App">
       <ErrorProvider>
-        <AuthProvider
-          authType="localstorage"
-          authName="_auth"
-          refreshName="_refresh"
-          cookieDomain={window.location.hostname}
-          cookieSecure={window.location.protocol === 'https:'}
-        >
+        <AuthProvider store={store}>
           <UpdateWebSocketProvider>
             <AudioProvider>
               <ContainerProvider>
