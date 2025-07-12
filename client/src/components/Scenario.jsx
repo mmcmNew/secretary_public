@@ -10,6 +10,7 @@ import { Accordion, AccordionSummary, AccordionDetails, Typography, Box,
  } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useState, useMemo, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import IconButton from '@mui/material/IconButton';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -32,8 +33,8 @@ export default function ScenarioComponent({ isRunningProp=false, updateProgress 
     const [isRunning, setIsRunning] = useState(isRunningProp);
     const [currentActionId, setCurrentActionId] = useState(null);
     const [expanded, setExpanded] = useState(false);
-    const [localScenario, setLocalScenario] = useState(null);
     const [scenarioName, setScenarioName] = useState('my_day');
+    const { data: localScenario } = useQuery(['scenario', scenarioName], () => getScenario(scenarioName), { enabled: !!scenarioName });
 
     const scenariesList = useMemo(() => [
         { label: 'Демонстрация', src: 'demo' },
@@ -61,16 +62,11 @@ export default function ScenarioComponent({ isRunningProp=false, updateProgress 
 
     }, [isRunning, updateProgress, currentActionId, localScenario, scenarioName, scenariesList]);
 
-    async function handleScenarioChange(event, newValue) {
+    function handleScenarioChange(event, newValue) {
         setScenarioName(newValue);
-        setLocalScenario(null); // Clear current scenario
         setIsRunning(false); // Stop any running actions
         setCurrentActionId(null); // Reset the current action ID
         setExpanded(false); // Collapse any expanded steps
-
-        const data = await getScenario(newValue)
-
-        setLocalScenario(data);
     }
 
     function onExpire(id) {
