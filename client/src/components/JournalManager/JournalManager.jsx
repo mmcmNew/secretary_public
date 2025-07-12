@@ -31,6 +31,7 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import axios from 'axios';
+import { apiGet, apiDelete, apiPut, apiPost } from '../../utils/api';
 
 // Функция транслитерации
 const transliterate = (text) => {
@@ -90,7 +91,7 @@ export default function JournalManager() {
 
   const fetchSchemas = async () => {
     try {
-      const response = await axios.get('/api/journals/schemas');
+      const response = await apiGet('/api/journals/schemas');
       setSchemas(response.data);
     } catch (err) {
       setError('Ошибка загрузки журналов');
@@ -125,7 +126,7 @@ export default function JournalManager() {
     }
 
     try {
-      await axios.delete(`/api/journals/schemas/${schemaId}`);
+      await apiDelete(`/api/journals/schemas/${schemaId}`);
       fetchSchemas();
     } catch (err) {
       setError(err.response?.data?.error || 'Ошибка удаления журнала');
@@ -152,9 +153,9 @@ export default function JournalManager() {
       };
       
       if (editingSchema) {
-        await axios.put(`/api/journals/schemas/${editingSchema.id}`, updatedFormData);
+        await apiPut(`/api/journals/schemas/${editingSchema.id}`, updatedFormData);
       } else {
-        await axios.post('/api/journals/schemas', updatedFormData);
+        await apiPost('/api/journals/schemas', updatedFormData);
       }
       setDialogOpen(false);
       fetchSchemas();

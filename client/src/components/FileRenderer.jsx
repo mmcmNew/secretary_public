@@ -4,6 +4,7 @@ import { Button, CircularProgress } from '@mui/material';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import axios from 'axios';
 import MDNotionEditor from './JournalEditor/MDNotionEditor';
+import { apiGet } from '../utils/api';
 
 export default function FileRenderer({ url }) {
   const extension = url.split('.').pop().toLowerCase();
@@ -13,11 +14,11 @@ export default function FileRenderer({ url }) {
   useEffect(() => {
     let isMounted = true;
     if (['md', 'txt'].includes(extension)) {
-      axios.get(url, { responseType: 'text' })
+      apiGet(url)
         .then(r => { if (isMounted) setContent(r.data); })
         .catch(() => { if (isMounted) setContent(''); });
     } else {
-      axios.get(url, { responseType: 'blob' })
+      apiGet(url)
         .then(r => { if (isMounted) setBlobUrl(URL.createObjectURL(r.data)); })
         .catch(() => { if (isMounted) setBlobUrl(''); });
     }

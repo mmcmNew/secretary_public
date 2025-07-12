@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import JournalManager from './components/JournalManager/JournalManager.jsx';
 import TaskTypeManager from './components/TaskTypeManager/TaskTypeManager.jsx';
+import { apiGet } from './utils/api';
 
 export default function AccountPage() {
   const auth = useAuthUser();
@@ -22,7 +23,7 @@ export default function AccountPage() {
 
   const fetchUserSubscription = async () => {
     try {
-      const response = await axios.get('/api/user/subscription');
+      const response = await apiGet('/api/user/subscription');
       setSubscription(response.data);
     } catch (error) {
       console.error('Failed to fetch subscription:', error);

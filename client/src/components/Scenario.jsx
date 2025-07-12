@@ -17,10 +17,11 @@ import TTSText from './Scenario/TTSText';
 import AudioPlayer from './Scenario/AudioPlayer';
 import Survey from './Scenario/Survey';
 import axios from 'axios';
+import { apiGet } from '../utils/api';
 
 async function getScenario(name){
       try {
-        const { data } = await axios.get(`/get_scenario/${name}`);
+        const { data } = await apiGet(`/get_scenario/${name}`);
         return data.scenario
       } catch (error) {
         console.error('Failed to fetch dashboard from server:', error);
@@ -68,7 +69,7 @@ export default function ScenarioComponent({ isRunningProp=false, updateProgress 
         setCurrentActionId(null); // Reset the current action ID
         setExpanded(false); // Collapse any expanded steps
 
-        const data = await getScenario(newValue)
+        const data = await apiGet(`/get_scenario/${newValue}`);
 
         setLocalScenario(data);
     }

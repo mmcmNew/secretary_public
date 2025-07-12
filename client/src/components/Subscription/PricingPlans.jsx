@@ -7,6 +7,7 @@ import {
 import CheckIcon from '@mui/icons-material/Check';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import axios from 'axios';
+import { apiGet, apiPost } from '../../utils/api';
 
 export default function PricingPlans() {
     const [plans, setPlans] = useState([]);
@@ -19,7 +20,7 @@ export default function PricingPlans() {
 
     const fetchPlans = async () => {
         try {
-            const response = await axios.get('/api/subscription-plans');
+            const response = await apiGet('/api/subscription-plans');
             setPlans(response.data);
         } catch (error) {
             console.error('Failed to fetch plans:', error);
@@ -30,7 +31,7 @@ export default function PricingPlans() {
 
     const subscribeToPlan = async (planId) => {
         try {
-            await axios.post(`/api/subscribe/${planId}`);
+            await apiPost(`/api/subscribe/${planId}`);
             alert('Подписка оформлена!');
             navigate('/account');
         } catch (error) {

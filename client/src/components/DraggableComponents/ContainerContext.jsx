@@ -2,6 +2,7 @@ import { createContext, useState, useEffect, useReducer, useContext } from "reac
 import PropTypes from "prop-types";
 import axios from 'axios';
 import { containerTypes } from "./containerConfig";
+import { apiPost } from '../../utils/api';
 
 const ContainerContext = createContext();
 
@@ -122,7 +123,7 @@ const ContainerProvider = ({ children }) => {
     useEffect(() => {
         const fetchDashboard = async () => {
             try {
-                const { data } = await axios.get(`/dashboard/last`);
+                const data = await apiGet(`/dashboard/last`);
                 setDashboardData({ id: data.id, name: data.name });
 
                     const loadedTimers = data.timers || [];
@@ -150,7 +151,7 @@ const ContainerProvider = ({ children }) => {
         // отправляем все контейнеры кроме таймеров
         const sendingContainers = containers.filter((container) => container.type !== "timersToolbar");
         try {
-            await axios.post("/dashboard", {
+            await apiPost("/dashboard", {
                 dashboard_data: dashboardData,
                 containers: sendingContainers.map(c => {
                     const { componentType, content, componentProps, ...serializableContainer } = c;
@@ -213,7 +214,7 @@ const ContainerProvider = ({ children }) => {
 
     function sendTimersToServer(updatedTimers) {
         // отправляем таймеры на сервер
-        axios.post("/post_timers", {
+        apiPost("/post_timers", {
             dashboardId: dashboardData.id,
             timers: updatedTimers
         })

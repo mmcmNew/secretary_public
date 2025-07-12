@@ -8,6 +8,7 @@ import get_tts_audio_filename from '../Tools/getTTSText';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import FilesListComponent from '../Chat/FilesList';
 import axios from 'axios';
+import { apiGet, apiPost, apiPut } from '../../utils/api';
 
 
 async function sendNewRecord(table_name, record_info) {
@@ -93,7 +94,7 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
     useEffect(() => {
         const loadFieldOptions = async () => {
             try {
-                const { data } = await axios.get(`/get_tables_filters/${survey.table_name}`);
+                const data = await apiGet(`/get_tables_filters/${survey.table_name}`);
                 setFieldOptions(data);
             } catch (error) {
                 console.error('Error loading field options:', error);

@@ -1,11 +1,12 @@
 import axios from 'axios';
+import useAuthHeader from 'react-auth-kit/hooks/useAuthHeader';
 
 // Создаём экземпляр axios
 const instance = axios.create();
 
 // Интерцептор для автоматического добавления Authorization
 instance.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem('_auth');
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }

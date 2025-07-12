@@ -21,6 +21,7 @@ import AuthProvider from 'react-auth-kit';
 import createStore from 'react-auth-kit/createStore';
 import createRefresh from 'react-auth-kit/createRefresh';
 import RequireAuth from './components/RequireAuth.jsx';
+import { apiPost } from './utils/api';
 // import ReactGridLayout from "./components/GridLayout";
 
 const store = createStore({
@@ -32,7 +33,7 @@ const store = createStore({
     interval: 600,
     refreshApiCallback: async ({ refreshToken }) => {
       try {
-        const response = await axios.post('/api/refresh', null, {
+        const response = await apiPost('/api/refresh', null, {
           headers: { Authorization: `Bearer ${refreshToken}` },
         });
         if (response.status === 200) {

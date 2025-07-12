@@ -4,6 +4,7 @@ import { IconButton, ListItemButton, ListItemIcon, ListItemText, CircularProgres
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import axios from 'axios';
+import { apiPost } from '../../utils/api';
 
 
 export default function TTSText({ element, elementId, isStartPlay = null, onExpireFunc = null,
@@ -40,10 +41,7 @@ export default function TTSText({ element, elementId, isStartPlay = null, onExpi
                 setLoading(true);
 
                 // Выполняем запрос для получения аудиофайла
-                const response = await axios.post('/get_tts_audio', new URLSearchParams({ text: element.text }), {
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    responseType: 'blob'
-                });
+                const response = await apiPost('/get_tts_audio', new URLSearchParams({ text: element.text }));
 
                 const blob = response.data;  // Получаем аудиофайл в виде Blob
                 const audioUrl = URL.createObjectURL(blob);  // Создаем URL для аудиофайла

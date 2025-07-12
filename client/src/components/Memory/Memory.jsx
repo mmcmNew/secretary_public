@@ -6,6 +6,7 @@ import { ExpandMore, PlayArrow, Pause, Replay, VolumeUp, VolumeOff, TextFields }
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation } from 'swiper/modules';
 import axios from 'axios';
+import { apiPost } from '../../utils/api';
 
 // Import Swiper styles
 import 'swiper/css';
@@ -26,7 +27,7 @@ async function sendNewRecord(table_name, record_info) {
     formData.append('time_zone', timeZone);
     formData.append('record_info', JSON.stringify(record_info));
     try {
-        const response = await axios.post(url, formData);
+        const response = await apiPost(url, formData);
         sendResult = response.data;
         console.log('Запись добавлена успешно');
     } catch (error) {

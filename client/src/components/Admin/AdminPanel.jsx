@@ -4,6 +4,7 @@ import {
     TableHead, TableRow, Select, MenuItem
 } from '@mui/material';
 import axios from 'axios';
+import { apiGet, apiPost } from '../../utils/api';
 
 
 export default function AdminPanel() {
@@ -20,7 +21,7 @@ export default function AdminPanel() {
 
     const fetchUsers = async () => {
         try {
-            const response = await axios.get('/api/admin/users');
+            const response = await apiGet('/api/admin/users');
             setUsers(response.data);
         } catch (error) {
             console.error('Failed to fetch users:', error);
@@ -31,7 +32,7 @@ export default function AdminPanel() {
 
     const fetchPlans = async () => {
         try {
-            const response = await axios.get('/api/subscription-plans');
+            const response = await apiGet('/api/subscription-plans');
             setPlans(response.data);
         } catch (e) {
             console.error('Failed to fetch plans:', e);
@@ -40,7 +41,7 @@ export default function AdminPanel() {
 
     const fetchAvailableModules = async () => {
         try {
-            const response = await axios.get('/api/admin/available-modules');
+            const response = await apiGet('/api/admin/available-modules');
             setAvailableModules(response.data);
         } catch (e) {
             console.error('Failed to fetch modules list:', e);
@@ -49,7 +50,7 @@ export default function AdminPanel() {
 
     const updateUserPlan = async (userId, planId) => {
         try {
-            await axios.post(`/api/admin/users/${userId}/plan`, { plan_id: planId });
+            await apiPost(`/api/admin/users/${userId}/plan`, { plan_id: planId });
             fetchUsers();
         } catch (error) {
             console.error('Failed to update plan:', error);
@@ -58,7 +59,7 @@ export default function AdminPanel() {
 
     const updateUserModules = async (userId, modules) => {
         try {
-            await axios.post(`/api/admin/users/${userId}/modules`, { modules });
+            await apiPost(`/api/admin/users/${userId}/modules`, { modules });
             fetchUsers();
         } catch (error) {
             console.error('Failed to update modules:', error);
