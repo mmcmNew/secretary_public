@@ -225,10 +225,17 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
         if start_dt or end_dt:
             if task.interval_id and task.start:
                 rule = task.build_rrule()
-                duration = (task.end - task.start) if (task.end and task.start) else timedelta(hours=1)
+                # duration = (task.end - task.start) if (task.end and task.start) else timedelta(hours=1)
+                # --- Исправление: duration всегда только для одного экземпляра! ---
+                if task.end and task.start:
+                    # Если end <= start (например, задача на весь день), делаем duration = 1 час по умолчанию
+                    duration = task.end - task.start
+                    if duration.total_seconds() <= 0:
+                        duration = timedelta(hours=1)
+                else:
+                    duration = timedelta(hours=1)
                 rng_start = start_dt or datetime.min.replace(tzinfo=None)
                 rng_end = end_dt or datetime.max.replace(tzinfo=None)
-                # Получаем все экземпляры, которые могут пересекать диапазон
                 occurrences = rule.between(rng_start - duration, rng_end, inc=True) if rule else []
                 for occ in occurrences:
                     occ_end = occ + duration
@@ -236,23 +243,22 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
                     override = TaskOverride.query.filter_by(task_id=task.id, date=occ_date, user_id=user_id).first()
                     if override:
                         if override.type == 'skip':
-                            continue  # пропуск экземпляра
+                            continue
                         elif override.type == 'modified':
-                            # подменить поля экземпляра
                             instance = {**task.to_dict(), **(override.data or {})}
                             instance['start'] = occ.isoformat() + 'Z'
-                            instance['end'] = (occ_end.isoformat() + 'Z') if occ_end else None
+                            instance['end'] = occ_end.isoformat() + 'Z'
                             instance['is_override'] = True
                             instance['override_id'] = override.id
                             tasks_data.append(instance)
                             continue
-                    # Если нет override — обычный экземпляр
+                    # Обычный экземпляр
                     instance = task.to_dict()
                     instance['start'] = occ.isoformat() + 'Z'
-                    instance['end'] = (occ_end.isoformat() + 'Z') if occ_end else None
+                    instance['end'] = occ_end.isoformat() + 'Z'
                     instance['is_override'] = False
                     tasks_data.append(instance)
-                return False  # уже добавили все экземпляры
+                return False
             st = task.start
             en = task.end or st
             if start_dt and en and en < start_dt:

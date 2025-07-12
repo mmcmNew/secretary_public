@@ -323,7 +323,7 @@ function CalendarComponent({
       timeGridPlugin,
       interactionPlugin,
       listPlugin,
-      rrulePlugin,
+      // rrulePlugin,
     ],
     headerToolbar: {
       left: "prev,next today",
