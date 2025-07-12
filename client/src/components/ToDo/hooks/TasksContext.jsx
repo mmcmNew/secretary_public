@@ -1,5 +1,5 @@
-import { createContext, useState, useCallback, useMemo, useRef, useEffect, useContext } from "react";
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { createContext, useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 import useContainer from '../../DraggableComponents/useContainer';
@@ -24,44 +24,40 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const fetching = useRef(false);
   const { draggingContainer } = useContainer();
-  const queryClient = useQueryClient();
 
-  const addListMutation = useMutation((params) => api('/tasks/add_list', 'POST', params), {
-    onSuccess: () => queryClient.invalidateQueries(['lists'])
-  });
-  const updateListMutation = useMutation((params) => api('/tasks/edit_list', 'PUT', params), {
-    onSuccess: () => queryClient.invalidateQueries(['lists'])
-  });
-  const deleteListMutation = useMutation((params) => api('/tasks/del_list', 'DELETE', params), {
-    onSuccess: () => queryClient.invalidateQueries(['lists'])
-  });
-  const linkListGroupMutation = useMutation((params) => api('/tasks/link_group_list', 'PUT', params), {
-    onSuccess: () => queryClient.invalidateQueries(['lists'])
-  });
-  const deleteFromChildesMutation = useMutation((params) => api('/tasks/delete_from_childes', 'DELETE', params), {
-    onSuccess: () => queryClient.invalidateQueries(['lists'])
-  });
-  const changeChildesOrderMutation = useMutation((params) => api('/tasks/change_childes_order', 'PUT', params), {
-    onSuccess: () => queryClient.invalidateQueries(['lists'])
+  // ----- List mutations -----
+  const addListMutation = useMutation({
+    mutationFn: (params) => api('/tasks/add_list', 'POST', params),
+    onSuccess: () => queryClient.invalidateQueries(['lists']),
   });
 
-  const addTaskMutation = useMutation((params) => api('/tasks/add_task', 'POST', params), {
-    onSuccess: () => queryClient.invalidateQueries(['tasks'])
+  const updateListMutation = useMutation({
+    mutationFn: (params) => api('/tasks/edit_list', 'PUT', params),
+    onSuccess: () => queryClient.invalidateQueries(['lists']),
   });
-  const updateTaskMutation = useMutation((params) => api('/tasks/edit_task', 'PUT', params), {
-    onSuccess: () => queryClient.invalidateQueries(['tasks'])
+
+
+  // NOTE: server does not expose /tasks/del_list. Deletion is done via edit_list
+  // with deleted flag
+  const deleteListMutation = useMutation({
+    mutationFn: (params) => api('/tasks/edit_list', 'PUT', { ...params, deleted: true }),
+    onSuccess: () => queryClient.invalidateQueries(['lists']),
   });
-  const deleteTaskMutation = useMutation((params) => api('/tasks/del_task', 'DELETE', params), {
-    onSuccess: () => queryClient.invalidateQueries(['tasks'])
+
+  const linkListGroupMutation = useMutation({
+    mutationFn: (params) => api('/tasks/link_group_list', 'PUT', params),
+    onSuccess: () => queryClient.invalidateQueries(['lists']),
   });
-  const changeStatusMutation = useMutation((params) => api('/tasks/change_status', 'PUT', params), {
-    onSuccess: () => queryClient.invalidateQueries(['tasks'])
+
+  const deleteFromChildesMutation = useMutation({
+    mutationFn: (params) => api('/tasks/delete_from_childes', 'DELETE', params),
+    onSuccess: () => queryClient.invalidateQueries(['lists']),
   });
-  const addSubTaskMutation = useMutation((params) => api('/tasks/add_subtask', 'POST', params), {
-    onSuccess: () => queryClient.invalidateQueries(['tasks'])
-  });
-  const linkTaskListMutation = useMutation((params) => api('/tasks/link_task', 'PUT', params), {
-    onSuccess: () => queryClient.invalidateQueries(['tasks'])
+
+  // change_childes_order endpoint is missing; use edit_list with childes_order
+  const changeChildesOrderMutation = useMutation({
+    mutationFn: (params) => api('/tasks/edit_list', 'PUT', params),
+    onSuccess: () => queryClient.invalidateQueries(['lists']),
   });
 
   const fetchTasksApi = async (listId) => {
@@ -155,12 +151,90 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   }, [onError, setLoading, queryClient]);
 
   // CRUD операции со списками
-  const addList = useCallback(async (params) => addListMutation.mutateAsync(params), [addListMutation]);
-  const updateList = useCallback(async (params) => updateListMutation.mutateAsync(params), [updateListMutation]);
-  const deleteList = useCallback(async (params) => deleteListMutation.mutateAsync(params), [deleteListMutation]);
-  const linkListGroup = useCallback(async (params) => linkListGroupMutation.mutateAsync(params), [linkListGroupMutation]);
-  const deleteFromChildes = useCallback(async (params) => deleteFromChildesMutation.mutateAsync(params), [deleteFromChildesMutation]);
-  const changeChildesOrder = useCallback(async (params) => changeChildesOrderMutation.mutateAsync(params), [changeChildesOrderMutation]);
+  const addList = useCallback(
+    async (params) => {
+      const res = await addListMutation.mutateAsync(params);
+      if (res.new_object) {
+        setLists(prev => ({
+          ...prev,
+          lists: res.object_type === 'project' ? prev.lists : [...prev.lists, res.new_object],
+          projects: res.object_type === 'project' ? [...prev.projects, res.new_object] : prev.projects,
+        }));
+      }
+      await fetchLists({ silent: true });
+      return res;
+    },
+    [addListMutation, fetchLists]
+  );
+
+  const updateList = useCallback(
+    async (params) => {
+      const res = await updateListMutation.mutateAsync(params);
+      if (res.updated_list) {
+        setLists(prev => ({
+          ...prev,
+          lists: prev.lists.map(l => l.id === res.updated_list.id ? res.updated_list : l),
+          projects: prev.projects.map(p => p.id === res.updated_list.id ? res.updated_list : p),
+          default_lists: prev.default_lists.map(d => d.id === res.updated_list.id ? res.updated_list : d),
+        }));
+      }
+      await fetchLists({ silent: true });
+      return res;
+    },
+    [updateListMutation, fetchLists]
+  );
+
+  const deleteList = useCallback(
+    async (params) => {
+      const res = await deleteListMutation.mutateAsync(params);
+      if (res.updated_list) {
+        setLists(prev => ({
+          ...prev,
+          lists: prev.lists.filter(l => l.id !== res.updated_list.id),
+          projects: prev.projects.filter(p => p.id !== res.updated_list.id),
+          default_lists: prev.default_lists.filter(d => d.id !== res.updated_list.id),
+        }));
+      }
+      await fetchLists({ silent: true });
+      return res;
+    },
+    [deleteListMutation, fetchLists]
+  );
+
+  const linkListGroup = useCallback(
+    async (params) => {
+      const res = await linkListGroupMutation.mutateAsync(params);
+      await fetchLists({ silent: true });
+      return res;
+    },
+    [linkListGroupMutation, fetchLists]
+  );
+
+  const deleteFromChildes = useCallback(
+    async (params) => {
+      const res = await deleteFromChildesMutation.mutateAsync(params);
+      await fetchLists({ silent: true });
+      return res;
+    },
+    [deleteFromChildesMutation, fetchLists]
+  );
+
+  const changeChildesOrder = useCallback(
+    async (params) => {
+      const res = await changeChildesOrderMutation.mutateAsync(params);
+      if (res.updated_list) {
+        setLists(prev => ({
+          ...prev,
+          lists: prev.lists.map(l => l.id === res.updated_list.id ? res.updated_list : l),
+          projects: prev.projects.map(p => p.id === res.updated_list.id ? res.updated_list : p),
+          default_lists: prev.default_lists.map(d => d.id === res.updated_list.id ? res.updated_list : d),
+        }));
+      }
+      await fetchLists({ silent: true });
+      return res;
+    },
+    [changeChildesOrderMutation, fetchLists]
+  );
 
   const handleSelectList = useCallback((listId) => {
     setSelectedListId(listId);
@@ -637,4 +711,10 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   return <TasksContext.Provider value={contextValue}>{children}</TasksContext.Provider>;
 };
 
-TasksProvider.propTypes = { children: PropTypes.node.isRequired };export default TasksContext; 
+TasksProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+  onError: PropTypes.func,
+  setLoading: PropTypes.func,
+};
+
+export default TasksContext;
