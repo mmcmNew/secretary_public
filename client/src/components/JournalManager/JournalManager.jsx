@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Card,
@@ -31,6 +31,7 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import axios from 'axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // Функция транслитерации
 const transliterate = (text) => {
@@ -73,8 +74,7 @@ const FIELD_TYPES = [
 ];
 
 export default function JournalManager() {
-  const [schemas, setSchemas] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [error, setError] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSchema, setEditingSchema] = useState(null);
@@ -84,20 +84,23 @@ export default function JournalManager() {
     fields: []
   });
 
-  useEffect(() => {
-    fetchSchemas();
-  }, []);
+  const { data: schemas = [], isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['journalSchemas'],
+    queryFn: () => axios.get('/api/journals/schemas').then(r => r.data),
+  });
 
-  const fetchSchemas = async () => {
-    try {
-      const response = await axios.get('/api/journals/schemas');
-      setSchemas(response.data);
-    } catch (err) {
-      setError('Ошибка загрузки журналов');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const saveMutation = useMutation({
+    mutationFn: (data) =>
+      editingSchema
+        ? axios.put(`/api/journals/schemas/${editingSchema.id}`, data)
+        : axios.post('/api/journals/schemas', data),
+    onSuccess: () => queryClient.invalidateQueries(['journalSchemas']),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => axios.delete(`/api/journals/schemas/${id}`),
+    onSuccess: () => queryClient.invalidateQueries(['journalSchemas']),
+  });
 
   const handleCreateSchema = () => {
     setEditingSchema(null);
@@ -125,8 +128,7 @@ export default function JournalManager() {
     }
 
     try {
-      await axios.delete(`/api/journals/schemas/${schemaId}`);
-      fetchSchemas();
+      await deleteMutation.mutateAsync(schemaId);
     } catch (err) {
       setError(err.response?.data?.error || 'Ошибка удаления журнала');
     }
@@ -151,13 +153,8 @@ export default function JournalManager() {
         }))
       };
       
-      if (editingSchema) {
-        await axios.put(`/api/journals/schemas/${editingSchema.id}`, updatedFormData);
-      } else {
-        await axios.post('/api/journals/schemas', updatedFormData);
-      }
+      await saveMutation.mutateAsync(updatedFormData);
       setDialogOpen(false);
-      fetchSchemas();
     } catch (err) {
       setError(err.response?.data?.error || 'Ошибка сохранения журнала');
     }
@@ -210,9 +207,9 @@ export default function JournalManager() {
         </Button>
       </Box>
 
-      {error && (
+      {(error || queryError) && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-          {error}
+          {error || queryError?.message}
         </Alert>
       )}
 
