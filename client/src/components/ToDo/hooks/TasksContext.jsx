@@ -1,5 +1,5 @@
 import { createContext, useState, useCallback, useMemo, useRef, useEffect, useContext } from "react";
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 import useContainer from '../../DraggableComponents/useContainer';
@@ -24,6 +24,45 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const fetching = useRef(false);
   const { draggingContainer } = useContainer();
+  const queryClient = useQueryClient();
+
+  const addListMutation = useMutation((params) => api('/tasks/add_list', 'POST', params), {
+    onSuccess: () => queryClient.invalidateQueries(['lists'])
+  });
+  const updateListMutation = useMutation((params) => api('/tasks/edit_list', 'PUT', params), {
+    onSuccess: () => queryClient.invalidateQueries(['lists'])
+  });
+  const deleteListMutation = useMutation((params) => api('/tasks/del_list', 'DELETE', params), {
+    onSuccess: () => queryClient.invalidateQueries(['lists'])
+  });
+  const linkListGroupMutation = useMutation((params) => api('/tasks/link_group_list', 'PUT', params), {
+    onSuccess: () => queryClient.invalidateQueries(['lists'])
+  });
+  const deleteFromChildesMutation = useMutation((params) => api('/tasks/delete_from_childes', 'DELETE', params), {
+    onSuccess: () => queryClient.invalidateQueries(['lists'])
+  });
+  const changeChildesOrderMutation = useMutation((params) => api('/tasks/change_childes_order', 'PUT', params), {
+    onSuccess: () => queryClient.invalidateQueries(['lists'])
+  });
+
+  const addTaskMutation = useMutation((params) => api('/tasks/add_task', 'POST', params), {
+    onSuccess: () => queryClient.invalidateQueries(['tasks'])
+  });
+  const updateTaskMutation = useMutation((params) => api('/tasks/edit_task', 'PUT', params), {
+    onSuccess: () => queryClient.invalidateQueries(['tasks'])
+  });
+  const deleteTaskMutation = useMutation((params) => api('/tasks/del_task', 'DELETE', params), {
+    onSuccess: () => queryClient.invalidateQueries(['tasks'])
+  });
+  const changeStatusMutation = useMutation((params) => api('/tasks/change_status', 'PUT', params), {
+    onSuccess: () => queryClient.invalidateQueries(['tasks'])
+  });
+  const addSubTaskMutation = useMutation((params) => api('/tasks/add_subtask', 'POST', params), {
+    onSuccess: () => queryClient.invalidateQueries(['tasks'])
+  });
+  const linkTaskListMutation = useMutation((params) => api('/tasks/link_task', 'PUT', params), {
+    onSuccess: () => queryClient.invalidateQueries(['tasks'])
+  });
 
   const fetchTasksApi = async (listId) => {
     let url = '';
@@ -47,13 +86,6 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     if (!listId) return;
     if (!silent && setLoading) setLoading(true);
     fetching.current = true;
-    if (!silent) {
-      if (listId === 'my_day') {
-        setMyDayTasks(prev => ({ ...prev, loading: true, error: null }));
-      } else {
-        setTasks(prev => ({ ...prev, loading: true, error: null }));
-      }
-    }
     try {
       const data = await queryClient.fetchQuery(['tasks', listId], () => fetchTasksApi(listId));
       const update = {
@@ -62,34 +94,19 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
         error: null,
       };
       if (listId === 'my_day') {
-        setMyDayTasks(prev => ({
-          ...prev,
-          ...update,
-          loading: silent ? prev.loading : update.loading,
-        }));
+        setMyDayTasks(update);
       } else {
-        setTasks(prev => ({
-          ...prev,
-          ...update,
-          loading: silent ? prev.loading : update.loading,
-        }));
+        setTasks(update);
       }
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
-      // console.log('fetchTasks: success');
       return data;
     } catch (err) {
       if (onError) onError(err);
-      if (listId === 'my_day') {
-        setMyDayTasks(prev => ({ ...prev, loading: silent ? prev.loading : false, error: err }));
-      } else {
-        setTasks(prev => ({ ...prev, loading: silent ? prev.loading : false, error: err }));
-      }
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
-      console.log('fetchTasks: error', err);
     }
-  }, [onError, setLoading]);
+  }, [onError, setLoading, queryClient]);
 
   const fetchTasksByIds = useCallback(async (ids) => {
     if (!ids || ids.length === 0) return [];
@@ -115,7 +132,6 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const fetchLists = useCallback(async ({ silent = false } = {}) => {
     if (!silent && setLoading) setLoading(true);
     fetching.current = true;
-    if (!silent) setLists(prev => ({ ...prev, loading: true, error: null }));
     try {
       const data = await queryClient.fetchQuery(['lists'], fetchListsApi);
       setLists(prev => ({
@@ -123,9 +139,9 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
         lists: data.lists,
         default_lists: data.default_lists,
         projects: data.projects,
-        loading: silent ? prev.loading : false,
+        loading: false,
         error: null,
-      }));
+      });
       const myDay = data.default_lists?.find(l => l.id === 'my_day');
       setMyDayList(myDay || null);
       if (!silent && setLoading) setLoading(false);
@@ -133,44 +149,18 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       return data;
     } catch (err) {
       if (onError) onError(err);
-      setLists(prev => ({ ...prev, loading: silent ? prev.loading : false, error: err }));
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
     }
-  }, [onError, setLoading]);
+  }, [onError, setLoading, queryClient]);
 
   // CRUD операции со списками
-  const addListMutation = useMutation({
-    mutationFn: (params) => api('/tasks/add_list', 'POST', params),
-    onSuccess: () => fetchLists(),
-  });
-  const updateListMutation = useMutation({
-    mutationFn: (params) => api('/tasks/edit_list', 'PUT', params),
-    onSuccess: () => fetchLists(),
-  });
-  const deleteListMutation = useMutation({
-    mutationFn: (params) => api('/tasks/del_list', 'DELETE', params),
-    onSuccess: () => fetchLists(),
-  });
-  const linkListGroupMutation = useMutation({
-    mutationFn: (params) => api('/tasks/link_group_list', 'PUT', params),
-    onSuccess: () => fetchLists(),
-  });
-  const deleteFromChildesMutation = useMutation({
-    mutationFn: (params) => api('/tasks/delete_from_childes', 'DELETE', params),
-    onSuccess: () => fetchLists(),
-  });
-  const changeChildesOrderMutation = useMutation({
-    mutationFn: (params) => api('/tasks/change_childes_order', 'PUT', params),
-    onSuccess: () => fetchLists(),
-  });
-
-  const addList = useCallback((params) => addListMutation.mutateAsync(params), [addListMutation]);
-  const updateList = useCallback((params) => updateListMutation.mutateAsync(params), [updateListMutation]);
-  const deleteList = useCallback((params) => deleteListMutation.mutateAsync(params), [deleteListMutation]);
-  const linkListGroup = useCallback((params) => linkListGroupMutation.mutateAsync(params), [linkListGroupMutation]);
-  const deleteFromChildes = useCallback((params) => deleteFromChildesMutation.mutateAsync(params), [deleteFromChildesMutation]);
-  const changeChildesOrder = useCallback((params) => changeChildesOrderMutation.mutateAsync(params), [changeChildesOrderMutation]);
+  const addList = useCallback(async (params) => addListMutation.mutateAsync(params), [addListMutation]);
+  const updateList = useCallback(async (params) => updateListMutation.mutateAsync(params), [updateListMutation]);
+  const deleteList = useCallback(async (params) => deleteListMutation.mutateAsync(params), [deleteListMutation]);
+  const linkListGroup = useCallback(async (params) => linkListGroupMutation.mutateAsync(params), [linkListGroupMutation]);
+  const deleteFromChildes = useCallback(async (params) => deleteFromChildesMutation.mutateAsync(params), [deleteFromChildesMutation]);
+  const changeChildesOrder = useCallback(async (params) => changeChildesOrderMutation.mutateAsync(params), [changeChildesOrderMutation]);
 
   const handleSelectList = useCallback((listId) => {
     setSelectedListId(listId);

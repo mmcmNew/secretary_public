@@ -11,7 +11,13 @@ export default function TTSText({ element, elementId, isStartPlay = null, onExpi
     currentActionId=null }) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [audio, setAudio] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const ttsMutation = useMutation(async (text) => {
+        const response = await axios.post('/get_tts_audio', new URLSearchParams({ text }), {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            responseType: 'blob'
+        });
+        return response.data;
+    });
 
     useEffect(() => {
         if (isStartPlay) {
@@ -46,12 +52,8 @@ export default function TTSText({ element, elementId, isStartPlay = null, onExpi
             setIsPlaying(false);
         } else {
             if (!audio) {
-                setLoading(true);
-
-                const response = await ttsMutation.mutateAsync(element.text);
-
-                const blob = response.data;  // Получаем аудиофайл в виде Blob
-                const audioUrl = URL.createObjectURL(blob);  // Создаем URL для аудиофайла
+                const blob = await ttsMutation.mutateAsync(element.text);
+                const audioUrl = URL.createObjectURL(blob);
 
                 const newAudio = new Audio(audioUrl);
                 setAudio(newAudio);
@@ -63,7 +65,6 @@ export default function TTSText({ element, elementId, isStartPlay = null, onExpi
                     }
                 };
 
-                setLoading(false);
                 newAudio.play();
                 setIsPlaying(true);
             } else {
@@ -75,9 +76,9 @@ export default function TTSText({ element, elementId, isStartPlay = null, onExpi
 
     return (
         <ListItemButton sx={{ margin: 0, padding: 0 }}>
-            <ListItemIcon onClick={loading ? null : handleClick}>
-                <IconButton aria-label={isPlaying ? "pause" : "play"} color="primary" disabled={loading}>
-                    {loading ? <CircularProgress size={24} /> : (isPlaying ? <PauseIcon /> : <PlayArrowIcon />)}
+            <ListItemIcon onClick={ttsMutation.isLoading ? null : handleClick}>
+                <IconButton aria-label={isPlaying ? "pause" : "play"} color="primary" disabled={ttsMutation.isLoading}>
+                    {ttsMutation.isLoading ? <CircularProgress size={24} /> : (isPlaying ? <PauseIcon /> : <PlayArrowIcon />)}
                 </IconButton>
             </ListItemIcon>
             <ListItemText id={elementId} primary={element.text} />

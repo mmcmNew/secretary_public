@@ -14,12 +14,11 @@ export default function AccountPage() {
   const signOut = useSignOut();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
-  const user = auth();
-
-  const { data: subscription } = useQuery({
-    queryKey: ['subscription'],
-    queryFn: () => axios.get('/api/user/subscription').then(res => res.data),
+  const { data: subscription } = useQuery(['subscription'], async () => {
+    const { data } = await axios.get('/api/user/subscription');
+    return data;
   });
+  const user = auth();
 
   if (!user) return null;
 

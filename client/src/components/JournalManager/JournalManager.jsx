@@ -75,6 +75,10 @@ const FIELD_TYPES = [
 
 export default function JournalManager() {
   const queryClient = useQueryClient();
+  const { data: schemas = [], isLoading } = useQuery(['schemas'], async () => {
+    const { data } = await axios.get('/api/journals/schemas');
+    return data;
+  });
   const [error, setError] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSchema, setEditingSchema] = useState(null);
@@ -84,23 +88,21 @@ export default function JournalManager() {
     fields: []
   });
 
-  const { data: schemas = [], isLoading: loading, error: queryError } = useQuery({
-    queryKey: ['journalSchemas'],
-    queryFn: () => axios.get('/api/journals/schemas').then(r => r.data),
-  });
+  const deleteSchemaMutation = useMutation(
+    (id) => axios.delete(`/api/journals/schemas/${id}`),
+    { onSuccess: () => queryClient.invalidateQueries(['schemas']) }
+  );
 
-  const saveMutation = useMutation({
-    mutationFn: (data) =>
-      editingSchema
-        ? axios.put(`/api/journals/schemas/${editingSchema.id}`, data)
-        : axios.post('/api/journals/schemas', data),
-    onSuccess: () => queryClient.invalidateQueries(['journalSchemas']),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id) => axios.delete(`/api/journals/schemas/${id}`),
-    onSuccess: () => queryClient.invalidateQueries(['journalSchemas']),
-  });
+  const saveSchemaMutation = useMutation(
+    async ({ id, data }) => {
+      if (id) {
+        await axios.put(`/api/journals/schemas/${id}`, data);
+      } else {
+        await axios.post('/api/journals/schemas', data);
+      }
+    },
+    { onSuccess: () => queryClient.invalidateQueries(['schemas']) }
+  );
 
   const handleCreateSchema = () => {
     setEditingSchema(null);
@@ -126,9 +128,8 @@ export default function JournalManager() {
     if (!window.confirm('Вы уверены, что хотите удалить этот журнал? Все записи будут удалены.')) {
       return;
     }
-
     try {
-      await deleteMutation.mutateAsync(schemaId);
+      await deleteSchemaMutation.mutateAsync(schemaId);
     } catch (err) {
       setError(err.response?.data?.error || 'Ошибка удаления журнала');
     }
@@ -153,7 +154,11 @@ export default function JournalManager() {
         }))
       };
       
-      await saveMutation.mutateAsync(updatedFormData);
+      if (editingSchema) {
+        await saveSchemaMutation.mutateAsync({ id: editingSchema.id, data: updatedFormData });
+      } else {
+        await saveSchemaMutation.mutateAsync({ id: null, data: updatedFormData });
+      }
       setDialogOpen(false);
     } catch (err) {
       setError(err.response?.data?.error || 'Ошибка сохранения журнала');
@@ -192,7 +197,7 @@ export default function JournalManager() {
     setFormData({ ...formData, fields: newFields });
   };
 
-  if (loading) return <Typography>Загрузка...</Typography>;
+  if (isLoading) return <Typography>Загрузка...</Typography>;
 
   return (
     <Box>

@@ -1,5 +1,6 @@
 import { PropTypes } from 'prop-types';
 import { useState, useEffect, useContext } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { useTimer } from 'react-timer-hook';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
@@ -41,24 +42,15 @@ export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resul
     }
   }, [currentActionId]);
 
-  const ttsMutation = useMutation({
-    mutationFn: (text) =>
-      axios.post('/get_tts_audio', new URLSearchParams({ text }), {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        responseType: 'blob'
-      })
+  const ttsMutation = useMutation(async (text) => {
+    const response = await axios.post('/get_tts_audio', new URLSearchParams({ text }), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      responseType: 'blob'
+    });
+    const blob = response.data;
+    const audioUrl = URL.createObjectURL(blob);
+    await playAudio(audioUrl, { queued: true });
   });
-
-  async function sendTextAndPlayAudio(text) {
-    try {
-      const response = await ttsMutation.mutateAsync(text);
-      const blob = response.data;
-      const audioUrl = URL.createObjectURL(blob);
-      await playAudio(audioUrl, { queued: true });
-    } catch (error) {
-      console.error('There has been a problem with your fetch operation:', error);
-    }
-  }
 
   function onExpire() {
     let playAudioPromise = Promise.resolve();
@@ -68,7 +60,7 @@ export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resul
     }
 
     playAudioPromise
-      .then(() => sendTextAndPlayAudio(textToTts))
+      .then(() => ttsMutation.mutateAsync(textToTts))
       .then(() => {
         resetTime(); // Сбрасываем таймер
         if (onExpireFunc) {
