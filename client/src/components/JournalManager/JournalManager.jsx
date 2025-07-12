@@ -104,7 +104,6 @@ export default function JournalManager() {
     { onSuccess: () => queryClient.invalidateQueries(['schemas']) }
   );
 
-
   const handleCreateSchema = () => {
     setEditingSchema(null);
     setFormData({
@@ -213,9 +212,9 @@ export default function JournalManager() {
         </Button>
       </Box>
 
-      {error && (
+      {(error || queryError) && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-          {error}
+          {error || queryError?.message}
         </Alert>
       )}
 

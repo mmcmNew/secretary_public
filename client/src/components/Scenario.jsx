@@ -18,16 +18,7 @@ import TTSText from './Scenario/TTSText';
 import AudioPlayer from './Scenario/AudioPlayer';
 import Survey from './Scenario/Survey';
 import axios from 'axios';
-
-async function getScenario(name){
-      try {
-        const { data } = await axios.get(`/get_scenario/${name}`);
-        return data.scenario
-      } catch (error) {
-        console.error('Failed to fetch dashboard from server:', error);
-        return null
-      }
-}
+import { useQuery } from '@tanstack/react-query';
 
 export default function ScenarioComponent({ isRunningProp=false, updateProgress  }) {
     const [isRunning, setIsRunning] = useState(isRunningProp);

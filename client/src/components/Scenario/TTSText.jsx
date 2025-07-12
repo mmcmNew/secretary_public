@@ -38,6 +38,14 @@ export default function TTSText({ element, elementId, isStartPlay = null, onExpi
         }
     }, [currentActionId]);
 
+    const ttsMutation = useMutation({
+        mutationFn: (text) =>
+            axios.post('/get_tts_audio', new URLSearchParams({ text }), {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                responseType: 'blob'
+            })
+    });
+
     async function handleClick() {
         if (audio && isPlaying) {
             audio.pause();
