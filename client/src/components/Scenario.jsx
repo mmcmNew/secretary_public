@@ -17,23 +17,18 @@ import TTSText from './Scenario/TTSText';
 import AudioPlayer from './Scenario/AudioPlayer';
 import Survey from './Scenario/Survey';
 import axios from 'axios';
-
-async function getScenario(name){
-      try {
-        const { data } = await axios.get(`/get_scenario/${name}`);
-        return data.scenario
-      } catch (error) {
-        console.error('Failed to fetch dashboard from server:', error);
-        return null
-      }
-}
+import { useQuery } from '@tanstack/react-query';
 
 export default function ScenarioComponent({ isRunningProp=false, updateProgress  }) {
     const [isRunning, setIsRunning] = useState(isRunningProp);
     const [currentActionId, setCurrentActionId] = useState(null);
     const [expanded, setExpanded] = useState(false);
-    const [localScenario, setLocalScenario] = useState(null);
     const [scenarioName, setScenarioName] = useState('my_day');
+    const { data: localScenario } = useQuery({
+        queryKey: ['scenario', scenarioName],
+        queryFn: () => axios.get(`/get_scenario/${scenarioName}`).then(r => r.data.scenario),
+        enabled: !!scenarioName,
+    });
 
     const scenariesList = useMemo(() => [
         { label: 'Демонстрация', src: 'demo' },
@@ -63,14 +58,9 @@ export default function ScenarioComponent({ isRunningProp=false, updateProgress 
 
     async function handleScenarioChange(event, newValue) {
         setScenarioName(newValue);
-        setLocalScenario(null); // Clear current scenario
         setIsRunning(false); // Stop any running actions
         setCurrentActionId(null); // Reset the current action ID
         setExpanded(false); // Collapse any expanded steps
-
-        const data = await getScenario(newValue)
-
-        setLocalScenario(data);
     }
 
     function onExpire(id) {

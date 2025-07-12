@@ -4,6 +4,7 @@ import { IconButton, ListItemButton, ListItemIcon, ListItemText, CircularProgres
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import axios from 'axios';
+import { useMutation } from '@tanstack/react-query';
 
 
 export default function TTSText({ element, elementId, isStartPlay = null, onExpireFunc = null,
@@ -31,6 +32,14 @@ export default function TTSText({ element, elementId, isStartPlay = null, onExpi
         }
     }, [currentActionId]);
 
+    const ttsMutation = useMutation({
+        mutationFn: (text) =>
+            axios.post('/get_tts_audio', new URLSearchParams({ text }), {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                responseType: 'blob'
+            })
+    });
+
     async function handleClick() {
         if (audio && isPlaying) {
             audio.pause();
@@ -39,11 +48,7 @@ export default function TTSText({ element, elementId, isStartPlay = null, onExpi
             if (!audio) {
                 setLoading(true);
 
-                // Выполняем запрос для получения аудиофайла
-                const response = await axios.post('/get_tts_audio', new URLSearchParams({ text: element.text }), {
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    responseType: 'blob'
-                });
+                const response = await ttsMutation.mutateAsync(element.text);
 
                 const blob = response.data;  // Получаем аудиофайл в виде Blob
                 const audioUrl = URL.createObjectURL(blob);  // Создаем URL для аудиофайла
