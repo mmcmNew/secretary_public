@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import useSignOut from 'react-auth-kit/hooks/useSignOut';
 import useAuthUser from 'react-auth-kit/hooks/useAuthUser';
 import { Button, Container, Typography, Box, Card, CardContent, Chip, Tabs, Tab } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
 import JournalManager from './components/JournalManager/JournalManager.jsx';
 import TaskTypeManager from './components/TaskTypeManager/TaskTypeManager.jsx';
 
@@ -12,22 +13,12 @@ export default function AccountPage() {
   const auth = useAuthUser();
   const signOut = useSignOut();
   const navigate = useNavigate();
-  const [subscription, setSubscription] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
+  const { data: subscription } = useQuery(['subscription'], async () => {
+    const { data } = await axios.get('/api/user/subscription');
+    return data;
+  });
   const user = auth();
-
-  useEffect(() => {
-    fetchUserSubscription();
-  }, []);
-
-  const fetchUserSubscription = async () => {
-    try {
-      const response = await axios.get('/api/user/subscription');
-      setSubscription(response.data);
-    } catch (error) {
-      console.error('Failed to fetch subscription:', error);
-    }
-  };
 
   if (!user) return null;
 

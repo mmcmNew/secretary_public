@@ -1,4 +1,5 @@
-import { createContext, useState, useCallback, useMemo, useRef, useEffect, useContext } from "react";
+import { createContext, useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 import useContainer from '../../DraggableComponents/useContainer';
@@ -12,6 +13,7 @@ const TasksContext = createContext();
 
 
 export const TasksProvider = ({ children, onError, setLoading }) => {
+  const queryClient = useQueryClient();
   const [tasks, setTasks] = useState({ data: [], loading: false, error: null });
   const [myDayTasks, setMyDayTasks] = useState({ data: [], loading: false, error: null });
   const [myDayList, setMyDayList] = useState(null);
@@ -23,67 +25,84 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const fetching = useRef(false);
   const { draggingContainer } = useContainer();
 
+  // ----- List mutations -----
+  const addListMutation = useMutation({
+    mutationFn: (params) => api('/tasks/add_list', 'POST', params),
+    onSuccess: () => queryClient.invalidateQueries(['lists']),
+  });
+
+  const updateListMutation = useMutation({
+    mutationFn: (params) => api('/tasks/edit_list', 'PUT', params),
+    onSuccess: () => queryClient.invalidateQueries(['lists']),
+  });
+
+
+  // NOTE: server does not expose /tasks/del_list. Deletion is done via edit_list
+  // with deleted flag
+  const deleteListMutation = useMutation({
+    mutationFn: (params) => api('/tasks/edit_list', 'PUT', { ...params, deleted: true }),
+    onSuccess: () => queryClient.invalidateQueries(['lists']),
+  });
+
+  const linkListGroupMutation = useMutation({
+    mutationFn: (params) => api('/tasks/link_group_list', 'PUT', params),
+    onSuccess: () => queryClient.invalidateQueries(['lists']),
+  });
+
+  const deleteFromChildesMutation = useMutation({
+    mutationFn: (params) => api('/tasks/delete_from_childes', 'DELETE', params),
+    onSuccess: () => queryClient.invalidateQueries(['lists']),
+  });
+
+  // change_childes_order endpoint is missing; use edit_list with childes_order
+  const changeChildesOrderMutation = useMutation({
+    mutationFn: (params) => api('/tasks/edit_list', 'PUT', params),
+    onSuccess: () => queryClient.invalidateQueries(['lists']),
+  });
+
+  const fetchTasksApi = async (listId) => {
+    let url = '';
+    if (listId === 'my_day') {
+      const start = dayjs().startOf('day').utc().toISOString();
+      const end = dayjs().endOf('day').utc().toISOString();
+      const params = new URLSearchParams({ list_id: 'events', start, end });
+      url = `/tasks/get_tasks?${params.toString()}`;
+    } else {
+      url = `/tasks/get_tasks?list_id=${listId}&time_zone=${new Date().getTimezoneOffset()}`;
+    }
+    return api(url);
+  };
+
+  const fetchListsApi = async () => {
+    return api(`/tasks/get_lists?time_zone=${new Date().getTimezoneOffset()}`);
+  };
+
   // Получить задачи для списка
   const fetchTasks = useCallback(async (listId, { silent = false } = {}) => {
     if (!listId) return;
-    // Если уже есть выполняющийся запрос, дожидаемся его завершения
-    // while (fetching.current) {
-    //   await new Promise((resolve) => setTimeout(resolve, 50));
-    // }
     if (!silent && setLoading) setLoading(true);
     fetching.current = true;
-    if (!silent) {
-      if (listId === 'my_day') {
-        setMyDayTasks(prev => ({ ...prev, loading: true, error: null }));
-      } else {
-        setTasks(prev => ({ ...prev, loading: true, error: null }));
-      }
-    }
     try {
-      let url = '';
-      if (listId === 'my_day') {
-        const start = dayjs().startOf('day').utc().toISOString();
-        const end = dayjs().endOf('day').utc().toISOString();
-        const params = new URLSearchParams({ list_id: 'events', start, end });
-        url = `/tasks/get_tasks?${params.toString()}`;
-      } else {
-        url = `/tasks/get_tasks?list_id=${listId}&time_zone=${new Date().getTimezoneOffset()}`;
-      }
-      const data = await api(url);
+      const data = await queryClient.fetchQuery(['tasks', listId], () => fetchTasksApi(listId));
       const update = {
         data: data.tasks || [],
         loading: false,
         error: null,
       };
       if (listId === 'my_day') {
-        setMyDayTasks(prev => ({
-          ...prev,
-          ...update,
-          loading: silent ? prev.loading : update.loading,
-        }));
+        setMyDayTasks(update);
       } else {
-        setTasks(prev => ({
-          ...prev,
-          ...update,
-          loading: silent ? prev.loading : update.loading,
-        }));
+        setTasks(update);
       }
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
-      // console.log('fetchTasks: success');
       return data;
     } catch (err) {
       if (onError) onError(err);
-      if (listId === 'my_day') {
-        setMyDayTasks(prev => ({ ...prev, loading: silent ? prev.loading : false, error: err }));
-      } else {
-        setTasks(prev => ({ ...prev, loading: silent ? prev.loading : false, error: err }));
-      }
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
-      console.log('fetchTasks: error', err);
     }
-  }, [onError, setLoading]);
+  }, [onError, setLoading, queryClient]);
 
   const fetchTasksByIds = useCallback(async (ids) => {
     if (!ids || ids.length === 0) return [];
@@ -107,20 +126,18 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
 
   // Получить все списки
   const fetchLists = useCallback(async ({ silent = false } = {}) => {
-    // if (fetching.current) return;
     if (!silent && setLoading) setLoading(true);
     fetching.current = true;
-    if (!silent) setLists(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await api(`/tasks/get_lists?time_zone=${new Date().getTimezoneOffset()}`);
+      const data = await queryClient.fetchQuery(['lists'], fetchListsApi);
       setLists(prev => ({
         ...prev,
         lists: data.lists,
         default_lists: data.default_lists,
         projects: data.projects,
-        loading: silent ? prev.loading : false,
+        loading: false,
         error: null,
-      }));
+      });
       const myDay = data.default_lists?.find(l => l.id === 'my_day');
       setMyDayList(myDay || null);
       if (!silent && setLoading) setLoading(false);
@@ -128,19 +145,96 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       return data;
     } catch (err) {
       if (onError) onError(err);
-      setLists(prev => ({ ...prev, loading: silent ? prev.loading : false, error: err }));
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
     }
-  }, [onError, setLoading]);
+  }, [onError, setLoading, queryClient]);
 
   // CRUD операции со списками
-  const addList = useCallback(async (params) => { const res = await api('/tasks/add_list', 'POST', params); await fetchLists(); return res; }, [fetchLists]);
-  const updateList = useCallback(async (params) => { const res = await api('/tasks/edit_list', 'PUT', params); await fetchLists(); return res; }, [fetchLists]);
-  const deleteList = useCallback(async (params) => { const res = await api('/tasks/del_list', 'DELETE', params); await fetchLists(); return res; }, [fetchLists]);
-  const linkListGroup = useCallback(async (params) => { const res = await api('/tasks/link_group_list', 'PUT', params); await fetchLists(); return res; }, [fetchLists]);
-  const deleteFromChildes = useCallback(async (params) => { const res = await api('/tasks/delete_from_childes', 'DELETE', params); await fetchLists(); return res; }, [fetchLists]);
-  const changeChildesOrder = useCallback(async (params) => { const res = await api('/tasks/change_childes_order', 'PUT', params); await fetchLists(); return res; }, [fetchLists]);
+  const addList = useCallback(
+    async (params) => {
+      const res = await addListMutation.mutateAsync(params);
+      if (res.new_object) {
+        setLists(prev => ({
+          ...prev,
+          lists: res.object_type === 'project' ? prev.lists : [...prev.lists, res.new_object],
+          projects: res.object_type === 'project' ? [...prev.projects, res.new_object] : prev.projects,
+        }));
+      }
+      await fetchLists({ silent: true });
+      return res;
+    },
+    [addListMutation, fetchLists]
+  );
+
+  const updateList = useCallback(
+    async (params) => {
+      const res = await updateListMutation.mutateAsync(params);
+      if (res.updated_list) {
+        setLists(prev => ({
+          ...prev,
+          lists: prev.lists.map(l => l.id === res.updated_list.id ? res.updated_list : l),
+          projects: prev.projects.map(p => p.id === res.updated_list.id ? res.updated_list : p),
+          default_lists: prev.default_lists.map(d => d.id === res.updated_list.id ? res.updated_list : d),
+        }));
+      }
+      await fetchLists({ silent: true });
+      return res;
+    },
+    [updateListMutation, fetchLists]
+  );
+
+  const deleteList = useCallback(
+    async (params) => {
+      const res = await deleteListMutation.mutateAsync(params);
+      if (res.updated_list) {
+        setLists(prev => ({
+          ...prev,
+          lists: prev.lists.filter(l => l.id !== res.updated_list.id),
+          projects: prev.projects.filter(p => p.id !== res.updated_list.id),
+          default_lists: prev.default_lists.filter(d => d.id !== res.updated_list.id),
+        }));
+      }
+      await fetchLists({ silent: true });
+      return res;
+    },
+    [deleteListMutation, fetchLists]
+  );
+
+  const linkListGroup = useCallback(
+    async (params) => {
+      const res = await linkListGroupMutation.mutateAsync(params);
+      await fetchLists({ silent: true });
+      return res;
+    },
+    [linkListGroupMutation, fetchLists]
+  );
+
+  const deleteFromChildes = useCallback(
+    async (params) => {
+      const res = await deleteFromChildesMutation.mutateAsync(params);
+      await fetchLists({ silent: true });
+      return res;
+    },
+    [deleteFromChildesMutation, fetchLists]
+  );
+
+  const changeChildesOrder = useCallback(
+    async (params) => {
+      const res = await changeChildesOrderMutation.mutateAsync(params);
+      if (res.updated_list) {
+        setLists(prev => ({
+          ...prev,
+          lists: prev.lists.map(l => l.id === res.updated_list.id ? res.updated_list : l),
+          projects: prev.projects.map(p => p.id === res.updated_list.id ? res.updated_list : p),
+          default_lists: prev.default_lists.map(d => d.id === res.updated_list.id ? res.updated_list : d),
+        }));
+      }
+      await fetchLists({ silent: true });
+      return res;
+    },
+    [changeChildesOrderMutation, fetchLists]
+  );
 
   const handleSelectList = useCallback((listId) => {
     setSelectedListId(listId);
@@ -188,9 +282,13 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const deleteCalendarEvent = useCallback((params) => api('/tasks/del_task', 'DELETE', params), []);
 
   // CRUD операции
+  const addTaskMutation = useMutation({
+    mutationFn: (params) => api('/tasks/add_task', 'POST', params),
+    onSuccess: () => fetchLists({ silent: true }),
+  });
+
   const addTask = useCallback(async (params) => {
-    const res = await api("/tasks/add_task", "POST", params);
-    await fetchLists({ silent: true });
+    const res = await addTaskMutation.mutateAsync(params);
     // Локальное обновление вместо полной перезагрузки
     if (res.task && params.listId === 'my_day') {
       setMyDayTasks(prev => ({
@@ -209,11 +307,15 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       }));
     }
     return res;
-  }, [fetchLists, selectedListId]);
+  }, [fetchLists, selectedListId, addTaskMutation]);
+
+  const updateTaskMutation = useMutation({
+    mutationFn: (params) => api('/tasks/edit_task', 'PUT', params),
+    onSuccess: () => fetchLists({ silent: true }),
+  });
 
   const updateTask = useCallback(async (params) => {
-    const res = await api("/tasks/edit_task", "PUT", params);
-    if (fetchLists) await fetchLists({ silent: true });
+    const res = await updateTaskMutation.mutateAsync(params);
     if (res.task) {
       setMyDayTasks(prev => {
         if (!prev.data.some(task => task.id == params.taskId)) return prev;
@@ -235,11 +337,15 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       });
     }
     return res;
-  }, [fetchLists]);
+  }, [fetchLists, updateTaskMutation]);
+
+  const changeTaskStatusMutation = useMutation({
+    mutationFn: (params) => api('/tasks/change_status', 'PUT', params),
+    onSuccess: () => fetchLists({ silent: true }),
+  });
 
   const changeTaskStatus = useCallback(async (params) => {
-    const res = await api("/tasks/change_status", "PUT", params);
-    if (fetchLists) await fetchLists({ silent: true });
+    const res = await changeTaskStatusMutation.mutateAsync(params);
     // Если сервер вернул массив changed_ids, обновляем статус у всех этих задач
     if (res.changed_ids && Array.isArray(res.changed_ids)) {
       setTasks(prev => ({
@@ -276,8 +382,12 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     return res;
   }, [fetchLists, selectedListId]);
 
+  const addSubTaskMutation = useMutation({
+    mutationFn: (params) => api('/tasks/add_subtask', 'POST', params),
+  });
+
   const addSubTask = useCallback(async (params) => {
-    const res = await api("/tasks/add_subtask", "POST", params);
+    const res = await addSubTaskMutation.mutateAsync(params);
 
 
 
@@ -306,11 +416,15 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     }
 
     return res;
-  }, []);
+  }, [addSubTaskMutation]);
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: (params) => api('/tasks/del_task', 'DELETE', params),
+    onSuccess: () => fetchLists({ silent: true }),
+  });
 
   const deleteTask = useCallback(async (params) => {
-    const res = await api("/tasks/del_task", "DELETE", params);
-    if (fetchLists) await fetchLists({ silent: true });
+    const res = await deleteTaskMutation.mutateAsync(params);
     // Локальное удаление задачи
     if (params.listId === 'my_day') {
       setMyDayTasks(prev => ({
@@ -324,11 +438,15 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       }));
     }
     return res;
-  }, [fetchLists, selectedListId]);
+  }, [fetchLists, selectedListId, deleteTaskMutation]);
   
+  const linkTaskListMutation = useMutation({
+    mutationFn: (params) => api('/tasks/link_task', 'PUT', params),
+    onSuccess: () => fetchLists({ silent: true }),
+  });
+
   const linkTaskList = useCallback(async (params) => {
-    const res = await api("/tasks/link_task", "PUT", params);
-    if (fetchLists) await fetchLists({ silent: true });
+    const res = await linkTaskListMutation.mutateAsync(params);
     // При перемещении задачи нужна перезагрузка соответствующего списка
     if (params.fromListId === 'my_day' || params.listId === 'my_day') {
       await fetchTasks('my_day', { silent: true });
@@ -593,4 +711,10 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   return <TasksContext.Provider value={contextValue}>{children}</TasksContext.Provider>;
 };
 
-TasksProvider.propTypes = { children: PropTypes.node.isRequired };export default TasksContext; 
+TasksProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+  onError: PropTypes.func,
+  setLoading: PropTypes.func,
+};
+
+export default TasksContext;

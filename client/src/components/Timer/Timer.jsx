@@ -1,5 +1,6 @@
 import { PropTypes } from 'prop-types';
 import { useState, useEffect, useContext } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { useTimer } from 'react-timer-hook';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
@@ -10,6 +11,7 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import CloseIcon from '@mui/icons-material/Close';
 import { AudioContext } from '../../contexts/AudioContext.jsx';
 import axios from 'axios';
+import { useMutation } from '@tanstack/react-query';
 
 
 export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resultText, isRunningProp=false, onExpireFunc=null, handleCloseTimer=null, handleUpdateTimers=null,  playSoundProp=true, soundUrl='/sounds/endTimer.mp3', currentActionId=null }) {
@@ -40,19 +42,15 @@ export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resul
     }
   }, [currentActionId]);
 
-  async function sendTextAndPlayAudio(text) {
-    try {
-      const response = await axios.post('/get_tts_audio', new URLSearchParams({ text }), {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        responseType: 'blob'
-      });
-      const blob = response.data;
-      const audioUrl = URL.createObjectURL(blob);
-      await playAudio(audioUrl, { queued: true });
-    } catch (error) {
-      console.error('There has been a problem with your fetch operation:', error);
-    }
-  }
+  const ttsMutation = useMutation(async (text) => {
+    const response = await axios.post('/get_tts_audio', new URLSearchParams({ text }), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      responseType: 'blob'
+    });
+    const blob = response.data;
+    const audioUrl = URL.createObjectURL(blob);
+    await playAudio(audioUrl, { queued: true });
+  });
 
   function onExpire() {
     let playAudioPromise = Promise.resolve();
@@ -62,7 +60,7 @@ export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resul
     }
 
     playAudioPromise
-      .then(() => sendTextAndPlayAudio(textToTts))
+      .then(() => ttsMutation.mutateAsync(textToTts))
       .then(() => {
         resetTime(); // Сбрасываем таймер
         if (onExpireFunc) {
