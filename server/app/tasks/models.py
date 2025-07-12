@@ -388,7 +388,6 @@ class List(db.Model):
         }
 
 
-print("Определяем Task")
 class Task(db.Model):
     __tablename__ = 'tasks'
     __table_args__ = {'schema': 'productivity'}
@@ -503,62 +502,7 @@ class Task(db.Model):
             kwargs['byweekday'] = (MO, TU, WE, TH, FR)
 
         return rrule(**kwargs)
-
-    @staticmethod
-    def get_myday_tasks(client_timezone=0, user_id=None):
-        if user_id is None:
-            raise ValueError("user_id must be provided for get_myday_tasks")
-
-        client_timezone_offset = timedelta(minutes=-int(client_timezone))
-        now_local = datetime.now(timezone.utc) + client_timezone_offset
-        start_of_day = datetime.combine(now_local.date(), datetime.min.time())
-        end_of_day = datetime.combine(now_local.date(), datetime.max.time())
-        start_utc = start_of_day - client_timezone_offset
-        end_utc = end_of_day - client_timezone_offset
-
-        load_options = [
-            joinedload(Task.lists),
-            joinedload(Task.status),
-            joinedload(Task.priority),
-            joinedload(Task.interval)
-        ]
-
-        # Один запрос: обычные задачи или потенциально повторяющиеся
-        query = Task.query.options(*load_options).filter(
-            Task.user_id == user_id,
-            or_(
-                # Обычные задачи на сегодня
-                and_(
-                    Task.start >= start_utc,
-                    Task.start < end_utc
-                ),
-                # Повторяющиеся задачи, которые могли бы быть сегодня
-                and_(
-                    Task.interval_id.isnot(None),
-                    Task.start.isnot(None),
-                )
-            )
-        )
-
-        all_tasks = query.all()
-
-        # Обычные задачи
-        today_tasks = [task for task in all_tasks if task.interval_id is None and task.start and start_utc <= task.start < end_utc]
-
-        # Повторяющиеся задачи (фильтруем через rrule)
-        recurring_tasks = [
-            task for task in all_tasks
-            if task.interval_id is not None and task.start is not None #and task.status_id != 2
-        ]
-        for task in recurring_tasks:
-            rule = task.build_rrule()
-            if rule and rule.between(start_utc, end_utc, inc=True):
-                today_tasks.append(task)
-
-        # Удалить дубли
-        unique_tasks = list({task.id: task for task in today_tasks}.values())
-        unique_tasks.sort(key=lambda t: t.start.time() if t.start else datetime.min.time())
-        return unique_tasks
+    
 
     def get_rrule(self):
         if not self.interval_id or not self.start:
@@ -647,3 +591,27 @@ class AntiTask(db.Model):
         anti_tasks = query.order_by(AntiTask.start).all()
         schedule = [task.to_dict() for task in anti_tasks]
         return schedule
+
+
+class TaskOverride(db.Model):
+    __tablename__ = 'task_overrides'
+    __table_args__ = {'schema': 'productivity'}
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('productivity.tasks.TaskID'), nullable=False)
+    user_id = db.Column(db.Integer, nullable=False)  # Новый столбец для пользователя
+    date = db.Column(db.Date, nullable=False)  # Дата экземпляра, к которому относится override
+    type = db.Column(db.String(20), nullable=False, default='modified')  # 'modified' или 'skip'
+    # Изменённые поля (например, start, end, title, status и т.д.)
+    data = db.Column(db.JSON, default={})
+
+    task = db.relationship('Task', backref='overrides', foreign_keys=[task_id])
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'task_id': self.task_id,
+            'user_id': self.user_id,
+            'date': self.date.isoformat(),
+            'type': self.type,
+            'data': self.data,
+        }

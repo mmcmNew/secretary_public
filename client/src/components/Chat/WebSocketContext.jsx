@@ -5,6 +5,7 @@ import axios from 'axios';
 import PropTypes from 'prop-types';
 import io from 'socket.io-client';
 import useContainer from '../DraggableComponents/useContainer';
+import { apiPost } from '../../utils/api';
 
 const WebSocketContext = createContext(null);
 
@@ -91,7 +92,7 @@ export const WebSocketProvider = ({ children }) => {
     });
     // console.log(files)
     // console.log(formData.get('files'), formData.get('text'), formData.get('user_id'))
-    const response = await axios.post('/chat/new_message', formData);
+    const response = await apiPost('/chat/new_message', formData);
     const result = response.data;
     if (result.status_code == 201) {
       setFiles([])

@@ -18,7 +18,6 @@ import TTSText from './Scenario/TTSText';
 import AudioPlayer from './Scenario/AudioPlayer';
 import Survey from './Scenario/Survey';
 import axios from 'axios';
-import { useQuery } from '@tanstack/react-query';
 
 export default function ScenarioComponent({ isRunningProp=false, updateProgress  }) {
     const [isRunning, setIsRunning] = useState(isRunningProp);

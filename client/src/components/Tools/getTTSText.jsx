@@ -4,7 +4,7 @@ import axios from 'axios';
 
 export default async function get_tts_audio_filename(text) {
     try {
-        const response = await axios.post('/get_tts_audio_filename', new URLSearchParams({ text }), {
+        const response = await apiPost('/get_tts_audio_filename', new URLSearchParams({ text }), {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
         console.log('Filename:', response.data.filename);

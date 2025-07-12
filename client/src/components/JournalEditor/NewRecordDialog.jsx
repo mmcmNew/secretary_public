@@ -11,12 +11,13 @@ import { Autocomplete, TextField } from '@mui/material';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import axios from 'axios';
+import { apiGet } from '../../utils/api';
 
 dayjs.extend(utc);
 
 async function fetchTablesList() {
     try {
-      const { data } = await axios.get('/get_tables');
+      const data = await apiGet('/get_tables');
       return data.tables;
     } catch (error) {
       console.error('There was a problem with the fetch operation:', error);
@@ -30,7 +31,7 @@ async function fetchDatesList(tableName, month, year, timezone) {
   const formattedMonth = month < 10 ? `0${month}` : `${month}`;
 
   try {
-    const { data } = await axios.get(`/get_days?table_name=${tableName}&month=${formattedMonth}&year=${year}&timezone=${timezone}`);
+    const { data } = await apiGet(`/get_days?table_name=${tableName}&month=${formattedMonth}&year=${year}&timezone=${timezone}`);
 
     if (data) {
       // console.log('Days:', data.days);

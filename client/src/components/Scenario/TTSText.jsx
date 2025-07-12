@@ -5,18 +5,19 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import axios from 'axios';
 import { useMutation } from '@tanstack/react-query';
+import { apiPost } from '../../utils/api';
 
 
 export default function TTSText({ element, elementId, isStartPlay = null, onExpireFunc = null,
     currentActionId=null }) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [audio, setAudio] = useState(null);
-    const ttsMutation = useMutation(async (text) => {
-        const response = await axios.post('/get_tts_audio', new URLSearchParams({ text }), {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            responseType: 'blob'
-        });
-        return response.data;
+    const ttsMutation = useMutation({
+        mutationFn: (text) =>
+            apiPost('/get_tts_audio', new URLSearchParams({ text }), {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                responseType: 'blob'
+            })
     });
 
     useEffect(() => {
@@ -37,14 +38,6 @@ export default function TTSText({ element, elementId, isStartPlay = null, onExpi
             handleClick();
         }
     }, [currentActionId]);
-
-    const ttsMutation = useMutation({
-        mutationFn: (text) =>
-            axios.post('/get_tts_audio', new URLSearchParams({ text }), {
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                responseType: 'blob'
-            })
-    });
 
     async function handleClick() {
         if (audio && isPlaying) {

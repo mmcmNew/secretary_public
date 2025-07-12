@@ -11,7 +11,6 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import CloseIcon from '@mui/icons-material/Close';
 import { AudioContext } from '../../contexts/AudioContext.jsx';
 import axios from 'axios';
-import { useMutation } from '@tanstack/react-query';
 
 
 export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resultText, isRunningProp=false, onExpireFunc=null, handleCloseTimer=null, handleUpdateTimers=null,  playSoundProp=true, soundUrl='/sounds/endTimer.mp3', currentActionId=null }) {
@@ -43,7 +42,7 @@ export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resul
   }, [currentActionId]);
 
   const ttsMutation = useMutation(async (text) => {
-    const response = await axios.post('/get_tts_audio', new URLSearchParams({ text }), {
+    const response = await apiPost('/get_tts_audio', new URLSearchParams({ text }), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       responseType: 'blob'
     });

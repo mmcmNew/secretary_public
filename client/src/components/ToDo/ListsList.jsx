@@ -13,6 +13,7 @@ import ContextMenu from './ListsList/ContextMenu';
 import useTasks from './hooks/useTasks';
 import useContextMenu from './hooks/useContextMenu'
 import { clearAllCache } from '../../utils/api';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 export default function ListsList({
   listsList = [],
@@ -326,9 +327,27 @@ export default function ListsList({
 
 
   return (
-    <>
-      <Button variant="outlined" onClick={handleFullRefresh} sx={{ mb: 1 }}>ОБНОВИТЬ</Button>
-        <Box sx={{
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        width: '100%'
+      }}
+    >
+      <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', mb: 1 }}>
+        <Button
+          variant="outlined"
+          startIcon={<RefreshIcon />}
+          onClick={() => {
+            if (typeof fetchLists === 'function') fetchLists({ silent: false, refetch: true });
+          }}
+        >
+          Обновить
+        </Button>
+      </Box>
+      <Box sx={{
           height: 'calc(100% - 50px)', // Вычитаем высоту кнопки
           overflowY: 'auto'
         }}>
@@ -459,7 +478,7 @@ export default function ListsList({
         <MenuItem onClick={() => handleListDropAction('link')}>Связать</MenuItem>
         <MenuItem onClick={() => handleListDropAction('move')}>Переместить</MenuItem>
       </Menu>
-    </>
+    </Box>
   );
 }
 

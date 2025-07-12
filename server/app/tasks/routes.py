@@ -39,7 +39,7 @@ def make_cache_key(prefix):
 @jwt_required()
 @cache.cached(timeout=60, key_prefix=make_cache_key('lists'))
 def get_lists_and_groups():
-    client_timezone = int(request.args.get('time_zone', 0))
+    client_timezone = request.args.get('time_zone', 'UTC')
     user_id = current_user.id
     data = get_lists_and_groups_data(client_timezone, user_id=user_id)
     if isinstance(data, dict) and 'error' in data:
@@ -164,7 +164,7 @@ def get_tasks_route():
     list_id = request.args.get('list_id')
     start = request.args.get('start')
     end = request.args.get('end')
-    client_timezone = int(request.args.get('time_zone', 0))
+    client_timezone = request.args.get('time_zone', 'UTC')
     user_id = current_user.id
     # current_app.logger.info(f'get_tasks, list_id: {list_id}')
     result, status_code = get_tasks(list_id, client_timezone, start, end, user_id=user_id)

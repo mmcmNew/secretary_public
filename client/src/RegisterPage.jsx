@@ -3,7 +3,7 @@ import { Avatar, Button, TextField, Box, Typography, Container } from '@mui/mate
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useNavigate } from 'react-router-dom';
 import useSignIn from 'react-auth-kit/hooks/useSignIn';
-import api from './utils/api.js';
+import { apiPost } from './utils/api.js';
 
 export default function RegisterPage() {
   const signIn = useSignIn();
@@ -16,7 +16,7 @@ export default function RegisterPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-      const data = await api('/api/register', 'POST', { username, email, password });
+      const { data } = await apiPost('/api/register', { username, email, password });
       const success = signIn({
         auth: {
           token: data.access_token,

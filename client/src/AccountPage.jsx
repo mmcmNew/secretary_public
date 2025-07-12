@@ -4,10 +4,10 @@ import useAuthUser from 'react-auth-kit/hooks/useAuthUser';
 import { Button, Container, Typography, Box, Card, CardContent, Chip, Tabs, Tab } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import JournalManager from './components/JournalManager/JournalManager.jsx';
 import TaskTypeManager from './components/TaskTypeManager/TaskTypeManager.jsx';
+import { apiGet } from './utils/api.js';
 
 export default function AccountPage() {
   const auth = useAuthUser();
@@ -15,7 +15,7 @@ export default function AccountPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
   const { data: subscription } = useQuery(['subscription'], async () => {
-    const { data } = await axios.get('/api/user/subscription');
+    const { data } = await apiGet('/api/user/subscription');
     return data;
   });
   const user = auth();

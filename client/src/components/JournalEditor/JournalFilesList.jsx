@@ -3,7 +3,7 @@ import { PropTypes } from 'prop-types';
 import { Box, Typography, List, ListItem, ListItemText, IconButton } from '@mui/material';
 import { Download, Delete } from '@mui/icons-material';
 import FileRenderer from '../FileRenderer';
-import axios from 'axios';
+import { apiDelete, apiGet } from '../../utils/api';
 
 export default function JournalFilesList({ files, journalType, entryId, onFileDelete }) {
     if (!files || files.length === 0) {
@@ -17,7 +17,7 @@ export default function JournalFilesList({ files, journalType, entryId, onFileDe
 
     const handleDownload = async (file) => {
         try {
-            const response = await axios.get(fileUrl(file, false), { responseType: 'blob' });
+            const response = await apiGet(fileUrl(file, false), { responseType: 'blob' });
             const url = window.URL.createObjectURL(response.data);
             const a = document.createElement('a');
             a.href = url;
@@ -34,7 +34,7 @@ export default function JournalFilesList({ files, journalType, entryId, onFileDe
     const handleDelete = async (file) => {
         if (window.confirm(`Удалить файл "${file.original_filename}"?`)) {
             try {
-                await axios.delete(`/api/journals/${journalType}/${entryId}/files/${file.id}`);
+                await apiDelete(`/api/journals/${journalType}/${entryId}/files/${file.id}`);
                 if (onFileDelete) {
                     onFileDelete(file.id);
                 }

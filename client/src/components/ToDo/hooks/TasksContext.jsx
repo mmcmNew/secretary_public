@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 import useContainer from '../../DraggableComponents/useContainer';
-import api from '../../../utils/api';
+import api, { apiDelete, apiGet, apiPost, apiPut } from '../../../utils/api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 
@@ -27,12 +27,12 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
 
   // ----- List mutations -----
   const addListMutation = useMutation({
-    mutationFn: (params) => api('/tasks/add_list', 'POST', params),
+    mutationFn: (params) => apiPost('/tasks/add_list', params),
     onSuccess: () => queryClient.invalidateQueries(['lists']),
   });
 
   const updateListMutation = useMutation({
-    mutationFn: (params) => api('/tasks/edit_list', 'PUT', params),
+    mutationFn: (params) => apiPut('/tasks/edit_list', params),
     onSuccess: () => queryClient.invalidateQueries(['lists']),
   });
 
@@ -40,23 +40,23 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   // NOTE: server does not expose /tasks/del_list. Deletion is done via edit_list
   // with deleted flag
   const deleteListMutation = useMutation({
-    mutationFn: (params) => api('/tasks/edit_list', 'PUT', { ...params, deleted: true }),
+    mutationFn: (params) => apiPut('/tasks/edit_list', { ...params, deleted: true }),
     onSuccess: () => queryClient.invalidateQueries(['lists']),
   });
 
   const linkListGroupMutation = useMutation({
-    mutationFn: (params) => api('/tasks/link_group_list', 'PUT', params),
+    mutationFn: (params) => apiPut('/tasks/link_group_list', params),
     onSuccess: () => queryClient.invalidateQueries(['lists']),
   });
 
   const deleteFromChildesMutation = useMutation({
-    mutationFn: (params) => api('/tasks/delete_from_childes', 'DELETE', params),
+    mutationFn: (params) => apiDelete('/tasks/delete_from_childes', params),
     onSuccess: () => queryClient.invalidateQueries(['lists']),
   });
 
   // change_childes_order endpoint is missing; use edit_list with childes_order
   const changeChildesOrderMutation = useMutation({
-    mutationFn: (params) => api('/tasks/edit_list', 'PUT', params),
+    mutationFn: (params) => apiPut('/tasks/edit_list', params),
     onSuccess: () => queryClient.invalidateQueries(['lists']),
   });
 
@@ -70,11 +70,15 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     } else {
       url = `/tasks/get_tasks?list_id=${listId}&time_zone=${new Date().getTimezoneOffset()}`;
     }
-    return api(url);
+    const { data } = await apiGet(url);
+    console.log(data)
+    return data;
   };
 
   const fetchListsApi = async () => {
-    return api(`/tasks/get_lists?time_zone=${new Date().getTimezoneOffset()}`);
+    const { data } = await apiGet(`/tasks/get_lists?time_zone=${new Date().getTimezoneOffset()}`);
+    console.log(data)
+    return data;
   };
 
   // Получить задачи для списка
@@ -83,7 +87,10 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     if (!silent && setLoading) setLoading(true);
     fetching.current = true;
     try {
-      const data = await queryClient.fetchQuery(['tasks', listId], () => fetchTasksApi(listId));
+      const data = await queryClient.fetchQuery({
+        queryKey: ['tasks', listId],
+        queryFn: () => fetchTasksApi(listId),
+      });
       const update = {
         data: data.tasks || [],
         loading: false,
@@ -96,6 +103,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       }
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
+      console.log(data)
       return data;
     } catch (err) {
       if (onError) onError(err);
@@ -108,7 +116,8 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     if (!ids || ids.length === 0) return [];
     try {
       const params = new URLSearchParams({ ids: ids.join(',') });
-      const data = await api(`/tasks/get_tasks_by_ids?${params.toString()}`);
+      const { data } = await apiGet(`/tasks/get_tasks_by_ids?${params.toString()}`);
+      console.log(data)
       if (Array.isArray(data.tasks)) {
         setTasks(prev => ({
           ...prev,
@@ -125,11 +134,15 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
 
 
   // Получить все списки
-  const fetchLists = useCallback(async ({ silent = false } = {}) => {
+  const fetchLists = useCallback(async ({ silent = true, refetch = false } = {}) => {
     if (!silent && setLoading) setLoading(true);
     fetching.current = true;
     try {
-      const data = await queryClient.fetchQuery(['lists'], fetchListsApi);
+      const data = await queryClient.fetchQuery({
+        queryKey: ['lists'],
+        queryFn: fetchListsApi,
+        force: refetch,
+      });
       setLists(prev => ({
         ...prev,
         lists: data.lists,
@@ -137,11 +150,12 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
         projects: data.projects,
         loading: false,
         error: null,
-      });
+      }));
       const myDay = data.default_lists?.find(l => l.id === 'my_day');
       setMyDayList(myDay || null);
       if (!silent && setLoading) setLoading(false);
       fetching.current = false;
+      console.log(data)
       return data;
     } catch (err) {
       if (onError) onError(err);
@@ -257,7 +271,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const fetchCalendarEvents = useCallback(async (range) => {
     const finalRange = range || calendarRange;
     if (range) setCalendarRange(range);
-    // console.log('fetchCalendarEvents: ', range, finalRange)
+    console.log('fetchCalendarEvents: ', range, finalRange)
     if (!finalRange.start || !finalRange.end) return [];
     fetching.current = true;
     setCalendarEvents(prev => ({ ...prev, loading: true, error: null }));
@@ -266,8 +280,9 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
       params.append('start', finalRange.start);
       params.append('end', finalRange.end);
       // console.log('fetchCalendarEvents: ', params.toString())
-      const data = await api(`/tasks/get_tasks?${params.toString()}`);
+      const { data } = await apiGet(`/tasks/get_tasks?${params.toString()}`);
       setCalendarEvents({ data: data.tasks || data, loading: false, error: null });
+      console.log(data)
       return data.tasks || data;
     } catch (error) {
       setCalendarEvents(prev => ({ ...prev, loading: false, error }));
@@ -277,13 +292,13 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     }
   }, []);
 
-  const updateCalendarEvent = useCallback((params) => api('/tasks/edit_task', 'PUT', params), []);
-  const addCalendarEvent = useCallback((params) => api('/tasks/add_task', 'POST', params), []);
-  const deleteCalendarEvent = useCallback((params) => api('/tasks/del_task', 'DELETE', params), []);
+  const updateCalendarEvent = useCallback((params) => apiPut('/tasks/edit_task', params), []);
+  const addCalendarEvent = useCallback((params) => apiPost('/tasks/add_task', params), []);
+  const deleteCalendarEvent = useCallback((params) => apiDelete('/tasks/del_task', params), []);
 
   // CRUD операции
   const addTaskMutation = useMutation({
-    mutationFn: (params) => api('/tasks/add_task', 'POST', params),
+    mutationFn: (params) => apiPost('/tasks/add_task', params),
     onSuccess: () => fetchLists({ silent: true }),
   });
 
@@ -310,7 +325,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   }, [fetchLists, selectedListId, addTaskMutation]);
 
   const updateTaskMutation = useMutation({
-    mutationFn: (params) => api('/tasks/edit_task', 'PUT', params),
+    mutationFn: (params) => apiPut('/tasks/edit_task', params),
     onSuccess: () => fetchLists({ silent: true }),
   });
 
@@ -340,7 +355,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   }, [fetchLists, updateTaskMutation]);
 
   const changeTaskStatusMutation = useMutation({
-    mutationFn: (params) => api('/tasks/change_status', 'PUT', params),
+    mutationFn: (params) => apiPut('/tasks/change_status', params),
     onSuccess: () => fetchLists({ silent: true }),
   });
 
@@ -383,7 +398,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   }, [fetchLists, selectedListId]);
 
   const addSubTaskMutation = useMutation({
-    mutationFn: (params) => api('/tasks/add_subtask', 'POST', params),
+    mutationFn: (params) => apiPost('/tasks/add_subtask', params),
   });
 
   const addSubTask = useCallback(async (params) => {
@@ -419,7 +434,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   }, [addSubTaskMutation]);
 
   const deleteTaskMutation = useMutation({
-    mutationFn: (params) => api('/tasks/del_task', 'DELETE', params),
+    mutationFn: (params) => apiDelete('/tasks/del_task', params),
     onSuccess: () => fetchLists({ silent: true }),
   });
 
@@ -441,7 +456,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   }, [fetchLists, selectedListId, deleteTaskMutation]);
   
   const linkTaskListMutation = useMutation({
-    mutationFn: (params) => api('/tasks/link_task', 'PUT', params),
+    mutationFn: (params) => apiPut('/tasks/link_task', params),
     onSuccess: () => fetchLists({ silent: true }),
   });
 
@@ -466,7 +481,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   // Получить конфиг полей задач
   const fetchTaskFields = useCallback(async () => {
     try {
-      const data = await api('/tasks/fields_config');
+      const { data } = await apiGet('/tasks/fields_config');
       setTaskFields(data);
     } catch (error) {
       setTaskFields({ error });
@@ -474,61 +489,67 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   }, []);
 
   // ----- Task types -----
-  const getTaskTypes = useCallback(() => api('/tasks/task_types'), []);
+  const getTaskTypes = useCallback(async () => {
+    const { data } = await apiGet('/tasks/task_types');
+    return data;
+  }, []);
 
   const addTaskType = useCallback(
     async (params) => {
-      const res = await api('/tasks/task_types', 'POST', params);
+      const { data } = await apiPost('/tasks/task_types', params);
       if (fetchTaskFields) await fetchTaskFields();
-      return res;
+      return data;
     },
     [fetchTaskFields]
   );
 
   const updateTaskType = useCallback(
     async (id, params) => {
-      const res = await api(`/tasks/task_types/${id}`, 'PUT', params);
+      const { data } = await apiPut(`/tasks/task_types/${id}`, params);
       if (fetchTaskFields) await fetchTaskFields();
-      return res;
+      return data;
     },
     [fetchTaskFields]
   );
 
   const deleteTaskType = useCallback(
     async (id) => {
-      const res = await api(`/tasks/task_types/${id}`, 'DELETE');
+      const { data } = await apiDelete(`/tasks/task_types/${id}`);
       if (fetchTaskFields) await fetchTaskFields();
-      return res;
+      return data;
     },
     [fetchTaskFields]
   );
 
   // ----- Task type groups -----
-  const getTaskTypeGroups = useCallback(() => api('/tasks/task_type_groups'), []);
+  const getTaskTypeGroups = useCallback(async () => {
+    const { data } = await apiGet('/tasks/task_type_groups');
+    return data;
+  }, []);
 
   const addTaskTypeGroup = useCallback(
     async (params) => {
-      const res = await api('/tasks/task_type_groups', 'POST', params);
+      const { data } = await apiPost('/tasks/task_type_groups', params);
       if (fetchTaskFields) await fetchTaskFields();
-      return res;
+      return data;
     },
     [fetchTaskFields]
   );
 
   const updateTaskTypeGroup = useCallback(
     async (id, params) => {
-      const res = await api(`/tasks/task_type_groups/${id}`, 'PUT', params);
+      const { data } = await apiPut(`/tasks/task_type_groups/${id}`, params);
       if (fetchTaskFields) await fetchTaskFields();
-      return res;
+      return data;
     },
     [fetchTaskFields]
   );
 
   const deleteTaskTypeGroup = useCallback(
     async (id) => {
-      const res = await api(`/tasks/task_type_groups/${id}`, 'DELETE');
+      const { data } = await apiDelete(`/tasks/task_type_groups/${id}`,);
       if (fetchTaskFields) await fetchTaskFields();
-      return res;
+      return data;
     },
     [fetchTaskFields]
   );
@@ -536,16 +557,16 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   // Получить подзадачи по parent_task_id
   const getSubtasksByParentId = useCallback(async (parent_task_id) => {
     try {
-      const res = await api(`/tasks/get_subtasks?parent_task_id=${parent_task_id}`);
+      const { data } = await apiGet(`/tasks/get_subtasks?parent_task_id=${parent_task_id}`);
       //объеденить tasks.data с res.subtasks
-      if (res.subtasks) {
+      if (data.subtasks) {
         setTasks(prev => ({
           ...prev,
-          data: [...prev.data, ...res.subtasks]
+          data: [...prev.data, ...data.subtasks]
         }));
       }
 
-      return res.subtasks || [];
+      return data.subtasks || [];
     } catch (err) {
       if (onError) onError(err);
       return [];
@@ -673,6 +694,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     calendarEvents,
     calendarRange,
     setCalendarRange,
+    fetchTasks,
     fetchCalendarEvents,
     updateCalendarEvent,
     addCalendarEvent,
@@ -695,7 +717,6 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     changeChildesOrder,
     selectedTaskId,
     setSelectedTaskId,
-    fetchTasks,
     fetchTasksByIds,
     forceRefreshTasks,
     addTask,

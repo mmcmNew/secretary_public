@@ -13,8 +13,6 @@ import {
   IconButton,
   List,
   ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
   Chip,
   Alert,
   FormControl,
@@ -30,8 +28,8 @@ import {
   Delete as DeleteIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
-import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiDelete, apiGet, apiPost, apiPut } from '../../utils/api';
 
 // Функция транслитерации
 const transliterate = (text) => {
@@ -76,7 +74,7 @@ const FIELD_TYPES = [
 export default function JournalManager() {
   const queryClient = useQueryClient();
   const { data: schemas = [], isLoading } = useQuery(['schemas'], async () => {
-    const { data } = await axios.get('/api/journals/schemas');
+    const { data } = await apiGet('/api/journals/schemas');
     return data;
   });
   const [error, setError] = useState('');
@@ -89,16 +87,16 @@ export default function JournalManager() {
   });
 
   const deleteSchemaMutation = useMutation(
-    (id) => axios.delete(`/api/journals/schemas/${id}`),
+    (id) => apiDelete(`/api/journals/schemas/${id}`),
     { onSuccess: () => queryClient.invalidateQueries(['schemas']) }
   );
 
   const saveSchemaMutation = useMutation(
     async ({ id, data }) => {
       if (id) {
-        await axios.put(`/api/journals/schemas/${id}`, data);
+        await apiPut(`/api/journals/schemas/${id}`, data);
       } else {
-        await axios.post('/api/journals/schemas', data);
+        await apiPost('/api/journals/schemas', data);
       }
     },
     { onSuccess: () => queryClient.invalidateQueries(['schemas']) }

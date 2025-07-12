@@ -1,7 +1,7 @@
 import { createContext, useState, useEffect, useReducer, useContext } from "react";
 import PropTypes from "prop-types";
-import axios from 'axios';
 import { containerTypes } from "./containerConfig";
+import { apiGet, apiPost } from "../../utils/api";
 
 const ContainerContext = createContext();
 
@@ -122,24 +122,26 @@ const ContainerProvider = ({ children }) => {
     useEffect(() => {
         const fetchDashboard = async () => {
             try {
-                const { data } = await axios.get(`/dashboard/last`);
+                const { data } = await apiGet(`/dashboard/last`);
+                console.log("Dashboard загружен:", data);
                 setDashboardData({ id: data.id, name: data.name });
 
-                    const loadedTimers = data.timers || [];
-                    setTimers(loadedTimers);
-                    const loadedContainers = (data.containers || []).map((containerData) =>
-                        createComponentFromType(containerData.type, containerData.id, containerData),
-                    );
+                const loadedTimers = data.timers || [];
+                setTimers(loadedTimers);
 
-                    setContainers(loadedContainers);
-                    setThemeMode(data.themeMode || "light");
-                } catch (error) {
-                    console.log("Ошибка загрузки dashboard, используем интерфейс по умолчанию:", error.message);
-                    setDashboardData({ id: 0, name: "dashboard 1" });
-                    setContainers([]);
-                    setTimers([]);
-                    setThemeMode("light");
-                }
+                const loadedContainers = (data.containers || []).map((containerData) => 
+                    createComponentFromType(containerData.type, containerData.id, containerData)
+                );
+
+                setContainers(loadedContainers);
+                setThemeMode(data.themeMode || "light");
+            } catch (error) {
+                console.log("Ошибка загрузки dashboard, используем интерфейс по умолчанию:", error.message);
+                setDashboardData({ id: 0, name: "dashboard 1" });
+                setContainers([]);
+                setTimers([]);
+                setThemeMode("light");
+            }
             };
 
         fetchDashboard();
@@ -150,7 +152,7 @@ const ContainerProvider = ({ children }) => {
         // отправляем все контейнеры кроме таймеров
         const sendingContainers = containers.filter((container) => container.type !== "timersToolbar");
         try {
-            await axios.post("/dashboard", {
+            await apiPost("/dashboard", {
                 dashboard_data: dashboardData,
                 containers: sendingContainers.map(c => {
                     const { componentType, content, componentProps, ...serializableContainer } = c;
@@ -160,7 +162,7 @@ const ContainerProvider = ({ children }) => {
                 timers: timers
             });
             console.log("Dashboard сохранен");
-        } catch (error) {
+        } catch {
             console.error("Failed to send containers to server:", error);
         }
     };
@@ -211,14 +213,17 @@ const ContainerProvider = ({ children }) => {
         );
     };
 
-    function sendTimersToServer(updatedTimers) {
+    async function sendTimersToServer(updatedTimers) {
         // отправляем таймеры на сервер
-        axios.post("/post_timers", {
-            dashboardId: dashboardData.id,
-            timers: updatedTimers
-        })
-            .then((response) => console.log("Timers saved:", response.data.message))
-            .catch((error) => console.error("Failed to save timers:", error));
+        try {
+            const { data } = await apiPost("/post_timers", {
+                dashboardId: dashboardData.id,
+                timers: updatedTimers
+            })
+            console.log(data?.message)
+        } catch(data) {
+            console.error("Failed to save timers:", data);
+        }
     }
 
     return (
