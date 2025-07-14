@@ -6,6 +6,7 @@ from flask_migrate import Migrate
 from flask_socketio import SocketIO
 from flask_cors import CORS
 from flask_caching import Cache
+from flask_debugtoolbar import DebugToolbarExtension
 
 from .config import WorkConfig, TestingConfig
 from sqlalchemy import text
@@ -41,6 +42,11 @@ def create_app(config_type='work'):
     jwt.init_app(app)
     socketio.init_app(app)
     cache.init_app(app, config={'CACHE_TYPE': 'SimpleCache'})
+    # Включаем DebugToolbar только в режиме отладки
+    if app.debug or app.config.get('DEBUG', False):
+        app.config['SECRET_KEY'] = app.config.get('SECRET_KEY', 'dev')
+        app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
+        toolbar = DebugToolbarExtension(app)
 
     with app.app_context():
         # if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):

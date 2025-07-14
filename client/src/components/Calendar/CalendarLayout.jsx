@@ -28,16 +28,16 @@ export default function CalendarLayout({
   onSuccess = null,
   onError = null,
 }) {
-  const { updateTask, addTask, fetchTasks, tasks, taskFields, addSubTask, changeTaskStatus, deleteTask, lists, calendarEvents, fetchCalendarEvents } = useTasks();
+  const { updateTask, addTask, fetchTasks, tasks, taskFields, addSubTask, changeTaskStatus, deleteTask, 
+    lists, calendarEvents, fetchCalendarEvents, processEventChange } = useTasks();
   const { setUpdates, handleUpdateContent } = useContainer();
   const calendarRef = useRef(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [dialogScroll, setDialogScroll] = useState("paper");
   const [selectedTaskId, setSelectedTaskId] = useState(null);
-  const [selectedTaskStart, setSelectedTaskStart] = useState(null);
   const [overrideDialog, setOverrideDialog] = useState({ open: false, eventInfo: null, mode: null });
   const [overrideSnackbar, setOverrideSnackbar] = useState({ open: false, event: null });
-  const [overrideMode, setOverrideMode] = useState(null); // null | 'single' | 'series'
+  const [selectedEvent, setSelectedEvent] = useState(null)
 
   const [calendarSettings, setCalendarSettings] = useState(
     () => calendarSettingsProp || defaultCalendarSettings
@@ -116,51 +116,54 @@ export default function CalendarLayout({
 
   const handleDialogClose = useCallback(() => {
     setTaskDialogOpen(false);
-    setSelectedTaskStart(null);
     setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
   }, [setUpdates]);
 
   const handleEventClick = useCallback(
-    async (event) => {
-      const calendarEvent = calendarEvents.data?.find(e => e.id == event?.event?.id);
-      // Если это override-экземпляр — открываем TaskDialog сразу для этого экземпляра
-      if (calendarEvent && calendarEvent.is_override) {
-        setOverrideMode('single');
-        setSelectedTaskId(event?.event?.id || null);
-        setSelectedTaskStart(event?.event?.start ? event.event.start.toISOString() : null);
+    (event) => {
+      const calendarEvent = calendarEvents.data?.events?.find(e => e.id == event?.event?.id);
+  
+      if (calendarEvent) {
+        console.log(calendarEvent)
+        if (!calendarEvent.is_override && calendarEvent.interval_id) {
+          // Открываем диалог выбора
+          setOverrideDialog({ open: true, eventInfo: { type: 'click', event: calendarEvent } });
+          return;
+        }
+        // Если это override или не повторяющееся — сразу открываем редактор
+        setSelectedTaskId(calendarEvent.id);
+        setSelectedEvent(calendarEvent);
         handleDialogOpen("paper");
-        return;
       }
-      // Если это экземпляр повторяющейся задачи — показываем Snackbar
-      if (calendarEvent && calendarEvent.rrule && event?.event?.extendedProps?.originalStart) {
-        setOverrideSnackbar({ open: true, event });
-        return;
-      }
-      // Обычная задача — открываем TaskDialog сразу
-      setSelectedTaskId(event?.event?.id || null);
-      setSelectedTaskStart(event?.event?.start ? event.event.start.toISOString() : null);
-      handleDialogOpen("paper");
     },
     [calendarEvents, handleDialogOpen]
   );
 
   // Обработка выбора в Snackbar
-  const handleOverrideSnackbarChoice = (mode) => {
-    if (!overrideSnackbar.event) return;
-    setOverrideMode(mode);
-    setSelectedTaskId(overrideSnackbar.event.event.id);
-    setSelectedTaskStart(overrideSnackbar.event.event.start ? overrideSnackbar.event.event.start.toISOString() : null);
-    setOverrideSnackbar({ open: false, event: null });
-    handleDialogOpen("paper");
-  };
+  const handleOverrideSnackbarChoice = async (mode) => {
+    if (!overrideDialog.eventInfo) return;
 
-  // Сброс overrideMode при закрытии TaskDialog
-  const handleDialogCloseWithReset = useCallback(() => {
-    setTaskDialogOpen(false);
-    setSelectedTaskStart(null);
-    setOverrideMode(null);
-    setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
-  }, [setUpdates]);
+    if (overrideDialog.eventInfo.type === 'click') {
+      const event = overrideDialog.eventInfo.event;
+      let newSelectedEvent = null;
+      if (mode === 'single') {
+        newSelectedEvent = { ...event, is_override: true };
+      } else if (mode === 'series') {
+        newSelectedEvent = calendarEvents.data?.parent_tasks?.find(e => e.id == event.parent_task_id);
+      }
+      setSelectedEvent(newSelectedEvent);
+      setSelectedTaskId(newSelectedEvent.id);
+      handleDialogOpen("paper");
+    }
+  
+    if (overrideDialog.eventInfo.type === 'drag') {
+      const eventInfo = overrideDialog.eventInfo.eventInfo;
+      const updatingMode = mode;
+      await processEventChange(eventInfo, updatingMode); 
+    }
+  
+    setOverrideDialog({ open: false, eventInfo: null, mode: null });
+  };
 
   const handleEventChange = useCallback(
     async (eventInfo) => {
@@ -204,13 +207,13 @@ export default function CalendarLayout({
         }
       }
 
-      const originalCalendarEvent = calendarEvents?.data?.find(
+      const originalCalendarEvent = calendarEvents?.events?.find(
         (event) => event && event.id == eventInfo.event.id
       );
 
       // Если это экземпляр повторяющейся задачи — показать диалог выбора
-      if (originalCalendarEvent && originalCalendarEvent.rrule && eventDict.start && eventInfo.event.extendedProps?.originalStart) {
-        setOverrideDialog({ open: true, eventInfo, mode: null });
+      if (originalCalendarEvent && originalCalendarEvent.status_id && eventDict.start && eventInfo.event.extendedProps?.originalStart) {
+        setOverrideDialog({ open: true, eventInfo: { type: 'drag', eventInfo }, mode: null });
         return;
       }
 
@@ -291,7 +294,7 @@ export default function CalendarLayout({
         calendarRef={calendarRef}
         newSettings={calendarSettings}
         saveSettings={handleSaveCalendarSettings}
-        events={calendarEvents.data}
+        events={calendarEvents.data.events}
         tasks={tasks.data}
         lists={lists}
         handleEventClick={handleEventClick}
@@ -304,13 +307,12 @@ export default function CalendarLayout({
       />
       <TaskDialog
         open={taskDialogOpen}
-        handleClose={handleDialogCloseWithReset}
+        handleClose={handleDialogClose}
         handleDelDateClick={handleDelDateClick}
         scroll={dialogScroll}
         setSelectedTaskId={setSelectedTaskId}
-        tasks={calendarEvents.data}
+        tasks={calendarEvents.events}
         selectedTaskId={selectedTaskId}
-        clickedStart={overrideMode === 'single' ? selectedTaskStart : null}
         taskFields={taskFields}
         addSubTask={addSubTask}
         updateTask={updateTask}
@@ -324,15 +326,15 @@ export default function CalendarLayout({
         message={
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <span>Что изменить?</span>
-            <Button variant="contained" color="primary" onClick={() => handleOverrideSnackbarChoice('single')}>
-              Только этот экземпляр (только {overrideSnackbar.event?.event?.extendedProps?.originalStart ? new Date(overrideSnackbar.event.event.extendedProps.originalStart).toLocaleDateString() : 'этот день'})
+            <Button variant="contained" color="primary" onClick={() => handleOverrideSnackbarChoice('single')}>  
+              Только этот экземпляр (только {overrideSnackbar.calendarEvent?.start ? new Date(overrideSnackbar.calendarEvent?.start).toLocaleDateString() : 'этот день'})            
             </Button>
             <Button variant="outlined" color="secondary" onClick={() => handleOverrideSnackbarChoice('series')}>
               Всю серию
             </Button>
           </Box>
         }
-        ContentProps={{ sx: { minWidth: 320 } }}
+        // ContentProps={{ sx: { minWidth: 320 } }}
         onClose={() => setOverrideSnackbar({ open: false, event: null })}
       />
       {/* Диалог выбора режима для drag&drop повторяющихся задач */}
@@ -352,6 +354,7 @@ export default function CalendarLayout({
 }
 
 CalendarLayout.propTypes = {
+  processEventChange: PropTypes.func,
   containerId: PropTypes.string,
   handleDatesSet: PropTypes.func,
   calendarSettingsProp: PropTypes.object,

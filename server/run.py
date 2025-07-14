@@ -39,7 +39,7 @@ def main():
     config_type = 'test' if args.mode == 'test' else 'work'
     app = create_app(config_type)
 
-    if args.mode in ['development', 'production']:
+    if args.mode in ['development', 'production', 'test']:
         print(f"{args.mode.capitalize()} server running at: https://{args.host}:{args.port}")
         run_server_with_ssl(app, args)
     else:  # docker or test without SSL

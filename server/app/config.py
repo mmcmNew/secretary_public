@@ -74,6 +74,7 @@ class BaseConfig:
 class TestingConfig(BaseConfig):
     DEBUG = True
     WTF_CSRF_ENABLED = False
+    # SQLALCHEMY_ECHO = True
 
 
 class WorkConfig(BaseConfig):

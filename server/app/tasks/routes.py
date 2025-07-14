@@ -16,11 +16,8 @@ from .handlers import (
     link_group_list,
     delete_from_childes,
     link_task,
-    get_anti_schedule,
-    add_anti_task,
-    edit_anti_task,
-    del_anti_task,
     get_subtasks_by_parent_id,
+    get_calendar_events
 )
 from .models import DataVersion, TaskTypeGroup, TaskType
 from app import db, cache
@@ -178,6 +175,25 @@ def get_tasks_route():
     return jsonify(result), status_code
 
 
+@to_do_app.route('/tasks/get_calendar_events', methods=['GET'])
+@jwt_required()
+@cache.cached(timeout=60, key_prefix=make_cache_key('tasks'))
+def get_calendar_events_route():
+    start = request.args.get('start')
+    end = request.args.get('end')
+    user_id = current_user.id
+    # current_app.logger.info(f'get_tasks, list_id: {list_id}')
+    result, status_code = get_calendar_events(start, end, user_id=user_id)
+    if status_code == 200:
+        version = DataVersion.get_version('tasksVersion')
+        response = jsonify(result)
+        response.set_etag(version)
+        if request.if_none_match and version in request.if_none_match:
+            return '', 304
+        return response
+    return jsonify(result), status_code
+
+
 @to_do_app.route('/tasks/get_tasks_by_ids', methods=['GET'])
 @jwt_required()
 @cache.cached(timeout=60, key_prefix=make_cache_key('tasks_by_ids'))
@@ -197,63 +213,6 @@ def get_tasks_by_ids_route():
             return '', 304
         return response
     return jsonify(result), status_code
-
-
-@to_do_app.route('/tasks/get_anti_schedule', methods=['GET'])
-@jwt_required()
-@cache.cached(timeout=60, key_prefix=make_cache_key('anti'))
-def get_anti_schedule_route():
-    current_app.logger.info('get_anti_schedule')
-    user_id = current_user.id
-    result, status_code = get_anti_schedule(user_id)
-    if status_code == 200:
-        version = DataVersion.get_version('tasksVersion')
-        response = jsonify(result)
-        response.set_etag(version)
-        if request.if_none_match and version in request.if_none_match:
-            return '', 304
-        return response
-    return jsonify(result), status_code
-
-
-@to_do_app.route('/tasks/add_anti_task', methods=['POST'])
-@jwt_required()
-def add_anti_task_route():
-    data = request.get_json()
-    user_id = current_user.id
-    result, status_code = add_anti_task(data, user_id)
-    response = jsonify(result)
-    if status_code == 200:
-        new_version = DataVersion.update_version('tasksVersion')
-        notify_data_update(tasksVersion=new_version)
-        response.set_etag(new_version)
-    return response, status_code
-
-
-@to_do_app.route('/tasks/edit_anti_task', methods=['PUT'])
-@jwt_required()
-def edit_anti_task_route():
-    data = request.get_json()
-    result, status_code = edit_anti_task(data)
-    response = jsonify(result)
-    if status_code == 200:
-        new_version = DataVersion.update_version('tasksVersion')
-        notify_data_update(tasksVersion=new_version)
-        response.set_etag(new_version)
-    return response, status_code
-
-
-@to_do_app.route('/tasks/del_anti_task', methods=['DELETE'])
-@jwt_required()
-def del_anti_task_route():
-    data = request.get_json()
-    result, status_code = del_anti_task(data)
-    response = jsonify(result)
-    if status_code == 200:
-        new_version = DataVersion.update_version('tasksVersion')
-        notify_data_update(tasksVersion=new_version)
-        response.set_etag(new_version)
-    return response, status_code
 
 
 @to_do_app.route('/tasks/del_task', methods=['DELETE'])

@@ -1,9 +1,8 @@
 # to_do_app/handlers.py
-from flask import current_app, jsonify
+from flask import current_app
 
 from .models import *
 from datetime import datetime, timezone, timedelta
-from flask import current_app
 from sqlalchemy import func
 import pytz
 
@@ -103,7 +102,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
 
     # --- Карты для ускоренного доступа
     tasks_map = {task.id: task for task in tasks}
-    lists_map = {lst.id: lst for lst in lists_list}
+    # lists_map = {lst.id: lst for lst in lists_list}
 
     # --- Получение задач "Мой день" через универсальную функцию get_tasks
     now = datetime.now(tz)
@@ -167,14 +166,107 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
 
 
 def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None):
-    tasks_data = []
     if user_id is None:
-        raise ValueError("user_id must be provided for get_tasks")
+        raise ValueError("user_id must be provided")
+
+    from .models import Task
+    tasks_data = []
     tz_name = client_timezone or 'UTC'
     try:
         tz = pytz.timezone(tz_name)
     except Exception:
         tz = pytz.UTC
+
+    load_options = [
+        db.joinedload(Task.lists),
+        db.joinedload(Task.status),
+        db.joinedload(Task.priority),
+        db.joinedload(Task.interval),
+    ]
+
+    start_dt = _parse_iso_datetime(start) if start else None
+    end_dt = _parse_iso_datetime(end) if end else None
+
+    if list_id == 'my_day':
+        now = datetime.now(tz)
+        start_dt = tz.localize(datetime(now.year, now.month, now.day, 0, 0, 0)).astimezone(pytz.UTC)
+        end_dt = tz.localize(datetime(now.year, now.month, now.day, 23, 59, 59, 999999)).astimezone(pytz.UTC)
+        list_id = 'all'
+
+    if list_id == 'all':
+        tasks_query = Task.query.options(*load_options).filter_by(user_id=user_id).all()
+    elif list_id == 'tasks':
+        tasks_query = Task.query.options(*load_options).filter(~Task.lists.any(), Task.user_id == user_id).all()
+    elif list_id == 'important':
+        tasks_query = Task.query.options(*load_options).filter(Task.priority_id == 3, Task.user_id == user_id).all()
+    elif list_id == 'background':
+        tasks_query = Task.query.options(*load_options).filter(Task.is_background, Task.user_id == user_id).all()
+    else:
+        if not isinstance(list_id, int):
+            try:
+                list_id = int(list_id)
+            except (TypeError, ValueError):
+                return {'error': 'Invalid list_id'}, 400
+
+        tasks_query = (
+            Task.query
+            .join(task_list_relations, Task.id == task_list_relations.c.TaskID)
+            .join(List, List.id == task_list_relations.c.ListID)
+            .filter(List.id == list_id, Task.user_id == user_id)
+            .options(*load_options)
+            .all()
+        )
+
+    for task in tasks_query:
+        if not task.interval_id:  # исключаем повторяющиеся события
+            if _is_task_in_range(task, start_dt, end_dt):
+                tasks_data.append(task.to_dict())
+
+    return {'tasks': tasks_data}, 200
+
+
+def delete_redundant_override(override, task):
+    """Удаляет override, если его данные полностью совпадают с основной задачей (для start/end сравнивается только время)."""
+    fields = [
+        'title', 'start', 'end', 'note', 'status_id', 'completed_at', 'color', 'priority_id', 'type_id'
+    ]
+    task_dict = task.to_dict()
+    override_data = override.data or {}
+    current_app.logger.info(f'delete_redundant_override(override: {override_data}, task: {task_dict})')
+    for field in fields:
+        val_override = override_data.get(field)
+        val_task = task_dict.get(field)
+        # Для start и end сравниваем только время
+        if field in ('start', 'end'):
+            if val_override and val_task:
+                try:
+                    t_override = datetime.fromisoformat(val_override.replace('Z','')).time()
+                    t_task = datetime.fromisoformat(val_task.replace('Z','')).time()
+                except Exception as e:
+                    current_app.logger.warning(f'Ошибка парсинга времени для поля {field}: {e}')
+                    return False
+                current_app.logger.info(f'Comparing {field} (time): {t_override} vs {t_task}')
+                if t_override != t_task:
+                    return False
+            elif val_override != val_task:
+                # Один есть, другого нет
+                current_app.logger.info(f'Comparing {field} (one is None): {val_override} vs {val_task}')
+                return False
+        else:
+            current_app.logger.info(f'Comparing {field}: {val_override} vs {val_task}')
+            if val_override != val_task:
+                return False  # Есть отличие, не удаляем
+    db.session.delete(override)
+    db.session.commit()
+    return True
+
+
+def get_calendar_events(start=None, end=None, user_id=None):
+    if user_id is None:
+        raise ValueError("user_id must be provided")
+
+    from .models import Task, TaskOverride
+
     start_dt = _parse_iso_datetime(start) if start else None
     end_dt = _parse_iso_datetime(end) if end else None
     load_options = [
@@ -184,93 +276,93 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
         db.joinedload(Task.interval),
     ]
 
-    # Универсальная логика для любого списка и диапазона
-    if list_id == 'my_day':
-        now = datetime.now(tz)
-        start_of_day = tz.localize(datetime(now.year, now.month, now.day, 0, 0, 0)).astimezone(pytz.UTC)
-        end_of_day = tz.localize(datetime(now.year, now.month, now.day, 23, 59, 59, 999999)).astimezone(pytz.UTC)
-        start_dt = start_of_day
-        end_dt = end_of_day
-        list_id = 'all'  # Получаем все задачи пользователя, фильтруем ниже
+    tasks_query = Task.query.options(*load_options).filter_by(user_id=user_id).all()
+    events = []
+    parent_tasks = []
 
-    if list_id == 'all':
-        tasks_query = Task.query.options(*load_options).filter_by(user_id=user_id).all()
-    elif list_id == 'tasks':
-        tasks_query = (
-            Task.query.options(*load_options)
-            .filter(~Task.lists.any(), Task.user_id == user_id)
-            .all()
-        )
-    elif list_id == 'important':
-        tasks_query = Task.query.options(*load_options).filter(Task.priority_id == 3, Task.user_id == user_id).all()
-    elif list_id == 'background':
-        tasks_query = Task.query.options(*load_options).filter(Task.is_background, Task.user_id == user_id).all()
-    elif list_id == 'events':
-        tasks_query = Task.query.options(*load_options).filter_by(user_id=user_id).all()
+    # Собираем id всех повторяющихся задач
+    recurring_task_ids = [task.id for task in tasks_query if task.interval_id and task.start]
+
+    # Собираем все overrides по этим задачам и диапазону дат
+    if recurring_task_ids and start_dt and end_dt:
+        overrides = TaskOverride.query.filter(
+            TaskOverride.task_id.in_(recurring_task_ids),
+            TaskOverride.date >= start_dt.date(),
+            TaskOverride.date <= end_dt.date(),
+            TaskOverride.user_id == user_id
+        ).all()
+    elif recurring_task_ids:
+        overrides = TaskOverride.query.filter(
+            TaskOverride.task_id.in_(recurring_task_ids),
+            TaskOverride.user_id == user_id
+        ).all()
     else:
-        tasks_query = (
-            Task.query
-            .join(task_list_relations, Task.id == task_list_relations.c.TaskID)
-            .join(List, List.id == task_list_relations.c.ListID)
-            .filter(
-                List.id == list_id,
-                Task.user_id == user_id,
-            )
-            .options(*load_options)
-            .all()
-        )
-
-    from .models import TaskOverride
-    def task_in_range(task):
-        if start_dt or end_dt:
-            if task.interval_id and task.start:
-                rule = task.build_rrule()
-                # duration = (task.end - task.start) if (task.end and task.start) else timedelta(hours=1)
-                # --- Исправление: duration всегда только для одного экземпляра! ---
-                if task.end and task.start:
-                    # Если end <= start (например, задача на весь день), делаем duration = 1 час по умолчанию
-                    duration = task.end - task.start
-                    if duration.total_seconds() <= 0:
-                        duration = timedelta(hours=1)
-                else:
-                    duration = timedelta(hours=1)
-                rng_start = start_dt or datetime.min.replace(tzinfo=None)
-                rng_end = end_dt or datetime.max.replace(tzinfo=None)
-                occurrences = rule.between(rng_start - duration, rng_end, inc=True) if rule else []
-                for occ in occurrences:
-                    occ_end = occ + duration
-                    occ_date = occ.date()
-                    override = TaskOverride.query.filter_by(task_id=task.id, date=occ_date, user_id=user_id).first()
-                    if override:
-                        if override.type == 'skip':
-                            continue
-                        elif override.type == 'modified':
-                            instance = {**task.to_dict(), **(override.data or {})}
-                            instance['start'] = occ.isoformat() + 'Z'
-                            instance['end'] = occ_end.isoformat() + 'Z'
-                            instance['is_override'] = True
-                            instance['override_id'] = override.id
-                            tasks_data.append(instance)
-                            continue
-                    # Обычный экземпляр
-                    instance = task.to_dict()
-                    instance['start'] = occ.isoformat() + 'Z'
-                    instance['end'] = occ_end.isoformat() + 'Z'
-                    instance['is_override'] = False
-                    tasks_data.append(instance)
-                return False
-            st = task.start
-            en = task.end or st
-            if start_dt and en and en < start_dt:
-                return False
-            if end_dt and st and st > end_dt:
-                return False
-        return True
+        overrides = []
+    # Индексируем overrides для быстрого доступа
+    override_map = {(o.task_id, o.date): o for o in overrides}
 
     for task in tasks_query:
-        if task_in_range(task):
-            tasks_data.append(task.to_dict())
-    return {'tasks': tasks_data}, 200
+        if task.interval_id and task.start:
+            parent_tasks.append(task.to_dict())
+
+            rule = task.build_rrule()
+            if task.end and task.start:
+                duration = task.end - task.start
+                if duration.total_seconds() <= 0:
+                    duration = timedelta(hours=1)
+            else:
+                duration = timedelta(hours=1)
+
+            rng_start = start_dt or datetime.min.replace(tzinfo=None)
+            rng_end = end_dt or datetime.max.replace(tzinfo=None)
+            occurrences = rule.between(rng_start - duration, rng_end, inc=True) if rule else []
+
+            for occ in occurrences:
+                occ_end = occ + duration
+                occ_date = occ.date()
+
+                override = override_map.get((task.id, occ_date))
+                if override:
+                    # Если override полностью совпадает с основной задачей — удаляем его
+                    if delete_redundant_override(override, task):
+                        # После удаления — используем основную задачу
+                        instance = task.to_dict()
+                        instance['start'] = occ.isoformat() + 'Z'
+                        instance['end'] = occ_end.isoformat() + 'Z'
+                        instance['is_override'] = False
+                        events.append(instance)
+                        continue
+                    if override.type == 'skip':
+                        continue
+                    elif override.type == 'modified':
+                        instance = {**task.to_dict(), **(override.data or {})}
+                        instance['start'] = occ.isoformat() + 'Z'
+                        instance['end'] = occ_end.isoformat() + 'Z'
+                        instance['is_override'] = True
+                        instance['override_id'] = override.id
+                        events.append(instance)
+                        continue
+
+                instance = task.to_dict()
+                instance['start'] = occ.isoformat() + 'Z'
+                instance['end'] = occ_end.isoformat() + 'Z'
+                instance['is_override'] = False
+                events.append(instance)
+
+    return {
+        'events': events,
+        'parent_tasks': parent_tasks
+    }, 200
+
+
+def _is_task_in_range(task, start_dt, end_dt):
+    st = task.start
+    en = task.end or st
+    if start_dt and en and en < start_dt:
+        return False
+    if end_dt and st and st > end_dt:
+        return False
+    return True
 
 
 def get_tasks_by_ids(task_ids, user_id=None):
@@ -555,7 +647,7 @@ def change_task_status(data, user_id=None):
                 override.type = 'modified'
                 override.data = {**(override.data or {}), 'status_id': 2, 'completed_at': completed_dt.isoformat() + 'Z'}
                 db.session.add(override)
-            db.session.commit()
+                db.session.commit()
             # Не меняем основную задачу, только создаём override
             changed_ids = [task.id]
             result = {'success': True, 'task': 'all', 'changed_ids': changed_ids}
@@ -599,72 +691,6 @@ def collect_all_subtasks(root_task):
             collected.append(sub)
             stack.append(sub)
     return collected
-
-
-def get_anti_schedule(user_id=None):
-    if user_id is None:
-        raise ValueError("user_id must be provided for get_anti_schedule")
-    anti_schedule = AntiTask.get_anti_schedule(user_id)
-    return {'anti_schedule': anti_schedule}, 200
-
-
-def add_anti_task(data, user_id=None):
-    # print(f'add_anti_task: data: {data}')
-    title = data.get('title').strip()
-    start = data.get('start')
-    end = data.get('end')
-    updated_fields = {key: value for key, value in data.items() if key not in ['taskId', 'id', 'subtasks', 'start',
-                                                                               'end', 'title', 'type']}
-
-    if user_id is None:
-        raise ValueError("user_id must be provided for add_anti_task")
-
-    if start and end and title:
-        start = _parse_iso_datetime(start)
-        end = _parse_iso_datetime(end)
-        anti_task = AntiTask(title=title, start=start, end=end, user_id=user_id)
-        for key, value in updated_fields.items():
-            if hasattr(anti_task, key):
-                setattr(anti_task, key, value)
-        db.session.add(anti_task)
-        db.session.commit()
-        return {'success': True, 'message': 'Anti task added successfully', 'task': anti_task.to_dict()}, 200
-    else:
-        return {'success': False, 'message': 'Missing required fields'}, 400
-
-
-def del_anti_task(data):
-    anti_task_id = data.get('taskId')
-    anti_task = AntiTask.query.get(anti_task_id)
-    if anti_task:
-        db.session.delete(anti_task)
-        db.session.commit()
-        return {'success': True, 'message': 'Anti task deleted successfully'}, 200
-    else:
-        return {'success': False, 'message': 'Anti task not found'}, 404
-
-
-def edit_anti_task(data):
-    anti_task_id = data.get('taskId')
-    updated_fields = {key: value for key, value in data.items() if key not in ['taskId', 'subtasks']}
-
-    # print(f'edit_anti_task: updated_fields: {updated_fields}')
-
-    anti_task = AntiTask.query.get(anti_task_id)
-
-    if not anti_task:
-        return {'success': False, 'message': 'Task not found'}, 404
-
-    for key, value in updated_fields.items():
-        if hasattr(anti_task, key):
-            if key in ['end', 'start'] and value:
-                value = _parse_iso_datetime(value)
-            setattr(anti_task, key, value)
-
-    db.session.add(anti_task)
-    db.session.commit()
-    return {'success': True, 'task': anti_task.to_dict()}, 200
-
 
 
 def del_task(data, user_id=None):

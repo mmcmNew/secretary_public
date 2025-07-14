@@ -269,6 +269,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const [calendarRange, setCalendarRange] = useState({ start: null, end: null });
 
   const fetchCalendarEvents = useCallback(async (range) => {
+    console.log(range, calendarRange)
     const finalRange = range || calendarRange;
     if (range) setCalendarRange(range);
     console.log('fetchCalendarEvents: ', range, finalRange)
@@ -276,14 +277,14 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     fetching.current = true;
     setCalendarEvents(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const params = new URLSearchParams({ list_id: 'events' });
+      const params = new URLSearchParams({ ...finalRange });
       params.append('start', finalRange.start);
       params.append('end', finalRange.end);
       // console.log('fetchCalendarEvents: ', params.toString())
-      const { data } = await apiGet(`/tasks/get_tasks?${params.toString()}`);
-      setCalendarEvents({ data: data.tasks || data, loading: false, error: null });
+      const { data } = await apiGet(`/tasks/get_calendar_events?${params.toString()}`);
+      setCalendarEvents({ data: data, loading: false, error: null });
       console.log(data)
-      return data.tasks || data;
+      return data;
     } catch (error) {
       setCalendarEvents(prev => ({ ...prev, loading: false, error }));
       return [];
