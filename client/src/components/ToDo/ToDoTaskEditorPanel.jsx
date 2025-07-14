@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import TaskEditor from './TaskEditor';
@@ -15,15 +15,40 @@ export default function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId 
     changeTaskStatus,
     deleteTask,
     setSelectedTaskId: setTaskId,
-    selectedListId,
+    getSubtasksByParentId,
+    fetchTasks,
   } = useTasks();
 
-  const handleAddSubTask = useCallback((subtask, taskId) => {
-    addSubTask({ title: subtask, parentTaskId: taskId });
-    setNewSubTask && setNewSubTask("");
-  }, [addSubTask]);
+  const [task, setTask] = useState(null);
+  const [subtasks, setSubtasks] = useState([]);
 
-  if (!selectedTaskId) return null;
+  // Загружаем задачу и подзадачи при изменении selectedTaskId
+  useEffect(() => {
+    if (!selectedTaskId) {
+      setTask(null);
+      setSubtasks([]);
+      return;
+    }
+    // Найти задачу по id
+    const allTasks = [...(tasks?.data || []), ...(myDayTasks?.data || [])];
+    const foundTask = allTasks.find(t => t.id === selectedTaskId);
+    setTask(foundTask || null);
+    // Загрузить подзадачи
+    if (foundTask) {
+      getSubtasksByParentId(foundTask.id).then(setSubtasks);
+    } else {
+      setSubtasks([]);
+    }
+  }, [selectedTaskId, tasks, myDayTasks, getSubtasksByParentId]);
+
+  // onChange для TaskEditor
+  const handleTaskEditorChange = useCallback(async (updatedTask) => {
+    if (!updatedTask || !updatedTask.id) return;
+    await updateTask({ taskId: updatedTask.id, ...updatedTask });
+    await fetchTasks();
+  }, [updateTask, fetchTasks]);
+
+  if (!selectedTaskId || !task) return null;
   return (
     <Box
       sx={{
@@ -44,15 +69,14 @@ export default function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId 
           <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>Загрузка полей задачи...</Typography>
         ) : (
           <TaskEditor
-            key={selectedTaskId}
-            tasks={selectedListId === 'my_day' ? myDayTasks.data : tasks.data}
-            selectedTaskId={selectedTaskId}
+            key={task.id}
+            task={task}
+            subtasks={subtasks}
             taskFields={taskFields}
             addSubTask={addSubTask}
-            updateTask={updateTask}
             changeTaskStatus={changeTaskStatus}
             deleteTask={deleteTask}
-            selectedListId={selectedListId}
+            onChange={handleTaskEditorChange}
           />
         )}
       </Box>

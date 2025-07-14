@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, memo, useContext, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm, Controller, useFieldArray, FormProvider } from "react-hook-form";
 import {
     Box,
@@ -27,50 +27,28 @@ import ColorPicker from "../ColorPicker";
 import NewRecordDialog from "../JournalEditor/NewRecordDialog";
 import TaskTypeDialog from "../TaskTypeManager/TaskTypeDialog.jsx";
 import PropTypes from "prop-types";
-import useTasks from "./hooks/useTasks";
-import { AudioContext } from "../../contexts/AudioContext.jsx";
 import DateTimeRangePickerField from "./DateTimeRangePicker.jsx";
-
 
 function TaskEditor({
     taskFields,
-    tasks = [],
-    selectedTaskId = null,
-    clickedStart = null,
+    task = null,
+    subtasks = [],
+    onChange = null,
+    addSubTask = null,
     updateTask = null,
     changeTaskStatus = null,
-    addSubTask = null,
     deleteTask = null,
-    selectedListId = null,
 }) {
     const methods = useForm({ defaultValues: { subtasks: [] } });
-    const { control, getValues, setValue, reset, watch, setError, clearErrors, formState: { errors } } = methods;
-    const fields = watch();
-    const { fields: subtaskFields, append, remove } = useFieldArray({ control, name: 'subtasks' });
+    const { control, setValue, reset, watch, formState: { errors } } = methods;
+    const { fields: subtaskFields, append, remove, replace } = useFieldArray({ control, name: 'subtasks' });
     const [newRecordDialogOpen, setNewRecordDialogOpen] = useState(false);
     const [typeDialogOpen, setTypeDialogOpen] = useState(false);
     const [newTypeData, setNewTypeData] = useState({ name: '', color: '#3788D8', description: '' });
     const updateNewTypeData = (field, value) => setNewTypeData(prev => ({ ...prev, [field]: value }));
-    const { addTaskType, getSubtasksByParentId } = useTasks();
-    const { playAudio } = useContext(AudioContext);
-    const [subtasks, setSubtasks] = useState([]);
+    const lastSent = useRef({});
 
-    useEffect(() => {
-        if (!selectedTaskId) return;
-        getSubtasksByParentId(selectedTaskId)
-            .then(setSubtasks)
-            .catch(() => setSubtasks([]));
-    }, [selectedTaskId, getSubtasksByParentId]);
-
-    const taskMap = useMemo(() => new Map(tasks.map(t => [t.id, t])), [tasks]);
-    const task = taskMap.get(+selectedTaskId) || null;
-    const [taskStatus, setTaskStatus] = useState(task?.status_id || 1);
-
-    useEffect(() => {
-        if (task) setTaskStatus(task.status_id);
-    }, [task]);
-
-    // Инициализация полей задачи
+    // Инициализация формы из пропсов
     useEffect(() => {
         if (!task || !taskFields) return;
         const sorted = Object.entries(taskFields)
@@ -95,110 +73,82 @@ function TaskEditor({
         initial.title = task.title;
         initial.start = task.start ? dayjs(task.start).toISOString() : null;
         initial.end = task.end ? dayjs(task.end).toISOString() : null;
-        // Используем подзадачи, полученные с сервера
         initial.subtasks = subtasks.map(st => ({ id: st.id, title: st.title, status_id: st.status_id }));
         reset(initial);
-    }, [task, taskFields, reset, subtasks]);
+        replace(initial.subtasks);
+    }, [task, taskFields, subtasks, reset, replace]);
 
-    const lastSent = useRef({});
-
-    const handleUpdate = useCallback(async (field, value) => {
+    // Обработчики
+    const handleUpdate = (field, value, opts = {}) => {
         setValue(field, value);
-
-
-        if (task && value !== lastSent.current[field] && value !== task[field]) {
-            lastSent.current[field] = value;
-            let listId = null;
-            if (selectedListId) {
-                listId = selectedListId;
-            }
-            await updateTask({ taskId: task.id, [field]: value, listId });
+        if (opts.immediate && onChange) {
+            // Собираем актуальные значения формы
+            const values = methods.getValues();
+            const updatedTask = {
+                ...task,
+                ...values,
+                subtasks: values.subtasks,
+            };
+            onChange(updatedTask);
         }
-    }, [task, updateTask, selectedListId, setValue]);
+    };
 
-    const handleRangeUpdate = useCallback((val) => {
-        handleUpdate('start', val?.start || null);
-        handleUpdate('end', val?.end || null);
-    }, [handleUpdate]);
+    const handleRangeUpdate = (val) => {
+        handleUpdate('start', val?.start || null, { immediate: true });
+        handleUpdate('end', val?.end || null, { immediate: true });
+    };
 
-    const handleToggle = useCallback(async (taskId, checked) => {
-        const status_id = checked ? 2 : 1;
-        let listId = null;
-        if (taskId === task.id) {
-            if (Array.isArray(task.lists) && task.lists.length > 0) {
-                listId = task.lists[0].id;
-            } else if (selectedListId) {
-                listId = selectedListId;
-            }
-            setTaskStatus(status_id);
-        } else {
-            const sub = taskMap.get(taskId);
-            if (Array.isArray(sub?.lists) && sub.lists.length > 0) {
-                listId = sub.lists[0].id;
-            } else if (selectedListId) {
-                listId = selectedListId;
-            }
+    const handleToggle = (taskId, checked, subIdx = null) => {
+        if (changeTaskStatus) changeTaskStatus(taskId, checked);
+        // onChange вызовется через родителя, но для локальных чекбоксов тоже отправим
+        if (onChange) {
+            const values = methods.getValues();
+            const updatedTask = {
+                ...task,
+                ...values,
+                subtasks: values.subtasks,
+            };
+            onChange(updatedTask);
         }
-        const payload = { taskId, status_id, listId };
-        if (status_id === 2) {
-            payload.completed_at = dayjs().toISOString();
-            if (clickedStart) payload.current_start = clickedStart;
-            playAudio("/sounds/isComplited.wav", { queued: false });
-        }
-        await changeTaskStatus(payload);
-    }, [changeTaskStatus, task, taskMap, selectedListId]);
+    };
 
-    const handleSubBlur = useCallback(async (index) => {
+    const handleSubBlur = async (index) => {
         const field = subtaskFields[index];
-        const title = getValues(`subtasks.${index}.title`).trim();
+        const title = methods.getValues(`subtasks.${index}.title`).trim();
         if (!title) return;
-        let listId = null;
-        const sub = field.id ? taskMap.get(field.id) : null;
-        if (Array.isArray(sub?.lists) && sub.lists.length > 0) {
-            listId = sub.lists[0].id;
-        } else if (selectedListId) {
-            listId = selectedListId;
+        if (!field.id && addSubTask) {
+            await addSubTask({ title, parentTaskId: task.id });
+            // onChange вызовется через обновление subtasks пропа
+        } else if (onChange) {
+            // Для существующей подзадачи отправим изменения
+            const values = methods.getValues();
+            const updatedTask = {
+                ...task,
+                ...values,
+                subtasks: values.subtasks,
+            };
+            onChange(updatedTask);
         }
-        if (field.id) {
-            if (sub && sub.title !== title) {
-                await updateTask({ taskId: field.id, title, listId });
-            }
-        } else {
-            await addSubTask({ title, parentTaskId: task.id, listId });
-            remove(index);
-        }
-    }, [subtaskFields, getValues, addSubTask, updateTask, task, selectedListId, taskMap, remove]);
+    };
 
-
-    const handleKeyDown = useCallback((e, field, subId = null) => {
+    const handleKeyDown = (e, field, subIdx = null) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            if (subId) handleSubBlur(subId);
-            else handleUpdate(field, e.target.value);
+            if (subIdx !== null) handleSubBlur(subIdx);
+            else {
+                handleUpdate(field, e.target.value, { immediate: true });
+            }
         }
-    }, [handleSubBlur, handleUpdate]);
+    };
 
+    const handleDeleteSubTask = (subId) => {
+        if (deleteTask) deleteTask(subId);
+        // onChange вызовется через обновление subtasks пропа
+    };
 
-    const handleDeleteSubTask = useCallback(async (subId) => {
-        let listId = null;
-        const sub = taskMap.get(subId);
-        if (Array.isArray(sub?.lists) && sub.lists.length > 0) {
-            listId = sub.lists[0].id;
-        } else if (selectedListId) {
-            listId = selectedListId;
-        }
-        await deleteTask({ taskId: subId, listId });
-    }, [deleteTask, taskMap, selectedListId]);
-
-    const handleDeleteTask = useCallback(async () => {
-        let listId = null;
-        if (Array.isArray(task.lists) && task.lists.length > 0) {
-            listId = task.lists[0].id;
-        } else if (selectedListId) {
-            listId = selectedListId;
-        }
-        await deleteTask({ taskId: task.id, listId });
-    }, [deleteTask, task, selectedListId]);
+    const handleDeleteTask = () => {
+        if (deleteTask) deleteTask(task.id);
+    };
 
     if (!task) return null;
 
@@ -208,7 +158,7 @@ function TaskEditor({
             <Paper variant="outlined" sx={{ p: 1, my: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Checkbox
-                        checked={taskStatus === 2}
+                        checked={task.status_id === 2}
                         sx={{ mr: 1, p: 0 }}
                         onChange={(e) => handleToggle(task.id, e.target.checked)}
                     />
@@ -220,7 +170,7 @@ function TaskEditor({
                                 label="Название задачи"
                                 sx={{ width: '100%', my: 1 }}
                                 {...field}
-                                onBlur={(e) => handleUpdate('title', e.target.value)}
+                                onBlur={(e) => handleUpdate('title', e.target.value, { immediate: true })}
                                 onKeyDown={(e) => handleKeyDown(e, 'title')}
                                 multiline
                                 maxRows={3}
@@ -237,7 +187,7 @@ function TaskEditor({
                                     <Checkbox
                                         checked={sub.status_id === 2}
                                         sx={{ m: 0, p: 0 }}
-                                        onChange={(e) => sub.id && handleToggle(sub.id, e.target.checked)}
+                                        onChange={(e) => sub.id && handleToggle(sub.id, e.target.checked, idx)}
                                     />
                                     <Controller
                                         name={`subtasks.${idx}.title`}
@@ -271,7 +221,7 @@ function TaskEditor({
                     </Box>
                 </Grid>
             </Paper>
-            {taskStatus === 2 && (
+            {task.status_id === 2 && (
                 <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
                     Завершено: {task.completed_at ? dayjs(task.completed_at).format('DD/MM/YYYY HH:mm') : ''}
                 </Typography>
@@ -303,7 +253,7 @@ function TaskEditor({
                                                         onChange={(nv) => {
                                                             const iso = nv ? nv.toISOString() : null;
                                                             ctrl.onChange(iso);
-                                                            handleUpdate(key, iso);
+                                                            handleUpdate(key, iso, { immediate: true });
                                                         }}
                                                         slotProps={{ textField: { inputProps: { readOnly: false }, error: !!errors[key], helperText: errors[key]?.message } }}
                                                     />
@@ -330,7 +280,7 @@ function TaskEditor({
                                                     if (key === 'type_id' && nv && nv.value === '__add__') {
                                                         setTypeDialogOpen(true);
                                                     } else {
-                                                        handleUpdate(key, nv ? nv.value : null);
+                                                        handleUpdate(key, nv ? nv.value : null, { immediate: true });
                                                     }
                                                 }}
                                                 renderInput={(params) => <TextField {...params} label={field.name} />}
@@ -348,7 +298,8 @@ function TaskEditor({
                                                 multiline
                                                 rows={5}
                                                 {...ctrl}
-                                                onBlur={(e) => handleUpdate(key, e.target.value)}
+                                                onBlur={(e) => handleUpdate(key, e.target.value, { immediate: true })}
+                                                onKeyDown={(e) => handleKeyDown(e, key)}
                                                 variant="outlined"
                                             />
                                         )}
@@ -363,7 +314,7 @@ function TaskEditor({
                                                     value="check"
                                                     size="small"
                                                     selected={!!ctrl.value}
-                                                    onChange={() => handleUpdate(key, !ctrl.value)}
+                                                    onChange={() => handleUpdate(key, !ctrl.value, { immediate: true })}
                                                     sx={{ border: '1px solid', borderColor: ctrl.value ? 'darkgrey' : 'grey.400', justifyContent: 'flex-start', p: 0 }}
                                                 >
                                                     <Checkbox checked={!!ctrl.value} />
@@ -381,7 +332,7 @@ function TaskEditor({
                                                 fieldKey={key}
                                                 fieldName={field.name}
                                                 selectedColorProp={ctrl.value || ''}
-                                                onColorChange={(_, color) => handleUpdate(key, color)}
+                                                onColorChange={(_, color) => handleUpdate(key, color, { immediate: true })}
                                             />
                                         )}
                                     />
@@ -396,7 +347,7 @@ function TaskEditor({
                                                 getOptionLabel={opt => opt.title}
                                                 isOptionEqualToValue={(opt, val) => opt.id === val.id}
                                                 value={Array.isArray(ctrl.value) ? ctrl.value : []}
-                                                onChange={(e, nv) => handleUpdate(key, nv)}
+                                                onChange={(e, nv) => handleUpdate(key, nv, { immediate: true })}
                                                 renderInput={(params) => <TextField {...params} label={field.name} />}
                                                 renderTags={(val, getTagProps) => val.map((opt, idx) => <Chip key={opt.id} label={opt.title} {...getTagProps({ idx })} />)}
                                             />
@@ -412,7 +363,8 @@ function TaskEditor({
                                                 label={field.name}
                                                 type={field.type}
                                                 {...ctrl}
-                                                onBlur={(e) => handleUpdate(key, e.target.value)}
+                                                onBlur={(e) => handleUpdate(key, e.target.value, { immediate: true })}
+                                                onKeyDown={(e) => handleKeyDown(e, key)}
                                                 variant="outlined"
                                             />
                                         )}
@@ -422,20 +374,15 @@ function TaskEditor({
                         );
                     })}
             </Paper>
-            <NewRecordDialog open={newRecordDialogOpen} handleClose={() => setNewRecordDialogOpen(false)} taskId={selectedTaskId} />
+            <NewRecordDialog open={newRecordDialogOpen} handleClose={() => setNewRecordDialogOpen(false)} taskId={task.id} />
             <TaskTypeDialog
                 open={typeDialogOpen}
                 onClose={() => setTypeDialogOpen(false)}
                 data={newTypeData}
                 onChange={updateNewTypeData}
                 onSave={async () => {
-                    try {
-                        await addTaskType(newTypeData);
-                    } catch (err) {
-                        console.error('Failed to add task type', err);
-                    } finally {
-                        setTypeDialogOpen(false);
-                    }
+                    // Типы задач должны обновляться вне компонента
+                    setTypeDialogOpen(false);
                 }}
             />
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 1 }}>
@@ -449,15 +396,14 @@ function TaskEditor({
 }
 
 TaskEditor.propTypes = {
-    taskFields: PropTypes.object,  // сюда передаётся TaskField.data
-    tasks: PropTypes.array,
-    selectedTaskId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    clickedStart: PropTypes.string,
+    taskFields: PropTypes.object,
+    task: PropTypes.object,
+    subtasks: PropTypes.array,
+    onChange: PropTypes.func,
+    addSubTask: PropTypes.func,
     updateTask: PropTypes.func,
     changeTaskStatus: PropTypes.func,
-    addSubTask: PropTypes.func,
     deleteTask: PropTypes.func,
-    selectedListId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 };
 
 export default TaskEditor;

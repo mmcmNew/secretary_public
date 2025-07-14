@@ -322,32 +322,37 @@ def get_calendar_events(start=None, end=None, user_id=None):
                 occ_date = occ.date()
 
                 override = override_map.get((task.id, occ_date))
+
+                def build_instance(base_data, is_override=False, override_id=None):
+                    instance = dict(base_data)
+                    instance['start'] = occ.isoformat() + 'Z'
+                    instance['end'] = occ_end.isoformat() + 'Z'
+                    instance['is_override'] = is_override
+                    instance['parent_task_id'] = task.id
+                    if override_id:
+                        instance['override_id'] = override_id
+                        instance['id'] = f"override_{override_id}"
+                    else:
+                        # Уникальный id для обычного экземпляра
+                        instance['id'] = f"instance_{task.id}_{occ_date.isoformat()}"
+                    instance['range'] = {
+                        'start': occ.isoformat() + 'Z' if occ else None,
+                        'end': occ_end.isoformat() + 'Z' if occ_end else None,
+                    }
+                    return instance
+
                 if override:
-                    # Если override полностью совпадает с основной задачей — удаляем его
                     if delete_redundant_override(override, task):
-                        # После удаления — используем основную задачу
-                        instance = task.to_dict()
-                        instance['start'] = occ.isoformat() + 'Z'
-                        instance['end'] = occ_end.isoformat() + 'Z'
-                        instance['is_override'] = False
-                        events.append(instance)
+                        events.append(build_instance(task.to_dict(), is_override=False))
                         continue
                     if override.type == 'skip':
                         continue
                     elif override.type == 'modified':
-                        instance = {**task.to_dict(), **(override.data or {})}
-                        instance['start'] = occ.isoformat() + 'Z'
-                        instance['end'] = occ_end.isoformat() + 'Z'
-                        instance['is_override'] = True
-                        instance['override_id'] = override.id
-                        events.append(instance)
+                        merged_data = {**task.to_dict(), **(override.data or {})}
+                        events.append(build_instance(merged_data, is_override=True, override_id=override.id))
                         continue
 
-                instance = task.to_dict()
-                instance['start'] = occ.isoformat() + 'Z'
-                instance['end'] = occ_end.isoformat() + 'Z'
-                instance['is_override'] = False
-                events.append(instance)
+                events.append(build_instance(task.to_dict(), is_override=False))
 
     return {
         'events': events,

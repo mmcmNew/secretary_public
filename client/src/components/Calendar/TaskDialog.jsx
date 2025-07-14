@@ -5,6 +5,13 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
 import TaskEditor from "../ToDo/TaskEditor";
 
 export default function TaskDialog({
@@ -12,42 +19,73 @@ export default function TaskDialog({
     handleClose,
     handleDelDateClick,
     scroll,
-    setSelectedTaskId,
-    tasks,
-    selectedTaskId,
-    clickedStart = null,
-    taskFields,
+    task = null,
+    subtasks = null,
+    parentTask = null,
+    overrides = [],
+    loadSubtasks = null,
+    taskFields = {},
+    onChange = null,
     addSubTask = null,
-    updateTask = null,
-    changeTaskStatus = null,
-    deleteTask = null,
 }) {
-    // console.log("TaskDialog:  selectedTaskId: ", selectedTaskId);
-    // console.log("TaskDialog:  tasks: ", tasks);
-    // console.log("TaskDialog:  taskFields: ", taskFields);
-    const descriptionElementRef = React.useRef(null);
+    // 0: экземпляр, 1: серия, 2: список
+    const [activeTab, setActiveTab] = React.useState(0);
+    // Для перехода по overrides
+    const [currentTask, setCurrentTask] = React.useState(task);
+    const [currentSubtasks, setCurrentSubtasks] = React.useState(subtasks || []);
 
     React.useEffect(() => {
-        if (open) {
-            const { current: descriptionElement } = descriptionElementRef;
-            if (descriptionElement !== null) {
-                descriptionElement.focus();
-            }
-        }
+        setCurrentTask(task);
+    }, [task]);
+    React.useEffect(() => {
+        setCurrentSubtasks(subtasks || []);
+    }, [subtasks]);
+
+    // Сброс вкладки на 'Экземпляр' при каждом открытии диалога
+    React.useEffect(() => {
+        if (open) setActiveTab(1);
     }, [open]);
 
-    if (!selectedTaskId) {
-        return null;
-    }
+    // // Загружаем подзадачи при смене задачи
+    // React.useEffect(() => {
+    //     if (open && currentTask && loadSubtasks) {
+    //         loadSubtasks(currentTask.id).then(setCurrentSubtasks);
+    //     }
+    // }, [open, currentTask, loadSubtasks]);
+
+    // Обработка изменений задачи
+    const handleTaskChange = React.useCallback(
+        (updatedTask) => {
+            setCurrentTask(updatedTask);
+            if (onChange) onChange(updatedTask);
+        },
+        [onChange]
+    );
+
+    // Переключение вкладок
+    const handleTabChange = (event, newValue) => {
+        setActiveTab(newValue);
+        if (newValue === 0 && task) {
+            setCurrentTask(task);
+        } else if (newValue === 1 && parentTask) {
+            setCurrentTask(parentTask);
+        }
+    };
+
+    // Переход к override/серии из списка
+    const handleSelectOverride = (item, isParent) => {
+        setActiveTab(isParent ? 1 : 0);
+        setCurrentTask(item);
+    };
+
+    if (!task) return null;
 
     function handleDelClick() {
-        if (handleDelDateClick) handleDelDateClick(selectedTaskId);
-        if (typeof setSelectedTaskId === "function") setSelectedTaskId(null);
+        if (handleDelDateClick) handleDelDateClick(currentTask.id);
     }
 
     function handleCloseClick() {
-        if (typeof setSelectedTaskId === "function") setSelectedTaskId(null);
-        handleClose();
+        handleClose && handleClose();
     }
 
     return (
@@ -59,22 +97,59 @@ export default function TaskDialog({
             aria-describedby="scroll-dialog-description"
             sx={{ maxWidth: "100%" }}
         >
-            <DialogTitle id="scroll-dialog-title">Изменить задачу</DialogTitle>
+            <DialogTitle id="scroll-dialog-title">Редактирование задачи</DialogTitle>
+            { parentTask &&
+                <Tabs value={activeTab} onChange={handleTabChange}>
+                    <Tab label="Экземпляр" />
+                    <Tab label="Серия" disabled={!parentTask} />
+                    <Tab label="Список" disabled={!parentTask} />
+                </Tabs>
+            }
             <DialogContent dividers={scroll === "paper"} style={{ width: "500px", maxWidth: "100%" }}>
-                <TaskEditor
-                    tasks={tasks}
-                    selectedTaskId={selectedTaskId}
-                    clickedStart={clickedStart}
-                    taskFields={taskFields}
-                    addSubTask={addSubTask}
-                    updateTask={updateTask}
-                    changeTaskStatus={changeTaskStatus}
-                    deleteTask={deleteTask}
-                />
+                {activeTab === 0 && (
+                    <TaskEditor
+                        task={currentTask}
+                        subtasks={currentSubtasks}
+                        taskFields={taskFields}
+                        onChange={handleTaskChange}
+                        addSubTask={addSubTask}
+                    />
+                )}
+                {activeTab === 1 && parentTask && (
+                    <TaskEditor
+                        task={parentTask}
+                        subtasks={currentSubtasks}
+                        taskFields={taskFields}
+                        onChange={onChange}
+                        addSubTask={addSubTask}
+                    />
+                )}
+                {activeTab === 2 && (
+                    <List>
+                        <ListItem disablePadding>
+                            <ListItemButton selected={activeTab === 1} onClick={() => handleSelectOverride(parentTask, true)}>
+                                <ListItemText primary={`Серия: ${parentTask?.title || 'Без названия'}`} secondary={parentTask ? `ID: ${parentTask.id}` : ''} />
+                            </ListItemButton>
+                        </ListItem>
+                        <Divider />
+                        {overrides && overrides.length > 0 ? overrides.map((ovr) => (
+                            <ListItem key={ovr.id} disablePadding>
+                                <ListItemButton selected={currentTask?.id === ovr.id} onClick={() => handleSelectOverride(ovr, false)}>
+                                    <ListItemText
+                                        primary={`Экземпляр: ${ovr.title || ''}`}
+                                        secondary={`Дата: ${ovr.start ? new Date(ovr.start).toLocaleString() : ''} (ID: ${ovr.id})`}
+                                    />
+                                </ListItemButton>
+                            </ListItem>
+                        )) : (
+                            <ListItem><ListItemText primary="Нет изменённых экземпляров" /></ListItem>
+                        )}
+                    </List>
+                )}
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleDelClick}>Удалить дату выполнения</Button>
-                <Button onClick={handleCloseClick}>Close</Button>
+                <Button onClick={handleCloseClick}>Закрыть</Button>
             </DialogActions>
         </Dialog>
     );
@@ -85,13 +160,13 @@ TaskDialog.propTypes = {
     handleClose: PropTypes.func,
     handleDelDateClick: PropTypes.func,
     scroll: PropTypes.string,
-    setSelectedTaskId: PropTypes.func,
-    tasks: PropTypes.array,
-    selectedTaskId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    clickedStart: PropTypes.string,
+    task: PropTypes.object,
+    subtasks: PropTypes.array,
+    parentTask: PropTypes.object,
+    parentSubtasks: PropTypes.array,
+    overrides: PropTypes.array,
+    loadSubtasks: PropTypes.func,
     taskFields: PropTypes.object,
+    onChange: PropTypes.func,
     addSubTask: PropTypes.func,
-    updateTask: PropTypes.func,
-    changeTaskStatus: PropTypes.func,
-    deleteTask: PropTypes.func,
 };
