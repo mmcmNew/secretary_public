@@ -5,11 +5,33 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { Controller, useFormContext } from "react-hook-form";
 import dayjs from "dayjs";
 import ClearIcon from "@mui/icons-material/Clear";
+import CheckIcon from "@mui/icons-material/CheckCircle";
 import 'dayjs/locale/ru';
 dayjs.locale('ru');
 
+import { useState, useRef } from "react";
+
 export default function DateTimeRangePickerField({ name = "startEnd", onValidBlur }) {
     const { control, trigger, getValues } = useFormContext();
+    const [editing, setEditing] = useState({ start: false, end: false });
+    const [lastSent, setLastSent] = useState({ start: null, end: null });
+    const startInputRef = useRef();
+    const endInputRef = useRef();
+
+    // Универсальный обработчик для отправки
+    const handleSave = async (field) => {
+        let currentValue = getValues(name) || {};
+        const { start, end } = currentValue;
+        let valid = await trigger(name);
+        if (valid) {
+            onValidBlur?.({
+                start: start ? dayjs(start).toISOString() : null,
+                end: end ? dayjs(end).toISOString() : null,
+            });
+            setLastSent({ start, end });
+            setEditing((prev) => ({ ...prev, [field]: false }));
+        }
+    };
 
     return (
         <Controller
@@ -20,55 +42,38 @@ export default function DateTimeRangePickerField({ name = "startEnd", onValidBlu
                     const { start = null, end = null } = value;
                     if (!start && !end) return true;
                     if (!start || !end) return "Выберите дату и время начала и окончания";
-                    
                     const startDate = dayjs(start);
                     const endDate = dayjs(end);
                     if (!startDate.isValid() || !endDate.isValid()) return "Некорректная дата";
                     if (!startDate.isBefore(endDate)) return "Дата окончания должна быть позже даты начала";
                     return true;
-                }                
+                }
             }}
             render={({ field: { value = {}, onChange }, fieldState: { error } }) => {
                 const { start = null, end = null } = value;
                 const parsedStart = start ? dayjs(start) : null;
                 const parsedEnd = end ? dayjs(end) : null;
-
-                const handleAccept = async () => {
-                    let currentValue = getValues(name) || {};
-                    const { start, end } = currentValue;
-
-                    if (start && !end) {
-                        const newEnd = dayjs(start).add(1, "hour");
-                        currentValue = { ...currentValue, end: newEnd };
-                        onChange(currentValue);
-                    }
-
-                    if (await trigger(name)) {
-                        onValidBlur?.({
-                            start: currentValue.start
-                                ? dayjs(currentValue.start).toISOString()
-                                : null,
-                            end: currentValue.end
-                                ? dayjs(currentValue.end).toISOString()
-                                : null,
-                        });
-                    }
-                };
+                const isStartChanged = start !== lastSent.start;
+                const isEndChanged = end !== lastSent.end;
 
                 const handleStartChange = (newStart) => {
                     onChange({ ...value, start: newStart });
+                    setEditing((prev) => ({ ...prev, start: true }));
                 };
 
                 const handleEndChange = (newEnd) => {
                     onChange({ ...value, end: newEnd });
+                    setEditing((prev) => ({ ...prev, end: true }));
                 };
 
                 const clearStart = () => {
                     onChange({ ...value, start: null });
+                    setEditing((prev) => ({ ...prev, start: true }));
                 };
 
                 const clearEnd = () => {
                     onChange({ ...value, end: null });
+                    setEditing((prev) => ({ ...prev, end: true }));
                 };
 
                 return (
@@ -81,21 +86,36 @@ export default function DateTimeRangePickerField({ name = "startEnd", onValidBlu
                                 format="DD.MM.YYYY HH:mm"
                                 value={parsedStart}
                                 onChange={handleStartChange}
-                                onAccept={handleAccept}
                                 slotProps={{
                                     textField: {
                                         fullWidth: true,
                                         error: !!error,
-                                        onBlur: handleAccept,
+                                        inputRef: startInputRef,
                                         InputProps: {
-                                            endAdornment: start ? (
-                                                <InputAdornment position="end">
-                                                    <IconButton onClick={clearStart} size="small">
-                                                        <ClearIcon />
-                                                    </IconButton>
-                                                </InputAdornment>
-                                            ) : null
-                                        }
+                                            endAdornment: (
+                                                <>
+                                                    {start && (
+                                                        <InputAdornment position="end">
+                                                            <IconButton onClick={clearStart} size="small">
+                                                                <ClearIcon />
+                                                            </IconButton>
+                                                        </InputAdornment>
+                                                    )}
+                                                    {/* Галочка всегда видна */}
+                                                    <InputAdornment position="end">
+                                                        <IconButton
+                                                            color="success"
+                                                            size="small"
+                                                            title="Сохранить"
+                                                            onClick={() => handleSave('start')}
+                                                        >
+                                                            <CheckIcon style={{ color: '#43a047' }} />
+                                                        </IconButton>
+                                                    </InputAdornment>
+                                                </>
+                                            )
+                                        },
+                                        onFocus: () => setEditing((prev) => ({ ...prev, start: true })),
                                     }
                                 }}
                             />
@@ -104,21 +124,36 @@ export default function DateTimeRangePickerField({ name = "startEnd", onValidBlu
                                 format="DD.MM.YYYY HH:mm"
                                 value={parsedEnd}
                                 onChange={handleEndChange}
-                                onAccept={handleAccept}
                                 slotProps={{
                                     textField: {
                                         fullWidth: true,
                                         error: !!error,
-                                        onBlur: handleAccept,
+                                        inputRef: endInputRef,
                                         InputProps: {
-                                            endAdornment: end ? (
-                                                <InputAdornment position="end">
-                                                    <IconButton onClick={clearEnd} size="small">
-                                                        <ClearIcon />
-                                                    </IconButton>
-                                                </InputAdornment>
-                                            ) : null
-                                        }
+                                            endAdornment: (
+                                                <>
+                                                    {end && (
+                                                        <InputAdornment position="end">
+                                                            <IconButton onClick={clearEnd} size="small">
+                                                                <ClearIcon />
+                                                            </IconButton>
+                                                        </InputAdornment>
+                                                    )}
+                                                    {/* Галочка всегда видна */}
+                                                    <InputAdornment position="end">
+                                                        <IconButton
+                                                            color="success"
+                                                            size="small"
+                                                            title="Сохранить"
+                                                            onClick={() => handleSave('end')}
+                                                        >
+                                                            <CheckIcon style={{ color: '#43a047' }} />
+                                                        </IconButton>
+                                                    </InputAdornment>
+                                                </>
+                                            )
+                                        },
+                                        onFocus: () => setEditing((prev) => ({ ...prev, end: true })),
                                     }
                                 }}
                             />

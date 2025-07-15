@@ -170,6 +170,7 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
         raise ValueError("user_id must be provided")
 
     from .models import Task
+    from .calendar.models import TaskOverride
     tasks_data = []
     tz_name = client_timezone or 'UTC'
     try:
@@ -221,6 +222,18 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
         if not task.interval_id:  # исключаем повторяющиеся события
             if _is_task_in_range(task, start_dt, end_dt):
                 tasks_data.append(task.to_dict())
+
+    # --- Добавляем override-экземпляры как отдельные задачи ---
+    override_query = TaskOverride.query.filter(TaskOverride.user_id == user_id)
+    if start_dt:
+        override_query = override_query.filter(TaskOverride.date >= start_dt.date())
+    if end_dt:
+        override_query = override_query.filter(TaskOverride.date <= end_dt.date())
+    overrides = override_query.all()
+    for override in overrides:
+        override_dict = override.to_dict()
+        override_dict['is_override'] = True
+        tasks_data.append(override_dict)
 
     return {'tasks': tasks_data}, 200
 
@@ -416,6 +429,13 @@ def edit_task(data, user_id=None):
     if not isinstance(task_id, int):
         return {'success': False, 'message': 'Invalid task id'}, 400
     updated_fields = {key: value for key, value in data.items() if key not in ['taskId', 'subtasks', 'current_start']}
+
+    current_app.logger.info(f'edit_task {updated_fields}')
+
+    # Преобразуем пустые строки в None для дат
+    for date_field in ['start', 'end', 'completed_at']:
+        if date_field in updated_fields and (updated_fields[date_field] == '' or updated_fields[date_field] is None):
+            updated_fields[date_field] = None
 
     task = Task.query.filter_by(id=task_id, user_id=user_id).first()
     if not task:
@@ -798,4 +818,3 @@ def get_subtasks_by_parent_id(parent_task_id, user_id=None):
     subtasks_map = {t.id: t for t in subtasks}
     subtasks_sorted = [subtasks_map[tid] for tid in parent_task.childes_order if tid in subtasks_map]
     return {'subtasks': [t.to_dict() for t in subtasks_sorted]}, 200
-
