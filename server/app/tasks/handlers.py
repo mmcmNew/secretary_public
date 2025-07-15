@@ -550,54 +550,11 @@ def edit_task(data, user_id=None):
     if not isinstance(task_id, int):
         return {'success': False, 'message': 'Invalid task id'}, 400
     updated_fields = {key: value for key, value in data.items() if key not in ['taskId', 'subtasks', 'current_start']}
-    current_start_str = data.get('current_start')
-    current_start = _parse_iso_datetime(current_start_str) if current_start_str else None
 
     task = Task.query.filter_by(id=task_id, user_id=user_id).first()
     if not task:
         return {'success': False, 'message': 'Task not found'}, 404
 
-    # Если это экземпляр повторяющейся задачи
-    if task.interval_id and current_start:
-        from .models import TaskOverride
-        override_date = current_start.date()
-        # Получить оригинальные значения для этой даты
-        original_data = {
-            'title': task.title,
-            'start': current_start.isoformat() + 'Z',
-            'end': (task.end.isoformat() + 'Z') if task.end else None,
-            'note': task.note,
-            'status_id': task.status_id,
-            'completed_at': task.completed_at.isoformat() + 'Z' if task.completed_at else None,
-            'color': task.color,
-            'priority_id': task.priority_id,
-            'type_id': task.type_id,
-        }
-        # Собираем новые значения для override
-        new_data = {**original_data, **updated_fields}
-        # Сравниваем
-        is_same = all(new_data.get(k) == original_data.get(k) for k in original_data)
-        override = TaskOverride.query.filter_by(task_id=task_id, date=override_date, user_id=user_id).first()
-        if override:
-            if is_same:
-                db.session.delete(override)
-            else:
-                override.data = new_data
-                db.session.add(override)
-        else:
-            if not is_same:
-                override = TaskOverride(
-                    task_id=task_id,
-                    user_id=user_id,
-                    date=override_date,
-                    type='modified',
-                    data=new_data
-                )
-                db.session.add(override)
-        db.session.commit()
-        return {'success': True, 'task': task.to_dict()}, 200
-
-    # Обычная задача (не повторяющаяся)
     for key, value in updated_fields.items():
         if hasattr(task, key):
             if key in ['end', 'completed_at', 'start'] and value:
