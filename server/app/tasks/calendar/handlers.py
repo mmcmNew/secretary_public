@@ -102,8 +102,11 @@ def get_calendar_events(start=None, end=None, user_id=None):
 
                 def build_instance(base_data, is_override=False, override_id=None):
                     instance = dict(base_data)
-                    instance['start'] = occ.isoformat() + 'Z'
-                    instance['end'] = occ_end.isoformat() + 'Z'
+                    # Use start/end from override data if provided, otherwise fall back
+                    start_val = base_data.get('start')
+                    end_val = base_data.get('end')
+                    instance['start'] = start_val or occ.isoformat() + 'Z'
+                    instance['end'] = end_val or occ_end.isoformat() + 'Z'
                     instance['is_override'] = is_override
                     instance['parent_task_id'] = task.id
                     instance['is_instance'] = True
@@ -113,8 +116,8 @@ def get_calendar_events(start=None, end=None, user_id=None):
                     else:
                         instance['id'] = f"instance_{task.id}_{occ_date.isoformat()}"
                     instance['range'] = {
-                        'start': occ.isoformat() + 'Z' if occ else None,
-                        'end': occ_end.isoformat() + 'Z' if occ_end else None,
+                        'start': start_val or (occ.isoformat() + 'Z' if occ else None),
+                        'end': end_val or (occ_end.isoformat() + 'Z' if occ_end else None),
                     }
                     return instance
 
