@@ -9,6 +9,7 @@ from .handlers import (
     delete_task_override,
 )
 from app.tasks.models import DataVersion
+from app.socketio_utils import notify_data_update
 from app import cache
 
 
@@ -52,6 +53,9 @@ def create_task_override_route():
     user_id = current_user.id
     current_app.logger.info(create_task_override_route)
     result, status_code = create_task_override(data, user_id=user_id)
+    if status_code == 201:
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -61,6 +65,9 @@ def update_task_override_route(override_id):
     data = request.get_json()
     user_id = current_user.id
     result, status_code = update_task_override(override_id, data, user_id=user_id)
+    if status_code == 200:
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
 
@@ -69,5 +76,8 @@ def update_task_override_route(override_id):
 def delete_task_override_route(override_id):
     user_id = current_user.id
     result, status_code = delete_task_override(override_id, user_id=user_id)
+    if status_code == 200:
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
     return jsonify(result), status_code
 
