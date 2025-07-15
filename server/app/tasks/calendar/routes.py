@@ -8,7 +8,7 @@ from .handlers import (
     update_task_override,
     delete_task_override,
 )
-from .models import DataVersion
+from app.tasks.models import DataVersion
 from app import cache
 
 
