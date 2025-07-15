@@ -149,10 +149,10 @@ Backend: Flask
   - `data` — JSON с изменёнными полями (start, end, title, status и т.д.)
 
 - API:
-  - `POST /task_overrides/` — создать override
-  - `PATCH/PUT /task_overrides/<id>` — обновить override
-  - `DELETE /task_overrides/<id>` — удалить override
-  - `GET /task_overrides/<id>` — получить override
+  - `POST /tasks/override` — создать override
+  - `PATCH /tasks/override/<id>` — обновить override
+  - `DELETE /tasks/override/<id>` — удалить override
+  - `GET /tasks/override/<id>` — получить override
 
 ### Пример использования
 - Есть задача "Тренировка" каждый понедельник.
