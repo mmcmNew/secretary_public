@@ -1042,17 +1042,35 @@ def create_task_override(data, user_id=None):
         return {'success': False, 'message': 'task_id and date required'}, 400
     from datetime import datetime
     date = datetime.fromisoformat(date_str).date()
-    override = TaskOverride(
+    # Check if override already exists for this task and date
+    override = TaskOverride.query.filter_by(
         task_id=task_id,
         user_id=user_id,
-        date=date,
-        type=override_type,
-        data=override_data
-    )
+        date=date
+    ).first()
+
     from app import db
-    db.session.add(override)
+    status_code = 201
+
+    if override:
+        # Update existing override
+        override.type = override_type
+        override.data = override_data
+        status_code = 200
+    else:
+        # Create new override
+        override = TaskOverride(
+            task_id=task_id,
+            user_id=user_id,
+            date=date,
+            type=override_type,
+            data=override_data
+        )
+        db.session.add(override)
+
     db.session.commit()
-    return {'success': True, 'override': override.to_dict()}, 201
+
+    return {'success': True, 'override': override.to_dict()}, status_code
 
 def update_task_override(override_id, data, user_id=None):
     from .models import TaskOverride
@@ -1064,6 +1082,17 @@ def update_task_override(override_id, data, user_id=None):
     override_data = data.get('data', {})
     override.type = data.get('type', override.type)
     override.data = override_data
+
+    # If new start datetime provided, update override date accordingly
+    new_start = override_data.get('start')
+    if new_start:
+        from datetime import datetime
+        try:
+            new_date = datetime.fromisoformat(new_start).date()
+            override.date = new_date
+        except ValueError:
+            pass
+
     from app import db
     db.session.add(override)
     db.session.commit()
