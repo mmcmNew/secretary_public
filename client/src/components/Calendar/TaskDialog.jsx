@@ -13,6 +13,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import TaskEditor from "../ToDo/TaskEditor";
+import useTasks from "../ToDo/hooks/useTasks";
 
 export default function TaskDialog({
     open,
@@ -53,13 +54,46 @@ export default function TaskDialog({
     //     }
     // }, [open, currentTask, loadSubtasks]);
 
+    const { updateTask, updateTaskOverride, createTaskOverride } = useTasks();
+
     // Обработка изменений задачи
     const handleTaskChange = React.useCallback(
-        (updatedTask) => {
+        async (updatedTask) => {
+            console.log(updatedTask)
             setCurrentTask(updatedTask);
-            if (onChange) onChange(updatedTask);
+            if (!updatedTask || !updatedTask.id) return;
+            if (updatedTask.is_instance) {
+                console.log(updatedTask.is_instance)
+                if (updatedTask.is_override && updatedTask.override_id) {
+                    console.log(updatedTask.override_id)
+                    await updateTaskOverride(updatedTask.override_id, { data: updatedTask });
+                } else if (updatedTask.parent_task_id) {
+                    // Получаем дату экземпляра из поля start (YYYY-MM-DD)
+                    const dateStr = updatedTask.start ? updatedTask.start.split('T')[0] : null;
+                    if (!dateStr) return;
+                    const res = await createTaskOverride({
+                        task_id: updatedTask.parent_task_id,
+                        date: dateStr,
+                        type: 'modified',
+                        data: updatedTask,
+                    });
+                    console.log(res)
+                    if (res && res.override) {
+                        setCurrentTask({
+                            ...updatedTask,
+                            is_override: true,
+                            override_id: res.override.id,
+                            id: `${res.override.id}`,
+                            is_instance: true,
+                        });
+                    }
+                }
+            } else {
+                await updateTask({ taskId: updatedTask.id, ...updatedTask });
+            }
+            // if (onChange) onChange(updatedTask);
         },
-        [onChange]
+        [onChange, updateTask, updateTaskOverride, createTaskOverride]
     );
 
     // Переключение вкладок
@@ -120,7 +154,7 @@ export default function TaskDialog({
                         task={parentTask}
                         subtasks={currentSubtasks}
                         taskFields={taskFields}
-                        onChange={onChange}
+                        onChange={handleTaskChange}
                         addSubTask={addSubTask}
                     />
                 )}

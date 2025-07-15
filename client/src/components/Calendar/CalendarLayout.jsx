@@ -29,7 +29,8 @@ export default function CalendarLayout({
   onError = null,
 }) {
   const { updateTask, addTask, fetchTasks, tasks, taskFields, addSubTask, changeTaskStatus, deleteTask, 
-    lists, calendarEvents, fetchCalendarEvents, processEventChange, getSubtasksByParentId } = useTasks();
+    lists, calendarEvents, fetchCalendarEvents, processEventChange, getSubtasksByParentId,
+    createTaskOverride, updateTaskOverride, deleteTaskOverride } = useTasks();
   const { setUpdates, handleUpdateContent } = useContainer();
   const calendarRef = useRef(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
@@ -87,7 +88,7 @@ export default function CalendarLayout({
       try {
         await updateTask({ taskId, start: null, end: null });
         if (fetchCalendarEvents && typeof fetchCalendarEvents === "function")
-          await fetchCalendarEvents();
+          await fetchCalendarEvents(getCalendarRange());
         setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
         if (onSuccess) onSuccess('Дата удалена');
       } catch (err) {
@@ -103,7 +104,7 @@ export default function CalendarLayout({
       try {
         await addTask(taskData);
         if (fetchCalendarEvents && typeof fetchCalendarEvents === 'function') {
-          await fetchCalendarEvents();
+          await fetchCalendarEvents(getCalendarRange());
         }
         setUpdates((prevUpdates) => [...prevUpdates, 'todo', 'calendar']);
         if (onSuccess) onSuccess('Событие добавлено');
@@ -160,10 +161,16 @@ export default function CalendarLayout({
   // onChange для TaskDialog
   const handleTaskDialogChange = useCallback(async (updatedTask) => {
     if (!updatedTask || !updatedTask.id) return;
-    await updateTask({ taskId: updatedTask.id, ...updatedTask });
-    await fetchCalendarEvents();
+    if (updatedTask.is_override && updatedTask.override_id) {
+      // PATCH override
+      await updateTaskOverride(updatedTask.override_id, { data: updatedTask });
+    } else {
+      // PATCH обычная задача/серия
+      await updateTask({ taskId: updatedTask.id, ...updatedTask });
+    }
+    await fetchCalendarEvents(getCalendarRange());
     setUpdates((prev) => [...prev, "todo", "calendar"]);
-  }, [updateTask, fetchCalendarEvents, setUpdates]);
+  }, [updateTask, updateTaskOverride, fetchCalendarEvents, setUpdates]);
 
   const handleEventClick = useCallback(
     async (event) => {
@@ -248,7 +255,7 @@ export default function CalendarLayout({
         if (setUpdates && typeof setUpdates === "function")
           setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
         if (fetchCalendarEvents && typeof fetchCalendarEvents === "function")
-          await fetchCalendarEvents();
+          await fetchCalendarEvents(getCalendarRange());
         if (onSuccess) onSuccess('Событие обновлено');
       } catch (err) {
         console.error('Error updating event:', err);
@@ -300,17 +307,36 @@ export default function CalendarLayout({
       eventDict.current_start = eventInfo.event.extendedProps.originalStart;
     }
     try {
-      await updateTask({ taskId: eventInfo.event.id, ...eventDict });
+      if (eventInfo.event.extendedProps?.is_override && eventInfo.event.id.startsWith('override_')) {
+        // PATCH override
+        const overrideId = parseInt(eventInfo.event.id.replace('override_', ''));
+        await updateTaskOverride(overrideId, { data: eventDict });
+      } else {
+        // PATCH обычная задача/серия
+        await updateTask({ taskId: eventInfo.event.id, ...eventDict });
+      }
       if (setUpdates && typeof setUpdates === "function")
         setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
       if (fetchCalendarEvents && typeof fetchCalendarEvents === "function")
-        await fetchCalendarEvents();
+        await fetchCalendarEvents(getCalendarRange());
       if (onSuccess) onSuccess('Событие обновлено');
     } catch (err) {
       console.error('Error updating event:', err);
       if (onError) onError(err);
     }
     setOverrideDialog({ open: false, eventInfo: null, mode: null });
+  };
+
+  // Вспомогательная функция для получения диапазона календаря
+  const getCalendarRange = () => {
+    const api = calendarRef.current?.getApi?.();
+    if (api && api.view) {
+      return {
+        start: api.view.activeStart.toISOString(),
+        end: api.view.activeEnd.toISOString(),
+      };
+    }
+    return undefined;
   };
 
   return (

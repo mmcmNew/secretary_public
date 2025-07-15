@@ -382,7 +382,7 @@ function TaskEditor({
                 onChange={updateNewTypeData}
                 onSave={async () => {
                     // Типы задач должны обновляться вне компонента
-                    setTypeDialogOpen(false);
+                        setTypeDialogOpen(false);
                 }}
             />
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 1 }}>

@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import PropTypes from "prop-types";
 import useUpdateWebSocket from "../../DraggableComponents/useUpdateWebSocket";
 import useContainer from '../../DraggableComponents/useContainer';
-import api, { apiDelete, apiGet, apiPost, apiPut } from '../../../utils/api';
+import api, { apiDelete, apiGet, apiPost, apiPut, apiPatch } from '../../../utils/api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 
@@ -682,6 +682,21 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     }
   }, [wsVersion, selectedListId, fetchTasks, fetchLists, fetchCalendarEvents, draggingContainer]);
 
+  // --- OVERRIDE CRUD ---
+  const createTaskOverride = useCallback(async (params) => {
+    // params: { task_id, date, data, type }
+    return apiPost('/tasks/override', params);
+  }, []);
+
+  const updateTaskOverride = useCallback(async (override_id, params) => {
+    // params: { data, type }
+    return apiPatch(`/tasks/override/${override_id}`, params);
+  }, []);
+
+  const deleteTaskOverride = useCallback(async (override_id) => {
+    return apiDelete(`/tasks/override/${override_id}`);
+  }, []);
+
   const contextValue = useMemo(() => ({
     tasks,
     myDayTasks,
@@ -728,7 +743,10 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     linkTaskList,
     loading: tasks.loading,
     getSubtasksByParentId,
-  }), [tasks, myDayTasks, myDayList, taskFields, lists, selectedListId, selectedList, calendarEvents, calendarRange, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, fetchTaskFields, getTaskTypes, addTaskType, updateTaskType, deleteTaskType, getTaskTypeGroups, addTaskTypeGroup, updateTaskTypeGroup, deleteTaskTypeGroup, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, fetchTasksByIds, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, getSubtasksByParentId]);
+    createTaskOverride,
+    updateTaskOverride,
+    deleteTaskOverride,
+  }), [tasks, myDayTasks, myDayList, taskFields, lists, selectedListId, selectedList, calendarEvents, calendarRange, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, fetchTaskFields, getTaskTypes, addTaskType, updateTaskType, deleteTaskType, getTaskTypeGroups, addTaskTypeGroup, updateTaskTypeGroup, deleteTaskTypeGroup, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, fetchTasksByIds, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, getSubtasksByParentId, createTaskOverride, updateTaskOverride, deleteTaskOverride]);
 
   return <TasksContext.Provider value={contextValue}>{children}</TasksContext.Provider>;
 };

@@ -40,6 +40,7 @@ export default function TasksList({
     changeTaskStatus = null,
     onSuccess = null,
     onError = null,
+    calendarRange = null, // <--- добавляем пропс
 }) {
     const { playAudio } = useContext(AudioContext);
     const [open, setOpen] = useState({});
@@ -101,7 +102,7 @@ export default function TasksList({
         }
         if (typeof changeTaskStatus === "function")
             await changeTaskStatus({ taskId: task_id, ...updatedFields, listId: selectedList.id });
-        if (fetchCalendarEvents) await fetchCalendarEvents();
+        if (fetchCalendarEvents) await fetchCalendarEvents(calendarRange);
     }
 
     // const isDefaultList = (listId) => defaultLists.some(list => list.id === listId);
@@ -248,7 +249,7 @@ export default function TasksList({
                     start: today.toISOString(),
                     end: end.toISOString(),
                 });
-                if (fetchCalendarEvents) await fetchCalendarEvents();
+                if (fetchCalendarEvents) await fetchCalendarEvents(calendarRange);
                 if (onSuccess) onSuccess('Добавлено в "Мой день"');
             } catch (err) {
                 if (onError) onError(err);
@@ -485,4 +486,5 @@ TasksList.propTypes = {
     additionalButton: PropTypes.object,
     onSuccess: PropTypes.func,
     onError: PropTypes.func,
+    calendarRange: PropTypes.object, // Добавляем пропс для диапазона календаря
 };

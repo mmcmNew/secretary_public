@@ -42,6 +42,7 @@ export default api;
 export const apiGet = (url, config) => api.get(url, config);
 export const apiPost = (url, body) => api.post(url, body);
 export const apiPut = (url, body) => api.put(url, body);
+export const apiPatch = (url, body) => api.patch(url, body);
 export const apiDelete = (url, body) => api.delete(url, { data: body });
 
 export async function clearAllCache() {

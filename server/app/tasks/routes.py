@@ -17,7 +17,11 @@ from .handlers import (
     delete_from_childes,
     link_task,
     get_subtasks_by_parent_id,
-    get_calendar_events
+    get_calendar_events,
+    get_task_override_by_id,
+    create_task_override,
+    update_task_override,
+    delete_task_override
 )
 from .models import DataVersion, TaskTypeGroup, TaskType
 from app import db, cache
@@ -274,6 +278,38 @@ def link_task_route():
     return response, status_code
 
 
+@to_do_app.route('/tasks/override/<int:override_id>', methods=['GET'])
+@jwt_required()
+def get_task_override_route(override_id):
+    user_id = current_user.id
+    result, status_code = get_task_override_by_id(override_id, user_id=user_id)
+    return jsonify(result), status_code
+
+@to_do_app.route('/tasks/override', methods=['POST'])
+@jwt_required()
+def create_task_override_route():
+    data = request.get_json()
+    user_id = current_user.id
+    current_app.logger.info(create_task_override_route)
+    result, status_code = create_task_override(data, user_id=user_id)
+    return jsonify(result), status_code
+
+@to_do_app.route('/tasks/override/<int:override_id>', methods=['PATCH'])
+@jwt_required()
+def update_task_override_route(override_id):
+    data = request.get_json()
+    user_id = current_user.id
+    result, status_code = update_task_override(override_id, data, user_id=user_id)
+    return jsonify(result), status_code
+
+@to_do_app.route('/tasks/override/<int:override_id>', methods=['DELETE'])
+@jwt_required()
+def delete_task_override_route(override_id):
+    user_id = current_user.id
+    result, status_code = delete_task_override(override_id, user_id=user_id)
+    return jsonify(result), status_code
+
+
 @to_do_app.route('/tasks/fields_config', methods=['GET'])
 @jwt_required()
 def get_fields_config():
@@ -469,3 +505,4 @@ def get_subtasks_route():
             return '', 304
         return response
     return jsonify(result), status_code
+

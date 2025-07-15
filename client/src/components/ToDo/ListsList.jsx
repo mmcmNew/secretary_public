@@ -35,6 +35,7 @@ export default function ListsList({
   changeChildesOrder = null,
   selectedList = null,
   setSelectedList = null,
+  calendarRange = null, // <--- добавляем пропс
 }) {
   const [openGroups, setOpenGroups] = useState({});
   const { anchorEl, openMenu, closeMenu } = useContextMenu();
@@ -66,7 +67,7 @@ export default function ListsList({
     if (typeof fetchLists === 'function') await fetchLists({ id: 'get-lists' });
     else if (typeof fetchListsHook === 'function') await fetchListsHook({ id: 'get-lists' });
     if (typeof fetchTasks === 'function' && selectedListId) await fetchTasks(selectedListId);
-    if (typeof fetchCalendarEvents === 'function') await fetchCalendarEvents();
+    if (typeof fetchCalendarEvents === 'function') await fetchCalendarEvents(calendarRange);
   }
 
   function handleListItemClick(event, index) {
@@ -498,4 +499,5 @@ ListsList.propTypes = {
   deleteFromChildes: PropTypes.func,
   linkTaskList: PropTypes.func,
   changeChildesOrder: PropTypes.func,
+  calendarRange: PropTypes.object, // Добавляем пропс для диапазона календаря
 };

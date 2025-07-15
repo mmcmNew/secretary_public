@@ -282,9 +282,21 @@ export default function Calendar() {
         handleNewTaskDialogOpen("paper");
     }
 
+    // Вспомогательная функция для получения диапазона календаря
+    const getCalendarRange = () => {
+        const api = calendarRef.current?.getApi?.();
+        if (api && api.view) {
+            return {
+                start: api.view.activeStart.toISOString(),
+                end: api.view.activeEnd.toISOString(),
+            };
+        }
+        return undefined;
+    };
+
     async function handleDelDateClick(taskId) {
         await updateTask(taskId, { start: null, end: null });
-        if (fetchCalendarEvents) await fetchCalendarEvents();
+        if (fetchCalendarEvents) await fetchCalendarEvents(getCalendarRange());
         setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
     }
 
@@ -330,7 +342,7 @@ export default function Calendar() {
         await updateTask(eventInfo.event.id, eventDict);
         setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
         if (fetchTasks) await fetchTasks(selectedListId);
-        if (fetchCalendarEvents) await fetchCalendarEvents();
+        if (fetchCalendarEvents) await fetchCalendarEvents(getCalendarRange());
     }
 
     const handleSettingsDialogOpen = () => setSettingsDialogOpen(true);

@@ -329,6 +329,7 @@ def get_calendar_events(start=None, end=None, user_id=None):
                     instance['end'] = occ_end.isoformat() + 'Z'
                     instance['is_override'] = is_override
                     instance['parent_task_id'] = task.id
+                    instance['is_instance'] = True  # Всегда true для экземпляров серии, включая override
                     if override_id:
                         instance['override_id'] = override_id
                         instance['id'] = f"override_{override_id}"
@@ -546,6 +547,8 @@ def edit_task(data, user_id=None):
     if user_id is None:
         raise ValueError("user_id must be provided for edit_task")
     task_id = data.get('taskId')
+    if not isinstance(task_id, int):
+        return {'success': False, 'message': 'Invalid task id'}, 400
     updated_fields = {key: value for key, value in data.items() if key not in ['taskId', 'subtasks', 'current_start']}
     current_start_str = data.get('current_start')
     current_start = _parse_iso_datetime(current_start_str) if current_start_str else None
@@ -1016,3 +1019,64 @@ def set_task_override_status(task_id, date, user_id, new_data):
 def get_task_override(task_id, date, user_id):
     from .models import TaskOverride
     return TaskOverride.query.filter_by(task_id=task_id, date=date, user_id=user_id).first()
+
+
+def get_task_override_by_id(override_id, user_id=None):
+    from .models import TaskOverride
+    if user_id is None:
+        raise ValueError("user_id must be provided for get_task_override_by_id")
+    override = TaskOverride.query.filter_by(id=override_id, user_id=user_id).first()
+    if not override:
+        return {'success': False, 'message': 'Override not found'}, 404
+    return {'success': True, 'override': override.to_dict()}, 200
+
+def create_task_override(data, user_id=None):
+    from .models import TaskOverride
+    if user_id is None:
+        raise ValueError("user_id must be provided for create_task_override")
+    task_id = data.get('task_id')
+    date_str = data.get('date')
+    override_type = data.get('type', 'modified')
+    override_data = data.get('data', {})
+    if not (task_id and date_str):
+        return {'success': False, 'message': 'task_id and date required'}, 400
+    from datetime import datetime
+    date = datetime.fromisoformat(date_str).date()
+    override = TaskOverride(
+        task_id=task_id,
+        user_id=user_id,
+        date=date,
+        type=override_type,
+        data=override_data
+    )
+    from app import db
+    db.session.add(override)
+    db.session.commit()
+    return {'success': True, 'override': override.to_dict()}, 201
+
+def update_task_override(override_id, data, user_id=None):
+    from .models import TaskOverride
+    if user_id is None:
+        raise ValueError("user_id must be provided for update_task_override")
+    override = TaskOverride.query.filter_by(id=override_id, user_id=user_id).first()
+    if not override:
+        return {'success': False, 'message': 'Override not found'}, 404
+    override_data = data.get('data', {})
+    override.type = data.get('type', override.type)
+    override.data = override_data
+    from app import db
+    db.session.add(override)
+    db.session.commit()
+    return {'success': True, 'override': override.to_dict()}, 200
+
+def delete_task_override(override_id, user_id=None):
+    from .models import TaskOverride
+    if user_id is None:
+        raise ValueError("user_id must be provided for delete_task_override")
+    override = TaskOverride.query.filter_by(id=override_id, user_id=user_id).first()
+    if not override:
+        return {'success': False, 'message': 'Override not found'}, 404
+    from app import db
+    db.session.delete(override)
+    db.session.commit()
+    return {'success': True}, 200
