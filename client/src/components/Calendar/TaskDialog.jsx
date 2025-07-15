@@ -59,16 +59,14 @@ export default function TaskDialog({
     // Обработка изменений задачи
     const handleTaskChange = React.useCallback(
         async (updatedTask) => {
-            console.log(updatedTask)
+            if (!updatedTask) return;
+            let finalTask = updatedTask;
             setCurrentTask(updatedTask);
-            if (!updatedTask || !updatedTask.id) return;
+            if (!updatedTask.id) return;
             if (updatedTask.is_instance) {
-                console.log(updatedTask.is_instance)
                 if (updatedTask.is_override && updatedTask.override_id) {
-                    console.log(updatedTask.override_id)
                     await updateTaskOverride(updatedTask.override_id, { data: updatedTask });
                 } else if (updatedTask.parent_task_id) {
-                    // Получаем дату экземпляра из поля start (YYYY-MM-DD)
                     const dateStr = updatedTask.start ? updatedTask.start.split('T')[0] : null;
                     if (!dateStr) return;
                     const res = await createTaskOverride({
@@ -77,21 +75,21 @@ export default function TaskDialog({
                         type: 'modified',
                         data: updatedTask,
                     });
-                    console.log(res)
                     if (res && res.override) {
-                        setCurrentTask({
+                        finalTask = {
                             ...updatedTask,
                             is_override: true,
                             override_id: res.override.id,
                             id: `${res.override.id}`,
                             is_instance: true,
-                        });
+                        };
+                        setCurrentTask(finalTask);
                     }
                 }
             } else {
                 await updateTask({ taskId: updatedTask.id, ...updatedTask });
             }
-            // if (onChange) onChange(updatedTask);
+            if (onChange) onChange(finalTask);
         },
         [onChange, updateTask, updateTaskOverride, createTaskOverride]
     );
