@@ -9,6 +9,7 @@ from .handlers import (
     delete_task_override,
 )
 from app.tasks.models import DataVersion
+from app import cache
 
 
 def make_cache_key(prefix):

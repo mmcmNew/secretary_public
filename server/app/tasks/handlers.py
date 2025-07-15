@@ -842,4 +842,3 @@ def get_subtasks_by_parent_id(parent_task_id, user_id=None):
     subtasks_sorted = [subtasks_map[tid] for tid in parent_task.childes_order if tid in subtasks_map]
     return {'subtasks': [t.to_dict() for t in subtasks_sorted]}, 200
 
-
