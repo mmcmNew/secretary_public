@@ -9,6 +9,7 @@ import PropTypes from "prop-types";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import applyTimeOffset from "../../utils/applyTimeOffset";
 
 
 dayjs.extend(utc);
@@ -16,9 +17,7 @@ dayjs.extend(timezone);
 
 // Helper that applies a time offset in hours and returns an ISO string
 function applyOffset(date, offset = 0) {
-  const newDate = new Date(date);
-  newDate.setHours(newDate.getHours() + offset);
-  return newDate.toISOString();
+  return applyTimeOffset(date, offset);
 }
 
 export default function AntiScheduleLayout({

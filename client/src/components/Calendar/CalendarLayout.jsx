@@ -11,6 +11,7 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import Snackbar from '@mui/material/Snackbar';
 import Box from '@mui/material/Box';
+import applyTimeOffset from "../../utils/applyTimeOffset";
 
 const defaultCalendarSettings = {
   slotDuration: 30,
@@ -200,22 +201,7 @@ export default function CalendarLayout({
   const handleEventChange = useCallback(
     async (eventInfo) => {
       const offsetHours = Number(calendarSettings?.timeOffset) || 0;
-      const applyInverseOffset = (dateInput) => {
-        if (!dateInput) return null;
-        const date = new Date(dateInput);
-        if (!(date instanceof Date) || isNaN(date.getTime())) {
-          console.error('[Layout] Invalid date value received in handleEventChange inverse:', dateInput);
-          return null;
-        }
-        if (offsetHours !== 0) {
-          date.setHours(date.getHours() + offsetHours);
-           if (isNaN(date.getTime())) {
-             console.error('[Layout] Invalid date after applying inverse offset:', dateInput, offsetHours);
-             return null;
-           }
-        }
-        return date.toISOString();
-      };
+
 
       const eventDict = {
         title: eventInfo.event.title,
@@ -223,18 +209,18 @@ export default function CalendarLayout({
       };
 
       if (eventInfo.event.start) {
-        const originalStart = applyInverseOffset(eventInfo.event.start);
+        const originalStart = applyTimeOffset(eventInfo.event.start, offsetHours);
         if (originalStart) eventDict.start = originalStart;
       }
 
       if (eventInfo.event.end) {
-         const originalEnd = applyInverseOffset(eventInfo.event.end);
+         const originalEnd = applyTimeOffset(eventInfo.event.end, offsetHours);
          if(originalEnd) eventDict.end = originalEnd;
       } else if (eventInfo.event.start && !eventInfo.event.allDay) {
         const receivedStartDate = new Date(eventInfo.event.start);
         if (!isNaN(receivedStartDate.getTime())) {
           receivedStartDate.setHours(receivedStartDate.getHours() + 1);
-          const originalEnd = applyInverseOffset(receivedStartDate);
+          const originalEnd = applyTimeOffset(receivedStartDate, offsetHours);
           if(originalEnd) eventDict.end = originalEnd;
         }
       }
@@ -270,36 +256,22 @@ export default function CalendarLayout({
     if (!overrideDialog.eventInfo) return;
     const eventInfo = overrideDialog.eventInfo;
     const offsetHours = Number(calendarSettings?.timeOffset) || 0;
-    const applyInverseOffset = (dateInput) => {
-      if (!dateInput) return null;
-      const date = new Date(dateInput);
-      if (!(date instanceof Date) || isNaN(date.getTime())) {
-        return null;
-      }
-      if (offsetHours !== 0) {
-        date.setHours(date.getHours() + offsetHours);
-        if (isNaN(date.getTime())) {
-          return null;
-        }
-      }
-      return date.toISOString();
-    };
     const eventDict = {
       title: eventInfo.event.title,
       allDay: eventInfo.event.allDay,
     };
     if (eventInfo.event.start) {
-      const originalStart = applyInverseOffset(eventInfo.event.start);
+      const originalStart = applyTimeOffset(eventInfo.event.start, offsetHours);
       if (originalStart) eventDict.start = originalStart;
     }
     if (eventInfo.event.end) {
-      const originalEnd = applyInverseOffset(eventInfo.event.end);
+      const originalEnd = applyTimeOffset(eventInfo.event.end, offsetHours);
       if(originalEnd) eventDict.end = originalEnd;
     } else if (eventInfo.event.start && !eventInfo.event.allDay) {
       const receivedStartDate = new Date(eventInfo.event.start);
       if (!isNaN(receivedStartDate.getTime())) {
         receivedStartDate.setHours(receivedStartDate.getHours() + 1);
-        const originalEnd = applyInverseOffset(receivedStartDate);
+        const originalEnd = applyTimeOffset(receivedStartDate, offsetHours);
         if(originalEnd) eventDict.end = originalEnd;
       }
     }
