@@ -18,6 +18,7 @@ import {
   ToggleButton,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import applyTimeOffset from "../utils/applyTimeOffset";
 import EditOffIcon from "@mui/icons-material/EditOff";
 import ListsList from "../ToDo/ListsList";
 import NewTaskDialog from "./NewTaskDialog";
@@ -74,14 +75,8 @@ function CalendarComponent({
     const offsetHours = Number(timeOffset) || 0;
 
     const applyOffset = (dateInput) => {
-      if (!dateInput) return null;
-      const date = new Date(dateInput);
-      if (isNaN(date.getTime())) return null;
-      if (offsetHours !== 0) {
-         date.setHours(date.getHours() - offsetHours);
-         if (isNaN(date.getTime())) return null;
-      }
-      return date;
+      const shifted = applyTimeOffset(dateInput, -offsetHours);
+      return shifted ? new Date(shifted) : null;
     };
 
     let eventsToProcess = Array.isArray(events) ? events : [];
@@ -206,20 +201,8 @@ function CalendarComponent({
 
   function handleDateSelect(selectInfo) {
     const offsetHours = Number(timeOffset) || 0;
-
-    const applyInverseOffset = (dateInput) => {
-      if (!dateInput) return null;
-      const date = new Date(dateInput);
-      if (isNaN(date.getTime())) return null;
-      if (offsetHours !== 0) {
-        date.setHours(date.getHours() + offsetHours);
-        if (isNaN(date.getTime())) return null;
-      }
-      return date.toISOString();
-    };
-
-    const originalStart = applyInverseOffset(selectInfo.startStr);
-    const originalEnd = applyInverseOffset(selectInfo.endStr);
+    const originalStart = applyTimeOffset(selectInfo.startStr, offsetHours);
+    const originalEnd = applyTimeOffset(selectInfo.endStr, offsetHours);
 
     setSelectedDate({
       start: originalStart,
