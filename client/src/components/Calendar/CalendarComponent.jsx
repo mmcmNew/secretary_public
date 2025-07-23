@@ -71,6 +71,33 @@ function CalendarComponent({
   const slotDuration = newSettings?.slotDuration || 30;
   const timeRange = newSettings?.timeRange || [8, 24];
 
+  const convertToServerTime = useCallback(
+    (data) => {
+      const offsetHours = Number(timeOffset) || 0;
+      const result = { ...data };
+
+      if (data.start) {
+        const converted = applyTimeOffset(data.start, offsetHours);
+        if (converted) result.start = converted;
+      }
+
+      if (data.end) {
+        const convertedEnd = applyTimeOffset(data.end, offsetHours);
+        if (convertedEnd) result.end = convertedEnd;
+      } else if (data.start && !data.allDay) {
+        const tempEnd = new Date(data.start);
+        if (!isNaN(tempEnd.getTime())) {
+          tempEnd.setHours(tempEnd.getHours() + 1);
+          const convertedEnd = applyTimeOffset(tempEnd, offsetHours);
+          if (convertedEnd) result.end = convertedEnd;
+        }
+      }
+
+      return result;
+    },
+    [timeOffset]
+  );
+
   const processedEvents = useMemo(() => {
     const offsetHours = Number(timeOffset) || 0;
 
@@ -194,21 +221,42 @@ function CalendarComponent({
   }, [tasks]);
 
   function handleEventReceive(eventInfo) {
-    if (eventReceive && typeof eventReceive === "function")
-      eventReceive(eventInfo);
+    if (eventReceive && typeof eventReceive === "function") {
+      const processed = convertToServerTime({
+        start: eventInfo.event.start,
+        end: eventInfo.event.end,
+        allDay: eventInfo.event.allDay,
+        title: eventInfo.event.title,
+        id: eventInfo.event.id,
+        extendedProps: eventInfo.event.extendedProps,
+      });
+      eventReceive({ ...eventInfo, event: processed });
+    }
     eventInfo.event.remove();
   }
 
-  function handleDateSelect(selectInfo) {
-    const offsetHours = Number(timeOffset) || 0;
-    const originalStart = applyTimeOffset(selectInfo.startStr, offsetHours);
-    const originalEnd = applyTimeOffset(selectInfo.endStr, offsetHours);
+  function handleEventChangeWrapper(eventInfo) {
+    if (handleEventChange && typeof handleEventChange === "function") {
+      const processed = convertToServerTime({
+        start: eventInfo.event.start,
+        end: eventInfo.event.end,
+        allDay: eventInfo.event.allDay,
+        title: eventInfo.event.title,
+        id: eventInfo.event.id,
+        extendedProps: eventInfo.event.extendedProps,
+      });
+      handleEventChange({ ...eventInfo, event: processed });
+    }
+  }
 
-    setSelectedDate({
-      start: originalStart,
-      end: originalEnd,
+  function handleDateSelect(selectInfo) {
+    const processed = convertToServerTime({
+      start: selectInfo.startStr,
+      end: selectInfo.endStr,
       allDay: selectInfo.allDay,
     });
+
+    setSelectedDate(processed);
     handleNewTaskDialogOpen("paper");
   }
 
@@ -331,7 +379,7 @@ function CalendarComponent({
     select: handleDateSelect,
     datesSet: handleDatesSet,
     eventClick: handleEventClick,
-    eventChange: handleEventChange,
+    eventChange: handleEventChangeWrapper,
     eventReceive: handleEventReceive,
     eventDragStart: () => setIsCollapsed(true),
     // eventContent: (arg) => {

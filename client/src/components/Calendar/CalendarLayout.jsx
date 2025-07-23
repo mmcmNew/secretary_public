@@ -7,7 +7,6 @@ import CalendarComponent from "./CalendarComponent";
 import Button from '@mui/material/Button';
 import Snackbar from '@mui/material/Snackbar';
 import Box from '@mui/material/Box';
-import applyTimeOffset from "../../utils/applyTimeOffset";
 
 const defaultCalendarSettings = {
   slotDuration: 30,
@@ -159,25 +158,15 @@ export default function CalendarLayout({
   const handleOverrideChoice = async (mode) => {
     if (!overrideSnackbar.eventInfo) return;
     const eventInfo = overrideSnackbar.eventInfo;
-    const offsetHours = Number(calendarSettings?.timeOffset) || 0;
     const eventDict = {
       title: eventInfo.event.title,
       allDay: eventInfo.event.allDay,
     };
     if (eventInfo.event.start) {
-      const originalStart = applyTimeOffset(eventInfo.event.start, offsetHours);
-      if (originalStart) eventDict.start = originalStart;
+      eventDict.start = eventInfo.event.start;
     }
     if (eventInfo.event.end) {
-      const originalEnd = applyTimeOffset(eventInfo.event.end, offsetHours);
-      if (originalEnd) eventDict.end = originalEnd;
-    } else if (eventInfo.event.start && !eventInfo.event.allDay) {
-      const receivedStartDate = new Date(eventInfo.event.start);
-      if (!isNaN(receivedStartDate.getTime())) {
-        receivedStartDate.setHours(receivedStartDate.getHours() + 1);
-        const originalEnd = applyTimeOffset(receivedStartDate, offsetHours);
-        if (originalEnd) eventDict.end = originalEnd;
-      }
+      eventDict.end = eventInfo.event.end;
     }
     if (mode === 'single' && eventInfo.event.extendedProps?.originalStart) {
       eventDict.current_start = eventInfo.event.extendedProps.originalStart;
@@ -208,29 +197,17 @@ export default function CalendarLayout({
 
   const handleEventChange = useCallback(
     async (eventInfo) => {
-      const offsetHours = Number(calendarSettings?.timeOffset) || 0;
-
-
       const eventDict = {
         title: eventInfo.event.title,
         allDay: eventInfo.event.allDay,
       };
 
       if (eventInfo.event.start) {
-        const originalStart = applyTimeOffset(eventInfo.event.start, offsetHours);
-        if (originalStart) eventDict.start = originalStart;
+        eventDict.start = eventInfo.event.start;
       }
 
       if (eventInfo.event.end) {
-         const originalEnd = applyTimeOffset(eventInfo.event.end, offsetHours);
-         if(originalEnd) eventDict.end = originalEnd;
-      } else if (eventInfo.event.start && !eventInfo.event.allDay) {
-        const receivedStartDate = new Date(eventInfo.event.start);
-        if (!isNaN(receivedStartDate.getTime())) {
-          receivedStartDate.setHours(receivedStartDate.getHours() + 1);
-          const originalEnd = applyTimeOffset(receivedStartDate, offsetHours);
-          if(originalEnd) eventDict.end = originalEnd;
-        }
+        eventDict.end = eventInfo.event.end;
       }
 
       const originalCalendarEvent = calendarEvents?.events?.find(
