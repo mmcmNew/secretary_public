@@ -335,7 +335,10 @@ export default function CalendarLayout({
         changeTaskStatus={changeTaskStatus}
         changeInstanceStatus={changeInstanceStatus}
         deleteTask={deleteTask}
-        onChange={handleTaskDialogChange}
+        onChangeTask={handleTaskChange}
+        onChangeInstance={handleInstanceChange}
+        onDeleteInctanceDate={handleDeleteInctanceDate}
+        onDeleteTaskDate={handleDeleteTaskDate}
       />
       {/* Snackbar для выбора режима теперь только для drag&drop */}
       <Snackbar
