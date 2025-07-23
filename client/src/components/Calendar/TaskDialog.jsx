@@ -26,7 +26,6 @@ export default function TaskDialog({
     onChangeTask = null,
     onChangeInstance = null,
     addSubTask = null,
-    onDeleteInctanceDate = null,
     onDeleteTaskDate = null,
     changeInstanceStatus = null,
     changeTaskStatus = null,
@@ -51,8 +50,8 @@ export default function TaskDialog({
     if (!task) return null;
 
     const handleDelClick = () => {
-        if (activeTab === 0 && onDeleteInctanceDate && instance?.id) {
-            onDeleteInctanceDate(instance.id);
+        if (activeTab === 0 && onChangeInstance && instance?.id) {
+            onChangeInstance({ ...instance, type: 'skip' });
         } else if (activeTab === 1 && onDeleteTaskDate && task?.id) {
             onDeleteTaskDate(task.id);
         }
