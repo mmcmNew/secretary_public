@@ -6,6 +6,8 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy import func
 import pytz
 
+from .calendar.handlers import get_calendar_events
+
 # Helper to parse ISO datetime strings that may contain timezone information.
 # All datetimes are converted to naive UTC before storing in the database so
 # that `to_dict` produces values like ``YYYY-MM-DDTHH:MM:SSZ`` which the client
@@ -108,8 +110,8 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     now = datetime.now(tz)
     start_of_day = tz.localize(datetime(now.year, now.month, now.day, 0, 0, 0)).astimezone(pytz.UTC)
     end_of_day = tz.localize(datetime(now.year, now.month, now.day, 23, 59, 59, 999999)).astimezone(pytz.UTC)
-    my_day_tasks, _ = get_tasks('all', tz_name, start_of_day.isoformat(), end_of_day.isoformat(), user_id=user_id)
-    my_day_tasks = my_day_tasks['tasks']
+    calendar_data, _ = get_calendar_events(start_of_day.isoformat(), end_of_day.isoformat(), user_id=user_id)
+    my_day_tasks = calendar_data['events']
 
     # --- Default lists
     default_lists = []
@@ -169,6 +171,23 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
     if user_id is None:
         raise ValueError("user_id must be provided")
 
+    if list_id == 'events':
+        tz_name = client_timezone or 'UTC'
+        try:
+            tz = pytz.timezone(tz_name)
+        except Exception:
+            tz = pytz.UTC
+
+        if not start and not end:
+            now = datetime.now(tz)
+            start_dt = tz.localize(datetime(now.year, now.month, now.day, 0, 0, 0)).astimezone(pytz.UTC)
+            end_dt = tz.localize(datetime(now.year, now.month, now.day, 23, 59, 59, 999999)).astimezone(pytz.UTC)
+            start = start_dt.isoformat()
+            end = end_dt.isoformat()
+        
+        calendar_data, _ = get_calendar_events(start, end, user_id=user_id)
+        return {'tasks': calendar_data['events']}, 200
+
     from .models import Task
     from .calendar.models import TaskOverride
     tasks_data = []
@@ -188,12 +207,6 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
     start_dt = _parse_iso_datetime(start) if start else None
     end_dt = _parse_iso_datetime(end) if end else None
 
-    if list_id == 'my_day':
-        now = datetime.now(tz)
-        start_dt = tz.localize(datetime(now.year, now.month, now.day, 0, 0, 0)).astimezone(pytz.UTC)
-        end_dt = tz.localize(datetime(now.year, now.month, now.day, 23, 59, 59, 999999)).astimezone(pytz.UTC)
-        list_id = 'all'
-
     if list_id == 'all':
         tasks_query = Task.query.options(*load_options).filter_by(user_id=user_id).all()
     elif list_id == 'tasks':
@@ -206,21 +219,20 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
         if not isinstance(list_id, int):
             try:
                 list_id = int(list_id)
+                tasks_query = (
+                Task.query
+                    .join(task_list_relations, Task.id == task_list_relations.c.TaskID)
+                    .join(List, List.id == task_list_relations.c.ListID)
+                    .filter(List.id == list_id, Task.user_id == user_id)
+                    .options(*load_options)
+                    .all()
+                )
             except (TypeError, ValueError):
                 return {'error': 'Invalid list_id'}, 400
 
-        tasks_query = (
-            Task.query
-            .join(task_list_relations, Task.id == task_list_relations.c.TaskID)
-            .join(List, List.id == task_list_relations.c.ListID)
-            .filter(List.id == list_id, Task.user_id == user_id)
-            .options(*load_options)
-            .all()
-        )
-
     for task in tasks_query:
         if not task.interval_id:  # исключаем повторяющиеся события
-            if _is_task_in_range(task, start_dt, end_dt):
+            if _is_task_in_range(task, start_dt, end_dt, is_events=False):
                 tasks_data.append(task.to_dict())
 
     # --- Добавляем override-экземпляры как отдельные задачи ---
@@ -238,9 +250,9 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
     return {'tasks': tasks_data}, 200
 
 
-
-
-def _is_task_in_range(task, start_dt, end_dt):
+def _is_task_in_range(task, start_dt, end_dt, is_events=False):
+    if is_events and not task.start:
+        return False
     st = task.start
     en = task.end or st
     if start_dt and en and en < start_dt:
@@ -426,16 +438,17 @@ def edit_task(data, user_id=None):
     if user_id is None:
         raise ValueError("user_id must be provided for edit_task")
     task_id = data.get('taskId')
-    if not isinstance(task_id, int):
+    try:
+        task_id = int(task_id)
+    except (ValueError, TypeError):
         return {'success': False, 'message': 'Invalid task id'}, 400
+
     updated_fields = {key: value for key, value in data.items() if key not in ['taskId', 'subtasks', 'current_start']}
 
     current_app.logger.info(f'edit_task {updated_fields}')
 
-    # Преобразуем пустые строки в None для дат
-    for date_field in ['start', 'end', 'completed_at']:
-        if date_field in updated_fields and (updated_fields[date_field] == '' or updated_fields[date_field] is None):
-            updated_fields[date_field] = None
+    # Преобразуем все пустые строки в None для корректной записи в БД
+    updated_fields = {k: (v if v != '' else None) for k, v in updated_fields.items()}
 
     task = Task.query.filter_by(id=task_id, user_id=user_id).first()
     if not task:

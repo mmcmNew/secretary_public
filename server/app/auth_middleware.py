@@ -11,7 +11,8 @@ def load_user_permissions():
         user_id = get_jwt_identity()
         
         if user_id:
-            user = User.query.get(user_id)
+            from app import db
+            user = db.session.get(User, user_id)
             if user:
                 g.user_id = user_id
                 g.user_access_level = getattr(user, 'access_level_id', 1)

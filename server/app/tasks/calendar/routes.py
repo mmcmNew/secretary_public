@@ -40,6 +40,7 @@ def get_calendar_events_route():
 
 @calendar_bp.route('/tasks/override/<int:override_id>', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=60, key_prefix=make_cache_key('tasks'))
 def get_task_override_route(override_id):
     user_id = current_user.id
     result, status_code = get_task_override_by_id(override_id, user_id=user_id)
@@ -79,5 +80,15 @@ def delete_task_override_route(override_id):
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
         notify_data_update(tasksVersion=new_version)
+    return jsonify(result), status_code
+
+
+@calendar_bp.route('/tasks/instance', methods=['PATCH'])
+@jwt_required()
+def patch_instance():
+    from .handlers import patch_instance_handler
+    data = request.get_json()
+    user_id = current_user.id
+    result, status_code = patch_instance_handler(data, user_id)
     return jsonify(result), status_code
 

@@ -28,6 +28,7 @@ import NewRecordDialog from "../JournalEditor/NewRecordDialog";
 import TaskTypeDialog from "../TaskTypeManager/TaskTypeDialog.jsx";
 import PropTypes from "prop-types";
 import DateTimeRangePickerField from "./DateTimeRangePicker.jsx";
+import TimeRangePickerField from "./TimeRangePicker.jsx";
 
 function TaskEditor({
     taskFields,
@@ -39,12 +40,23 @@ function TaskEditor({
     changeTaskStatus = null,
     deleteTask = null,
 }) {
+    const isInstance = task?.is_instance;
+    const allowedFields = ['start', 'end', 'type_id', 'priority_id', 'color', 'note'];
+    const filteredTaskFields = isInstance
+        ? Object.entries(taskFields).reduce((acc, [key, value]) => {
+              if (allowedFields.includes(key) || value.type === 'range') {
+                  acc[key] = value;
+              }
+              return acc;
+          }, {})
+        : taskFields;
     const methods = useForm({ defaultValues: { subtasks: [] } });
     const { control, setValue, reset, watch, formState: { errors } } = methods;
     const { fields: subtaskFields, append, remove, replace } = useFieldArray({ control, name: 'subtasks' });
     const [newRecordDialogOpen, setNewRecordDialogOpen] = useState(false);
     const [typeDialogOpen, setTypeDialogOpen] = useState(false);
     const [newTypeData, setNewTypeData] = useState({ name: '', color: '#3788D8', description: '' });
+    const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
     const updateNewTypeData = (field, value) => setNewTypeData(prev => ({ ...prev, [field]: value }));
     const lastSent = useRef({});
 
@@ -131,6 +143,19 @@ function TaskEditor({
         }
     };
 
+    const handleAddSubtask = async (e) => {
+        if (e.type === 'keydown' && e.key !== 'Enter') return;
+        e.preventDefault();
+        const title = newSubtaskTitle.trim();
+        if (!title) return;
+        if (addSubTask) {
+            await addSubTask({ title, parentTaskId: task.id });
+        } else {
+            append({ title, status_id: 1 });
+        }
+        setNewSubtaskTitle('');
+    };
+
     const handleKeyDown = (e, field, subIdx = null) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -179,6 +204,8 @@ function TaskEditor({
                         )}
                     />
                 </Box>
+                {!isInstance && (
+                    <>
                 <Box sx={{ marginY: 0 }}>
                     {subtaskFields.map((sub, idx) => (
                         <Grid container alignItems="center" spacing={0.5} key={sub.id || idx} sx={{ marginY: 0.5 }}>
@@ -215,11 +242,21 @@ function TaskEditor({
                 </Box>
                 <Grid item xs>
                     <Box component="form" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                        <IconButton sx={{ m: 0, p: 0 }} onClick={() => append({ id: null, title: '', status_id: 1 })}>
+                        <IconButton sx={{ m: 0, p: 0 }} onClick={handleAddSubtask}>
                             <AddIcon />
                         </IconButton>
+                        <InputBase
+                            sx={{ flex: 1, ml: 1 }}
+                            placeholder="Новая подзадача"
+                            value={newSubtaskTitle}
+                            onChange={e => setNewSubtaskTitle(e.target.value)}
+                            onKeyDown={handleAddSubtask}
+                            inputProps={{ 'aria-label': 'add subtask' }}
+                        />
                     </Box>
                 </Grid>
+                    </>
+                )}
             </Paper>
             {task.status_id === 2 && (
                 <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
@@ -227,8 +264,8 @@ function TaskEditor({
                 </Typography>
             )}
             <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexDirection: 'column', gap: 1.5, paddingY: 2 }}>
-                <Button variant="outlined" onClick={() => setNewRecordDialogOpen(true)}>Добавить запись в журнал проекта</Button>
-                {Object.entries(taskFields)
+                {!isInstance && <Button variant="outlined" onClick={() => setNewRecordDialogOpen(true)}>Добавить запись в журнал проекта</Button>}
+                {Object.entries(filteredTaskFields)
                     .sort(([, a], [, b]) => (a.id || 0) - (b.id || 0))
                     .map(([key, field]) => {
                         if (!field) return null;
@@ -236,7 +273,11 @@ function TaskEditor({
                         return (
                             <Box key={key} sx={{ mt: 1 }}>
                                 {field.type === 'range' ? (
+                                    isInstance ? (
+                                        <TimeRangePickerField name={key} onValidBlur={handleRangeUpdate} />
+                                    ) : (
                                     <DateTimeRangePickerField name={key} onValidBlur={handleRangeUpdate} />
+                                    )
                                 ) : field.type === 'datetime' ? (
                                     <FormControl fullWidth>
                                         <Controller
@@ -385,11 +426,11 @@ function TaskEditor({
                         setTypeDialogOpen(false);
                 }}
             />
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 1 }}>
+            {!isInstance && <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 1 }}>
                 <Button variant="outlined" color="error" onClick={handleDeleteTask}>
                     Удалить задачу
                 </Button>
-            </Box>
+            </Box>}
         </Box>
         </FormProvider>
     );

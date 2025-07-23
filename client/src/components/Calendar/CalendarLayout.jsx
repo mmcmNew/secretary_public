@@ -7,10 +7,7 @@ import CalendarComponent from "./CalendarComponent";
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
-import Snackbar from '@mui/material/Snackbar';
-import Box from '@mui/material/Box';
 
 const defaultCalendarSettings = {
   slotDuration: 30,
@@ -38,7 +35,6 @@ export default function CalendarLayout({
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedSubtasks, setSelectedSubtasks] = useState([]);
   const [overrideDialog, setOverrideDialog] = useState({ open: false, eventInfo: null, mode: null });
-  // const [overrideSnackbar, setOverrideSnackbar] = useState({ open: false, event: null });
   const [parentTask, setParentTask] = useState(null);
   const [overrides, setOverrides] = useState([]);
 
@@ -372,25 +368,6 @@ export default function CalendarLayout({
         deleteTask={deleteTask}
         onChange={handleTaskDialogChange}
       />
-      {/* Snackbar для выбора режима теперь только для drag&drop */}
-      {/*
-      <Snackbar
-        open={overrideSnackbar.open}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        message={
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span>Что изменить?</span>
-            <Button variant="contained" color="primary" onClick={() => handleOverrideSnackbarChoice('single')}>  
-              Только этот экземпляр (только {overrideSnackbar.calendarEvent?.start ? new Date(overrideSnackbar.calendarEvent?.start).toLocaleDateString() : 'этот день'})            
-            </Button>
-            <Button variant="outlined" color="secondary" onClick={() => handleOverrideSnackbarChoice('series')}>
-              Всю серию
-            </Button>
-          </Box>
-        }
-        onClose={() => setOverrideSnackbar({ open: false, event: null })}
-      />
-      */}
       <Dialog open={overrideDialog.open} onClose={() => setOverrideDialog({ open: false, eventInfo: null, mode: null })}>
         <DialogTitle>Что изменить?</DialogTitle>
         <DialogContent>

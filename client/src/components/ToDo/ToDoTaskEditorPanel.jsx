@@ -1,46 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import TaskEditor from './TaskEditor';
-import useTasks from './hooks/useTasks';
 
-export default function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId }) {
-  const {
-    tasks,
-    myDayTasks,
-    selectedTaskId,
-    taskFields,
-    addSubTask,
-    updateTask,
-    changeTaskStatus,
-    deleteTask,
-    setSelectedTaskId: setTaskId,
-    getSubtasksByParentId,
-    fetchTasks,
-  } = useTasks();
-
-  const [task, setTask] = useState(null);
-  const [subtasks, setSubtasks] = useState([]);
-
-  // Загружаем задачу и подзадачи при изменении selectedTaskId
-  useEffect(() => {
-    if (!selectedTaskId) {
-      setTask(null);
-      setSubtasks([]);
-      return;
-    }
-    // Найти задачу по id
-    const allTasks = [...(tasks?.data || []), ...(myDayTasks?.data || [])];
-    const foundTask = allTasks.find(t => t.id === selectedTaskId);
-    setTask(foundTask || null);
-    // Загрузить подзадачи
-    if (foundTask) {
-      getSubtasksByParentId(foundTask.id).then(setSubtasks);
-    } else {
-      setSubtasks([]);
-    }
-  }, [selectedTaskId, tasks, myDayTasks, getSubtasksByParentId]);
-
+export default function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId, task, subtasks, taskFields, addSubTask, updateTask, changeTaskStatus, deleteTask, fetchTasks }) {
   // onChange для TaskEditor
   const handleTaskEditorChange = useCallback(async (updatedTask) => {
     if (!updatedTask || !updatedTask.id) return;
@@ -48,7 +11,7 @@ export default function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId 
     await fetchTasks();
   }, [updateTask, fetchTasks]);
 
-  if (!selectedTaskId || !task) return null;
+  if (!task) return null;
   return (
     <Box
       sx={{
@@ -60,7 +23,7 @@ export default function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId 
       }}
     >
       <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
-        <IconButton onClick={() => (setSelectedTaskId ? setSelectedTaskId(null) : setTaskId(null))}>
+        <IconButton onClick={() => (setSelectedTaskId ? setSelectedTaskId(null) : null)}>
           <CloseIcon />
         </IconButton>
       </Box>

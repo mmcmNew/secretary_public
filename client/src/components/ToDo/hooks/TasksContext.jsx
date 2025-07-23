@@ -559,20 +559,23 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const getSubtasksByParentId = useCallback(async (parent_task_id) => {
     try {
       const { data } = await apiGet(`/tasks/get_subtasks?parent_task_id=${parent_task_id}`);
-      //объеденить tasks.data с res.subtasks
+      let newSubtasks = [];
       if (data.subtasks) {
-        setTasks(prev => ({
-          ...prev,
-          data: [...prev.data, ...data.subtasks]
-        }));
+        setTasks(prev => {
+          const existingIds = new Set(prev.data.map(t => t.id));
+          newSubtasks = data.subtasks.filter(s => !existingIds.has(s.id));
+          return {
+            ...prev,
+            data: [...prev.data, ...newSubtasks]
+          };
+        });
       }
-
       return data.subtasks || [];
     } catch (err) {
       if (onError) onError(err);
       return [];
     }
-  }, [onError]);
+  }, [onError, setTasks]);
 
   useEffect(() => {
       fetchTaskFields();

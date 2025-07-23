@@ -50,7 +50,7 @@ def create_app(config_type='work'):
 
     with app.app_context():
         # if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):
-        engine = db.get_engine()
+        engine = db.engine
         for schema in app.config.get('SCHEMAS', []):
             with engine.connect() as conn:
                 conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {schema}'))
@@ -84,7 +84,7 @@ def create_app(config_type='work'):
         from app.main.models import User
         @jwt.user_lookup_loader
         def load_user_callback(_jwt_header, jwt_data):
-            return User.query.get(int(jwt_data["sub"]))
+            return db.session.get(User, int(jwt_data["sub"]))
 
         @jwt.expired_token_loader
         def expired_token_callback(jwt_header, jwt_payload):

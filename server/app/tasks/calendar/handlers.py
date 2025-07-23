@@ -2,16 +2,37 @@ from datetime import datetime, timezone, timedelta
 from flask import current_app
 from ..models import Task
 from .models import TaskOverride
-from app import db
+from app import db, socketio
+from datetime import datetime, timedelta, timezone
+from dateutil.rrule import rrule, WEEKLY, DAILY, MONTHLY, YEARLY, MO, TU, WE, TH, FR
+from flask import current_app
+from ..models import Task, Status
+from .models import TaskOverride
 
 
 def _parse_iso_datetime(value):
     if not value:
         return None
+    # 'Z' в конце строки ISO 8601 означает UTC.
+    if value.endswith('Z'):
+        value = value[:-1] + '+00:00'
     dt = datetime.fromisoformat(value)
-    if dt.tzinfo is not None:
-        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
-    return dt
+    # Преобразуем в UTC и делаем "наивным" (без tzinfo), как ожидается в остальном коде
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+def _is_task_in_range(task, start_dt, end_dt, is_events=False):
+    if is_events and not task.start:
+        return False
+    st = task.start
+    en = task.end or st
+    if not st:  # Если нет начала, задача не может быть в диапазоне
+        return False
+        
+    if start_dt and en and en < start_dt:
+        return False
+    if end_dt and st and st > end_dt:
+        return False
+    return True
 
 
 def delete_redundant_override(override, task):
@@ -56,11 +77,16 @@ def get_calendar_events(start=None, end=None, user_id=None):
         db.joinedload(Task.interval),
     ]
 
+    current_app.logger.info(f'get_calendar_events {start_dt} {end_dt}')
+
     tasks_query = Task.query.options(*load_options).filter_by(user_id=user_id).all()
     events = []
     parent_tasks = []
 
     recurring_task_ids = [task.id for task in tasks_query if task.interval_id and task.start]
+
+    current_app.logger.info(f'recurring_task_ids {recurring_task_ids}')
+    current_app.logger.info(f'tasks_query {tasks_query}')
 
     if recurring_task_ids and start_dt and end_dt:
         overrides = TaskOverride.query.filter(
@@ -96,7 +122,9 @@ def get_calendar_events(start=None, end=None, user_id=None):
 
             for occ in occurrences:
                 occ_end = occ + duration
-                occ_date = occ.date()
+                # occ_date = occ.date()
+                occ_date = datetime(occ.year, occ.month, occ.day).date()
+
 
                 override = override_map.get((task.id, occ_date))
 
@@ -105,8 +133,8 @@ def get_calendar_events(start=None, end=None, user_id=None):
                     # Use start/end from override data if provided, otherwise fall back
                     start_val = base_data.get('start')
                     end_val = base_data.get('end')
-                    instance['start'] = start_val or occ.isoformat() + 'Z'
-                    instance['end'] = end_val or occ_end.isoformat() + 'Z'
+                    instance['start'] = occ.isoformat() + 'Z'
+                    instance['end'] = occ_end.isoformat() + 'Z'
                     instance['is_override'] = is_override
                     instance['parent_task_id'] = task.id
                     instance['is_instance'] = True
@@ -116,8 +144,8 @@ def get_calendar_events(start=None, end=None, user_id=None):
                     else:
                         instance['id'] = f"instance_{task.id}_{occ_date.isoformat()}"
                     instance['range'] = {
-                        'start': start_val or (occ.isoformat() + 'Z' if occ else None),
-                        'end': end_val or (occ_end.isoformat() + 'Z' if occ_end else None),
+                        'start': occ.isoformat() + 'Z' if occ else None,
+                        'end': occ_end.isoformat() + 'Z' if occ_end else None,
                     }
                     return instance
 
@@ -133,6 +161,10 @@ def get_calendar_events(start=None, end=None, user_id=None):
                         continue
 
                 events.append(build_instance(task.to_dict(), is_override=False))
+        else:
+            if _is_task_in_range(task, start_dt, end_dt, is_events=True):
+                events.append(task.to_dict())
+
 
     return {
         'events': events,
@@ -194,3 +226,51 @@ def delete_task_override(override_id, user_id=None):
     db.session.delete(override)
     db.session.commit()
     return {'success': True}, 200
+
+
+def patch_instance_handler(data, user_id):
+    from datetime import datetime
+    task_id = data.get('parent_task_id')
+    date_str = data.get('date')
+    patch_data = data.get('data', {})
+    if not (task_id and date_str):
+        return {'success': False, 'message': 'parent_task_id and date required'}, 400
+    date = datetime.fromisoformat(date_str).date()
+    parent_task = Task.query.filter_by(id=task_id, user_id=user_id).first()
+    if not parent_task:
+        return {'success': False, 'message': 'Parent task not found'}, 404
+    override = TaskOverride.query.filter_by(task_id=task_id, user_id=user_id, date=date).first()
+    parent_data = parent_task.to_dict()
+    # Только разрешённые поля (можно расширить список)
+    allowed_fields = ['start', 'end', 'note', 'status_id', 'completed_at', 'color', 'priority_id', 'type_id']
+    changed = {k: v for k, v in patch_data.items() if k in allowed_fields and parent_data.get(k) != v}
+    # Обработка skip
+    if patch_data.get('type') == 'skip':
+        if override:
+            override.type = 'skip'
+            override.data = {}
+            db.session.add(override)
+            db.session.commit()
+            return {'success': True, 'instance': {'parent_task_id': task_id, 'date': date_str, 'override_id': override.id, 'is_override': True, 'type': 'skip', 'data': {}}}, 200
+        else:
+            new_override = TaskOverride(task_id=task_id, user_id=user_id, date=date, type='skip', data={})
+            db.session.add(new_override)
+            db.session.commit()
+            return {'success': True, 'instance': {'parent_task_id': task_id, 'date': date_str, 'override_id': new_override.id, 'is_override': True, 'type': 'skip', 'data': {}}}, 201
+    # Если изменений нет — удалить override, если был
+    if not changed:
+        if override:
+            db.session.delete(override)
+            db.session.commit()
+        return {'success': True, 'instance': {'parent_task_id': task_id, 'date': date_str, 'is_override': False, 'data': parent_data}}, 200
+    if override:
+        override.data = changed
+        override.type = 'modified'
+        db.session.add(override)
+        db.session.commit()
+        return {'success': True, 'instance': {'parent_task_id': task_id, 'date': date_str, 'override_id': override.id, 'is_override': True, 'type': 'modified', 'data': {**parent_data, **changed}}}, 200
+    else:
+        new_override = TaskOverride(task_id=task_id, user_id=user_id, date=date, type='modified', data=changed)
+        db.session.add(new_override)
+        db.session.commit()
+        return {'success': True, 'instance': {'parent_task_id': task_id, 'date': date_str, 'override_id': new_override.id, 'is_override': True, 'type': 'modified', 'data': {**parent_data, **changed}}}, 201

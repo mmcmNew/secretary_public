@@ -152,13 +152,15 @@ export default function AntischeduleComponent({
         handleClose={handleDialogClose}
         handleDelDateClick={handleDelDateClick}
         scroll={dialogScroll}
-        setSelectedTaskId={setSelectedTaskId}
-        tasks={currentTasks}
-        selectedTaskId={selectedTaskId}
+        task={selectedTask}
+        subtasks={selectedSubtasks}
+        parentTask={parentTask}
+        overrides={overrides}
         taskFields={currentTaskFields}
-        updateTask={handleUpdateTask}
-        changeTaskStatus={currentTaskType === 'task' ? handleChangeTaskStatus : handleChangeEventStatus}
+        addSubTask={addSubTask}
+        changeTaskStatus={changeTaskStatus}
         deleteTask={deleteTask}
+        onChange={handleTaskDialogChange}
       />
       <NewRecordDialog open={newRecordDialogOpen} handleClose={handleNewRecordDialogClose} />
     </Box>

@@ -522,14 +522,15 @@ export default function Calendar() {
                             handleClose={handleDialogClose}
                             handleDelDateClick={handleDelDateClick}
                             scroll={dialogScroll}
-                            setSelectedTaskId={setSelectedTaskId}
-                            tasks={calendarEvents}
-                            selectedTaskId={selectedTaskId}
+                            task={selectedTask}
+                            subtasks={selectedSubtasks}
+                            parentTask={parentTask}
+                            overrides={overrides}
                             taskFields={taskFields}
                             addSubTask={addSubTask}
-                            updateTask={updateTask}
                             changeTaskStatus={changeTaskStatus}
                             deleteTask={deleteTask}
+                            onChange={handleTaskDialogChange}
                         />
                         <NewTaskDialog
                             open={newTaskDialogOpen}
