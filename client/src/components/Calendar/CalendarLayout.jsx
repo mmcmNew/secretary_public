@@ -154,33 +154,7 @@ export default function CalendarLayout({
     setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
   }, [setUpdates]);
 
-  // onChange для TaskDialog
-  const handleTaskDialogChange = useCallback(async (updatedTask) => {
-    if (!updatedTask || !updatedTask.id) return;
-    if (updatedTask.is_override && updatedTask.override_id) {
-      // PATCH override
-      await updateTaskOverride(updatedTask.override_id, { data: updatedTask });
-    } else {
-      // PATCH обычная задача/серия
-      await updateTask({ taskId: updatedTask.id, ...updatedTask });
-    }
-    await fetchCalendarEvents(getCalendarRange());
-    setUpdates((prev) => [...prev, "todo", "calendar"]);
-  }, [updateTask, updateTaskOverride, fetchCalendarEvents, setUpdates]);
-
-  const handleEventClick = useCallback(
-    async (event) => {
-      const calendarEvent = calendarEvents?.data?.events?.find(e => e.id == event?.event?.id);
-      console.log(calendarEvent, calendarEvents)
-      if (calendarEvent) {
-        await handleDialogOpen("paper", calendarEvent);
-      } else {
-        onError('Event not found in calendarEvents')
-      }
-    },
-    [calendarEvents, handleDialogOpen]
-  );
-
+  
   // Обработка выбора в Snackbar
   const handleOverrideChoice = async (mode) => {
     if (!overrideSnackbar.eventInfo) return;
