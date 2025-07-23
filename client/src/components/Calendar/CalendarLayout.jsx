@@ -325,14 +325,15 @@ export default function CalendarLayout({
         handleClose={handleDialogClose}
         handleDelDateClick={handleDelDateClick}
         scroll={dialogScroll}
-        task={selectedEvent}
+        instance={selectedEvent}
         subtasks={selectedSubtasks}
-        parentTask={parentTask}
+        task={parentTask}
         overrides={overrides}
         loadSubtasks={loadSubtasks}
         taskFields={taskFields}
         addSubTask={addSubTask}
         changeTaskStatus={changeTaskStatus}
+        changeInstanceStatus={changeInstanceStatus}
         deleteTask={deleteTask}
         onChange={handleTaskDialogChange}
       />

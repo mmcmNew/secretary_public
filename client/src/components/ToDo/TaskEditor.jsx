@@ -36,7 +36,6 @@ function TaskEditor({
     subtasks = [],
     onChange = null,
     addSubTask = null,
-    updateTask = null,
     changeTaskStatus = null,
     deleteTask = null,
 }) {
@@ -58,7 +57,6 @@ function TaskEditor({
     const [newTypeData, setNewTypeData] = useState({ name: '', color: '#3788D8', description: '' });
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
     const updateNewTypeData = (field, value) => setNewTypeData(prev => ({ ...prev, [field]: value }));
-    const lastSent = useRef({});
 
     // Инициализация формы из пропсов
     useEffect(() => {
@@ -204,8 +202,6 @@ function TaskEditor({
                         )}
                     />
                 </Box>
-                {!isInstance && (
-                    <>
                 <Box sx={{ marginY: 0 }}>
                     {subtaskFields.map((sub, idx) => (
                         <Grid container alignItems="center" spacing={0.5} key={sub.id || idx} sx={{ marginY: 0.5 }}>
@@ -240,23 +236,23 @@ function TaskEditor({
                         </Grid>
                     ))}
                 </Box>
-                <Grid item xs>
-                    <Box component="form" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                        <IconButton sx={{ m: 0, p: 0 }} onClick={handleAddSubtask}>
-                            <AddIcon />
-                        </IconButton>
-                        <InputBase
-                            sx={{ flex: 1, ml: 1 }}
-                            placeholder="Новая подзадача"
-                            value={newSubtaskTitle}
-                            onChange={e => setNewSubtaskTitle(e.target.value)}
-                            onKeyDown={handleAddSubtask}
-                            inputProps={{ 'aria-label': 'add subtask' }}
-                        />
-                    </Box>
-                </Grid>
-                    </>
-                )}
+                {typeof handleAddSubtask == 'function' &&
+                    <Grid item xs>
+                        <Box component="form" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                            <IconButton sx={{ m: 0, p: 0 }} onClick={handleAddSubtask}>
+                                <AddIcon />
+                            </IconButton>
+                            <InputBase
+                                sx={{ flex: 1, ml: 1 }}
+                                placeholder="Новая подзадача"
+                                value={newSubtaskTitle}
+                                onChange={e => setNewSubtaskTitle(e.target.value)}
+                                onKeyDown={handleAddSubtask}
+                                inputProps={{ 'aria-label': 'add subtask' }}
+                            />
+                        </Box>
+                    </Grid>
+                }
             </Paper>
             {task.status_id === 2 && (
                 <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
@@ -426,11 +422,11 @@ function TaskEditor({
                         setTypeDialogOpen(false);
                 }}
             />
-            {!isInstance && <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 1 }}>
+            {/* {!isInstance && <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 1 }}>
                 <Button variant="outlined" color="error" onClick={handleDeleteTask}>
                     Удалить задачу
                 </Button>
-            </Box>}
+            </Box>} */}
         </Box>
         </FormProvider>
     );
