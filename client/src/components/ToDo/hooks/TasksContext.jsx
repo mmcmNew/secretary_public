@@ -700,6 +700,84 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     return apiDelete(`/tasks/override/${override_id}`);
   }, []);
 
+  // --- Calendar helpers for CalendarLayout ---
+  const handleCreateTask = useCallback(
+    async (taskData, range) => {
+      await addTask(taskData);
+      if (fetchCalendarEvents && typeof fetchCalendarEvents === 'function') {
+        await fetchCalendarEvents(range);
+      }
+    },
+    [addTask, fetchCalendarEvents]
+  );
+
+  const handleDelDateClick = useCallback(
+    async (taskId, range) => {
+      await updateTask({ taskId, start: null, end: null });
+      if (fetchCalendarEvents && typeof fetchCalendarEvents === 'function') {
+        await fetchCalendarEvents(range);
+      }
+    },
+    [updateTask, fetchCalendarEvents]
+  );
+
+  const processEventChange = useCallback(
+    async (eventInfo, range) => {
+      const eventDict = {
+        title: eventInfo.event.title,
+        allDay: eventInfo.event.allDay,
+      };
+
+      if (eventInfo.event.start) {
+        eventDict.start = eventInfo.event.start;
+      }
+
+      if (eventInfo.event.end) {
+        eventDict.end = eventInfo.event.end;
+      }
+
+      await updateTask({ taskId: eventInfo.event.id, ...eventDict });
+      if (fetchCalendarEvents && typeof fetchCalendarEvents === 'function') {
+        await fetchCalendarEvents(range);
+      }
+    },
+    [updateTask, fetchCalendarEvents]
+  );
+
+  const handleOverrideChoice = useCallback(
+    async (mode, eventInfo, range) => {
+      const eventDict = {
+        title: eventInfo.event.title,
+        allDay: eventInfo.event.allDay,
+      };
+
+      if (eventInfo.event.start) {
+        eventDict.start = eventInfo.event.start;
+      }
+      if (eventInfo.event.end) {
+        eventDict.end = eventInfo.event.end;
+      }
+      if (mode === 'single' && eventInfo.event.extendedProps?.originalStart) {
+        eventDict.current_start = eventInfo.event.extendedProps.originalStart;
+      }
+
+      if (
+        eventInfo.event.extendedProps?.is_override &&
+        eventInfo.event.id.startsWith('override_')
+      ) {
+        const overrideId = parseInt(eventInfo.event.id.replace('override_', ''));
+        await updateTaskOverride(overrideId, { data: eventDict });
+      } else {
+        await updateTask({ taskId: eventInfo.event.id, ...eventDict });
+      }
+
+      if (fetchCalendarEvents && typeof fetchCalendarEvents === 'function') {
+        await fetchCalendarEvents(range);
+      }
+    },
+    [updateTask, updateTaskOverride, fetchCalendarEvents]
+  );
+
   const contextValue = useMemo(() => ({
     tasks,
     myDayTasks,
@@ -746,10 +824,14 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     linkTaskList,
     loading: tasks.loading,
     getSubtasksByParentId,
+    handleCreateTask,
+    handleDelDateClick,
+    processEventChange,
+    handleOverrideChoice,
     createTaskOverride,
     updateTaskOverride,
     deleteTaskOverride,
-  }), [tasks, myDayTasks, myDayList, taskFields, lists, selectedListId, selectedList, calendarEvents, calendarRange, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, fetchTaskFields, getTaskTypes, addTaskType, updateTaskType, deleteTaskType, getTaskTypeGroups, addTaskTypeGroup, updateTaskTypeGroup, deleteTaskTypeGroup, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, fetchTasksByIds, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, getSubtasksByParentId, createTaskOverride, updateTaskOverride, deleteTaskOverride]);
+  }), [tasks, myDayTasks, myDayList, taskFields, lists, selectedListId, selectedList, calendarEvents, calendarRange, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, fetchTaskFields, getTaskTypes, addTaskType, updateTaskType, deleteTaskType, getTaskTypeGroups, addTaskTypeGroup, updateTaskTypeGroup, deleteTaskTypeGroup, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, fetchTasksByIds, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, getSubtasksByParentId, createTaskOverride, updateTaskOverride, deleteTaskOverride, handleCreateTask, handleDelDateClick, processEventChange, handleOverrideChoice]);
 
   return <TasksContext.Provider value={contextValue}>{children}</TasksContext.Provider>;
 };

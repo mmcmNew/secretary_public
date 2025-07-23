@@ -24,8 +24,9 @@ export default function CalendarLayout({
   onSuccess = null,
   onError = null,
 }) {
-  const { updateTask, addTask, fetchTasks, tasks, taskFields, addSubTask, changeTaskStatus, deleteTask, 
-    lists, calendarEvents, fetchCalendarEvents, processEventChange, getSubtasksByParentId,
+  const { updateTask, addTask, fetchTasks, tasks, taskFields, addSubTask, changeTaskStatus, deleteTask,
+    lists, calendarEvents, fetchCalendarEvents, processEventChange: processEventChangeCtx, handleCreateTask: handleCreateTaskCtx,
+    handleDelDateClick: handleDelDateClickCtx, handleOverrideChoice: handleOverrideChoiceCtx, getSubtasksByParentId,
     createTaskOverride, updateTaskOverride, deleteTaskOverride } = useTasks();
   const { setUpdates, handleUpdateContent } = useContainer();
   const calendarRef = useRef(null);
@@ -70,20 +71,11 @@ export default function CalendarLayout({
     [handleUpdateContent, containerId, onSuccess, onError]
   );
 
-      // Функция загрузки подзадач
-  const loadSubtasks = useCallback(async (parentTaskId) => {
-    if (!parentTaskId) return [];
-    const subtasks = await getSubtasksByParentId(parentTaskId);
-    setSelectedSubtasks(subtasks);
-    return subtasks;
-  }, [getSubtasksByParentId]);
 
   const handleDelDateClick = useCallback(
     async (taskId) => {
       try {
-        await updateTask({ taskId, start: null, end: null });
-        if (fetchCalendarEvents && typeof fetchCalendarEvents === "function")
-          await fetchCalendarEvents(getCalendarRange());
+        await handleDelDateClickCtx(taskId, getCalendarRange());
         setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
         if (onSuccess) onSuccess('Дата удалена');
       } catch (err) {
@@ -91,16 +83,13 @@ export default function CalendarLayout({
         if (onError) onError(err);
       }
     },
-    [updateTask, setUpdates, onSuccess, onError]
+    [handleDelDateClickCtx, setUpdates, onSuccess, onError]
   );
 
   const handleCreateTask = useCallback(
     async (taskData) => {
       try {
-        await addTask(taskData);
-        if (fetchCalendarEvents && typeof fetchCalendarEvents === 'function') {
-          await fetchCalendarEvents(getCalendarRange());
-        }
+        await handleCreateTaskCtx(taskData, getCalendarRange());
         setUpdates((prevUpdates) => [...prevUpdates, 'todo', 'calendar']);
         if (onSuccess) onSuccess('Событие добавлено');
       } catch (err) {
@@ -108,7 +97,14 @@ export default function CalendarLayout({
         if (onError) onError(err);
       }
     },
-    [addTask, fetchCalendarEvents, setUpdates, onSuccess, onError]
+    [handleCreateTaskCtx, setUpdates, onSuccess, onError]
+  );
+
+  const handleEventClick = useCallback(
+    async (eventInfo) => {
+      await handleDialogOpen('paper', eventInfo.event);
+    },
+    [handleDialogOpen]
   );
 
   const handleDialogOpen = useCallback(
@@ -132,16 +128,16 @@ export default function CalendarLayout({
         // Для экземпляра: если есть parent_task_id, то подзадачи по нему, иначе по id
         let subtasks;
         if (!eventObj.parent_task_id) {
-          subtasks = await loadSubtasks(eventObj.id);
+          subtasks = await getSubtasksByParentId(eventObj.id);
         } else {
-          subtasks = await loadSubtasks(_parentTask.id);
+          subtasks = await getSubtasksByParentId(_parentTask.id);
         }
         setSelectedSubtasks(subtasks);
         
       }
       setTaskDialogOpen(true);
       setDialogScroll(scrollType);
-    }, [calendarEvents, loadSubtasks]
+    }, [calendarEvents, getSubtasksByParentId]
   );
 
   const handleDialogClose = useCallback(() => {
@@ -158,34 +154,10 @@ export default function CalendarLayout({
   const handleOverrideChoice = async (mode) => {
     if (!overrideSnackbar.eventInfo) return;
     const eventInfo = overrideSnackbar.eventInfo;
-    const eventDict = {
-      title: eventInfo.event.title,
-      allDay: eventInfo.event.allDay,
-    };
-    if (eventInfo.event.start) {
-      eventDict.start = eventInfo.event.start;
-    }
-    if (eventInfo.event.end) {
-      eventDict.end = eventInfo.event.end;
-    }
-    if (mode === 'single' && eventInfo.event.extendedProps?.originalStart) {
-      eventDict.current_start = eventInfo.event.extendedProps.originalStart;
-    }
     try {
-      if (
-        eventInfo.event.extendedProps?.is_override &&
-        eventInfo.event.id.startsWith('override_')
-      ) {
-        const overrideId = parseInt(eventInfo.event.id.replace('override_', ''));
-        await updateTaskOverride(overrideId, { data: eventDict });
-      } else {
-        await updateTask({ taskId: eventInfo.event.id, ...eventDict });
-      }
+      await handleOverrideChoiceCtx(mode, eventInfo, getCalendarRange());
       if (setUpdates && typeof setUpdates === 'function') {
         setUpdates((prevUpdates) => [...prevUpdates, 'todo', 'calendar']);
-      }
-      if (fetchCalendarEvents && typeof fetchCalendarEvents === 'function') {
-        await fetchCalendarEvents(getCalendarRange());
       }
       if (onSuccess) onSuccess('Событие обновлено');
     } catch (err) {
@@ -227,18 +199,16 @@ export default function CalendarLayout({
 
       // Обычная задача или серия — сразу обновляем
       try {
-        await updateTask({ taskId: eventInfo.event.id, ...eventDict });
+        await processEventChangeCtx(eventInfo, getCalendarRange());
         if (setUpdates && typeof setUpdates === "function")
           setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
-        if (fetchCalendarEvents && typeof fetchCalendarEvents === "function")
-          await fetchCalendarEvents(getCalendarRange());
         if (onSuccess) onSuccess('Событие обновлено');
       } catch (err) {
         console.error('Error updating event:', err);
         if (onError) onError(err);
       }
     },
-    [calendarSettings, calendarEvents, updateTask, setUpdates, fetchCalendarEvents, onSuccess, onError]
+    [calendarSettings, calendarEvents, processEventChangeCtx, setUpdates, onSuccess, onError]
   );
 
 
@@ -280,7 +250,6 @@ export default function CalendarLayout({
         subtasks={selectedSubtasks}
         task={parentTask}
         overrides={overrides}
-        loadSubtasks={loadSubtasks}
         taskFields={taskFields}
         addSubTask={addSubTask}
         changeTaskStatus={changeTaskStatus}
