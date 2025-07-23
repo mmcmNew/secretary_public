@@ -4,10 +4,10 @@ import useTasks from "../ToDo/hooks/useTasks";
 import useContainer from "../DraggableComponents/useContainer";
 import TaskDialog from "./TaskDialog";
 import CalendarComponent from "./CalendarComponent";
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
 import Button from '@mui/material/Button';
+import Snackbar from '@mui/material/Snackbar';
+import Box from '@mui/material/Box';
+import applyTimeOffset from "../../utils/applyTimeOffset";
 
 const defaultCalendarSettings = {
   slotDuration: 30,
@@ -34,7 +34,7 @@ export default function CalendarLayout({
   const [dialogScroll, setDialogScroll] = useState("paper");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedSubtasks, setSelectedSubtasks] = useState([]);
-  const [overrideDialog, setOverrideDialog] = useState({ open: false, eventInfo: null, mode: null });
+  const [overrideSnackbar, setOverrideSnackbar] = useState({ open: false, eventInfo: null });
   const [parentTask, setParentTask] = useState(null);
   const [overrides, setOverrides] = useState([]);
 
@@ -182,36 +182,60 @@ export default function CalendarLayout({
   );
 
   // Обработка выбора в Snackbar
-  const handleOverrideSnackbarChoice = async (mode) => {
-    if (!overrideDialog.eventInfo) return;
-    // Оставляем только для drag&drop
-    if (overrideDialog.eventInfo.type === 'drag') {
-      const eventInfo = overrideDialog.eventInfo.eventInfo;
-      const updatingMode = mode;
-      await processEventChange(eventInfo, updatingMode); 
+  const handleOverrideChoice = async (mode) => {
+    if (!overrideSnackbar.eventInfo) return;
+    const eventInfo = overrideSnackbar.eventInfo;
+    const offsetHours = Number(calendarSettings?.timeOffset) || 0;
+    const eventDict = {
+      title: eventInfo.event.title,
+      allDay: eventInfo.event.allDay,
+    };
+    if (eventInfo.event.start) {
+      const originalStart = applyTimeOffset(eventInfo.event.start, offsetHours);
+      if (originalStart) eventDict.start = originalStart;
     }
-    setOverrideDialog({ open: false, eventInfo: null, mode: null });
+    if (eventInfo.event.end) {
+      const originalEnd = applyTimeOffset(eventInfo.event.end, offsetHours);
+      if (originalEnd) eventDict.end = originalEnd;
+    } else if (eventInfo.event.start && !eventInfo.event.allDay) {
+      const receivedStartDate = new Date(eventInfo.event.start);
+      if (!isNaN(receivedStartDate.getTime())) {
+        receivedStartDate.setHours(receivedStartDate.getHours() + 1);
+        const originalEnd = applyTimeOffset(receivedStartDate, offsetHours);
+        if (originalEnd) eventDict.end = originalEnd;
+      }
+    }
+    if (mode === 'single' && eventInfo.event.extendedProps?.originalStart) {
+      eventDict.current_start = eventInfo.event.extendedProps.originalStart;
+    }
+    try {
+      if (
+        eventInfo.event.extendedProps?.is_override &&
+        eventInfo.event.id.startsWith('override_')
+      ) {
+        const overrideId = parseInt(eventInfo.event.id.replace('override_', ''));
+        await updateTaskOverride(overrideId, { data: eventDict });
+      } else {
+        await updateTask({ taskId: eventInfo.event.id, ...eventDict });
+      }
+      if (setUpdates && typeof setUpdates === 'function') {
+        setUpdates((prevUpdates) => [...prevUpdates, 'todo', 'calendar']);
+      }
+      if (fetchCalendarEvents && typeof fetchCalendarEvents === 'function') {
+        await fetchCalendarEvents(getCalendarRange());
+      }
+      if (onSuccess) onSuccess('Событие обновлено');
+    } catch (err) {
+      console.error('Error updating event:', err);
+      if (onError) onError(err);
+    }
+    setOverrideSnackbar({ open: false, eventInfo: null });
   };
 
   const handleEventChange = useCallback(
     async (eventInfo) => {
       const offsetHours = Number(calendarSettings?.timeOffset) || 0;
-      const applyInverseOffset = (dateInput) => {
-        if (!dateInput) return null;
-        const date = new Date(dateInput);
-        if (!(date instanceof Date) || isNaN(date.getTime())) {
-          console.error('[Layout] Invalid date value received in handleEventChange inverse:', dateInput);
-          return null;
-        }
-        if (offsetHours !== 0) {
-          date.setHours(date.getHours() + offsetHours);
-           if (isNaN(date.getTime())) {
-             console.error('[Layout] Invalid date after applying inverse offset:', dateInput, offsetHours);
-             return null;
-           }
-        }
-        return date.toISOString();
-      };
+
 
       const eventDict = {
         title: eventInfo.event.title,
@@ -219,18 +243,18 @@ export default function CalendarLayout({
       };
 
       if (eventInfo.event.start) {
-        const originalStart = applyInverseOffset(eventInfo.event.start);
+        const originalStart = applyTimeOffset(eventInfo.event.start, offsetHours);
         if (originalStart) eventDict.start = originalStart;
       }
 
       if (eventInfo.event.end) {
-         const originalEnd = applyInverseOffset(eventInfo.event.end);
+         const originalEnd = applyTimeOffset(eventInfo.event.end, offsetHours);
          if(originalEnd) eventDict.end = originalEnd;
       } else if (eventInfo.event.start && !eventInfo.event.allDay) {
         const receivedStartDate = new Date(eventInfo.event.start);
         if (!isNaN(receivedStartDate.getTime())) {
           receivedStartDate.setHours(receivedStartDate.getHours() + 1);
-          const originalEnd = applyInverseOffset(receivedStartDate);
+          const originalEnd = applyTimeOffset(receivedStartDate, offsetHours);
           if(originalEnd) eventDict.end = originalEnd;
         }
       }
@@ -240,8 +264,13 @@ export default function CalendarLayout({
       );
 
       // Если это экземпляр повторяющейся задачи — показать диалог выбора
-      if (originalCalendarEvent && originalCalendarEvent.status_id && eventDict.start && eventInfo.event.extendedProps?.originalStart) {
-        setOverrideDialog({ open: true, eventInfo: { type: 'drag', eventInfo }, mode: null });
+      if (
+        originalCalendarEvent &&
+        originalCalendarEvent.status_id &&
+        eventDict.start &&
+        eventInfo.event.extendedProps?.originalStart
+      ) {
+        setOverrideSnackbar({ open: true, eventInfo });
         return;
       }
 
@@ -261,67 +290,6 @@ export default function CalendarLayout({
     [calendarSettings, calendarEvents, updateTask, setUpdates, fetchCalendarEvents, onSuccess, onError]
   );
 
-  // Обработка выбора в диалоге override для drag&drop
-  const handleOverrideDialogChoice = async (mode) => {
-    if (!overrideDialog.eventInfo) return;
-    const eventInfo = overrideDialog.eventInfo;
-    const offsetHours = Number(calendarSettings?.timeOffset) || 0;
-    const applyInverseOffset = (dateInput) => {
-      if (!dateInput) return null;
-      const date = new Date(dateInput);
-      if (!(date instanceof Date) || isNaN(date.getTime())) {
-        return null;
-      }
-      if (offsetHours !== 0) {
-        date.setHours(date.getHours() + offsetHours);
-        if (isNaN(date.getTime())) {
-          return null;
-        }
-      }
-      return date.toISOString();
-    };
-    const eventDict = {
-      title: eventInfo.event.title,
-      allDay: eventInfo.event.allDay,
-    };
-    if (eventInfo.event.start) {
-      const originalStart = applyInverseOffset(eventInfo.event.start);
-      if (originalStart) eventDict.start = originalStart;
-    }
-    if (eventInfo.event.end) {
-      const originalEnd = applyInverseOffset(eventInfo.event.end);
-      if(originalEnd) eventDict.end = originalEnd;
-    } else if (eventInfo.event.start && !eventInfo.event.allDay) {
-      const receivedStartDate = new Date(eventInfo.event.start);
-      if (!isNaN(receivedStartDate.getTime())) {
-        receivedStartDate.setHours(receivedStartDate.getHours() + 1);
-        const originalEnd = applyInverseOffset(receivedStartDate);
-        if(originalEnd) eventDict.end = originalEnd;
-      }
-    }
-    if (mode === 'single' && eventInfo.event.extendedProps?.originalStart) {
-      eventDict.current_start = eventInfo.event.extendedProps.originalStart;
-    }
-    try {
-      if (eventInfo.event.extendedProps?.is_override && eventInfo.event.id.startsWith('override_')) {
-        // PATCH override
-        const overrideId = parseInt(eventInfo.event.id.replace('override_', ''));
-        await updateTaskOverride(overrideId, { data: eventDict });
-      } else {
-        // PATCH обычная задача/серия
-        await updateTask({ taskId: eventInfo.event.id, ...eventDict });
-      }
-      if (setUpdates && typeof setUpdates === "function")
-        setUpdates((prevUpdates) => [...prevUpdates, "todo", "calendar"]);
-      if (fetchCalendarEvents && typeof fetchCalendarEvents === "function")
-        await fetchCalendarEvents(getCalendarRange());
-      if (onSuccess) onSuccess('Событие обновлено');
-    } catch (err) {
-      console.error('Error updating event:', err);
-      if (onError) onError(err);
-    }
-    setOverrideDialog({ open: false, eventInfo: null, mode: null });
-  };
 
   // Вспомогательная функция для получения диапазона календаря
   const getCalendarRange = () => {
@@ -368,23 +336,28 @@ export default function CalendarLayout({
         deleteTask={deleteTask}
         onChange={handleTaskDialogChange}
       />
-      <Dialog open={overrideDialog.open} onClose={() => setOverrideDialog({ open: false, eventInfo: null, mode: null })}>
-        <DialogTitle>Что изменить?</DialogTitle>
-        <DialogContent>
-          <Button variant="contained" color="primary" sx={{ my: 1 }} onClick={() => handleOverrideDialogChoice('single')}>
-            Только этот экземпляр (только {overrideDialog.eventInfo?.event?.extendedProps?.originalStart ? new Date(overrideDialog.eventInfo.event.extendedProps.originalStart).toLocaleDateString() : 'этот день'})
-          </Button>
-          <Button variant="outlined" color="secondary" sx={{ my: 1 }} onClick={() => handleOverrideDialogChoice('series')}>
-            Всю серию
-          </Button>
-        </DialogContent>
-      </Dialog>
+      {/* Snackbar для выбора режима теперь только для drag&drop */}
+      <Snackbar
+        open={overrideSnackbar.open}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        message={
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span>Что изменить?</span>
+            <Button variant="contained" color="primary" onClick={() => handleOverrideChoice('single')}>
+              Только этот экземпляр (только {overrideSnackbar.eventInfo?.event?.extendedProps?.originalStart ? new Date(overrideSnackbar.eventInfo.event.extendedProps.originalStart).toLocaleDateString() : 'этот день'})
+            </Button>
+            <Button variant="outlined" color="secondary" onClick={() => handleOverrideChoice('series')}>
+              Всю серию
+            </Button>
+          </Box>
+        }
+        onClose={() => setOverrideSnackbar({ open: false, eventInfo: null })}
+      />
     </>
   );
 }
 
 CalendarLayout.propTypes = {
-  processEventChange: PropTypes.func,
   containerId: PropTypes.string,
   handleDatesSet: PropTypes.func,
   calendarSettingsProp: PropTypes.object,

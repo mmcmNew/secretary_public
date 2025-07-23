@@ -15,6 +15,7 @@ import useContainer from "../DraggableComponents/useContainer";
 import TaskDialog from "./TaskDialog";
 import NewTaskDialog from "./NewTaskDialog";
 import SettingsDialog from "./SettingsDialog";
+import applyTimeOffset from "../utils/applyTimeOffset";
 
 export default function Calendar() {
     const { updateTask, addTask, fetchTasks, taskFields, addSubTask, changeTaskStatus, deleteTask, lists, updateList, deleteFromChildes, linkListGroup, calendarEvents, fetchCalendarEvents } = useTasks();
@@ -55,17 +56,18 @@ export default function Calendar() {
 
             // Применяем смещение времени
             const applyOffset = (date) => {
-                const newDate = new Date(date);
-                newDate.setHours(newDate.getHours() - timeOffset.current);
-                return newDate;
+                const shifted = applyTimeOffset(date, -timeOffset.current);
+                return shifted ? new Date(shifted) : null;
             };
 
             if (event.start) {
-                updatedEvent.start = applyOffset(event.start).toISOString();
+                const startDate = applyOffset(event.start);
+                if (startDate) updatedEvent.start = startDate.toISOString();
             }
 
             if (event.end) {
-                updatedEvent.end = applyOffset(event.end).toISOString();
+                const endDate = applyOffset(event.end);
+                if (endDate) updatedEvent.end = endDate.toISOString();
             }
 
             if (event.rrule) {
@@ -264,11 +266,7 @@ export default function Calendar() {
 
     function handleDateSelect(selectInfo) {
         // console.log(selectInfo)
-        const applyOffset = (date, offset) => {
-            const newDate = new Date(date);
-            newDate.setHours(newDate.getHours() + offset);
-            return newDate.toISOString();
-        };
+        const applyOffset = (date, offset) => applyTimeOffset(date, offset);
 
         // Применяем смещение времени к выбранной дате
         const adjustedStartDate = applyOffset(selectInfo.startStr, timeOffset.current);
@@ -301,11 +299,7 @@ export default function Calendar() {
     }
 
     async function handleEventChange(eventInfo) {
-        const applyOffset = (date, offset) => {
-            const newDate = new Date(date);
-            newDate.setHours(newDate.getHours() + offset);
-            return newDate.toISOString();
-        };
+        const applyOffset = (date, offset) => applyTimeOffset(date, offset);
 
         const eventDict = {
             taskId: eventInfo.event.id,
