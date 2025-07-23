@@ -29,8 +29,11 @@ describe('CalendarLayout', () => {
     onError = jest.fn();
 
     tasksMock = {
+      handleCreateTask: jest.fn().mockResolvedValue({}),
+      handleDelDateClick: jest.fn().mockResolvedValue({}),
+      processEventChange: jest.fn(),
+      handleOverrideChoice: jest.fn(),
       updateTask: jest.fn().mockResolvedValue({}),
-      addTask: jest.fn().mockResolvedValue({}),
       fetchTasks: jest.fn(),
       tasks: { data: [], error: null },
       taskFields: {},
@@ -40,7 +43,6 @@ describe('CalendarLayout', () => {
       lists: {},
       calendarEvents: { data: { events: [], parent_tasks: [] }, error: null },
       fetchCalendarEvents: jest.fn(),
-      processEventChange: jest.fn(),
       getSubtasksByParentId: jest.fn().mockResolvedValue([]),
       createTaskOverride: jest.fn(),
       updateTaskOverride: jest.fn(),
@@ -75,19 +77,19 @@ describe('CalendarLayout', () => {
     expect(onSuccess).toHaveBeenCalledWith('Настройки сохранены');
   });
 
-  it('calls addTask and fetchCalendarEvents on create task', async () => {
+  it('calls handleCreateTask and fetchCalendarEvents on create task', async () => {
     render(<CalendarLayout onSuccess={onSuccess} onError={onError} />);
     await act(async () => {
       await global.capturedCalendarProps.onCreateTask({ title: 'Test' });
     });
-    expect(tasksMock.addTask).toHaveBeenCalled();
+    expect(tasksMock.handleCreateTask).toHaveBeenCalled();
     expect(tasksMock.fetchCalendarEvents).toHaveBeenCalled();
     expect(containerMock.setUpdates).toHaveBeenCalled();
     expect(onSuccess).toHaveBeenCalledWith('Событие добавлено');
   });
 
-  it('handles error in addTask', async () => {
-    tasksMock.addTask.mockRejectedValueOnce(new Error('fail'));
+  it('handles error in handleCreateTask', async () => {
+    tasksMock.handleCreateTask.mockRejectedValueOnce(new Error('fail'));
     render(<CalendarLayout onSuccess={onSuccess} onError={onError} />);
     await act(async () => {
       await global.capturedCalendarProps.onCreateTask({ title: 'Test' });
@@ -104,12 +106,12 @@ describe('CalendarLayout', () => {
     expect(global.capturedTaskDialogProps.open).toBe(true);
   });
 
-  it('calls updateTask on event change', async () => {
+  it('calls processEventChange on event change', async () => {
     render(<CalendarLayout onSuccess={onSuccess} onError={onError} />);
     await act(async () => {
       await global.capturedCalendarProps.handleEventChange({ event: { id: 1, title: 'T', allDay: false, start: new Date(), end: new Date() } });
     });
-    expect(tasksMock.updateTask).toHaveBeenCalled();
+    expect(tasksMock.processEventChange).toHaveBeenCalled();
     expect(tasksMock.fetchCalendarEvents).toHaveBeenCalled();
     expect(containerMock.setUpdates).toHaveBeenCalled();
     expect(onSuccess).toHaveBeenCalledWith('Событие обновлено');
@@ -148,11 +150,11 @@ describe('CalendarLayout', () => {
     await act(async () => {
       await global.capturedTaskDialogProps.handleDelDateClick(1);
     });
-    expect(tasksMock.updateTask).toHaveBeenCalledWith({ taskId: 1, start: null, end: null });
+    expect(tasksMock.handleDelDateClick).toHaveBeenCalled();
     expect(onSuccess).toHaveBeenCalledWith('Дата удалена');
   });
 
-  it('calls loadSubtasks and sets selectedSubtasks', async () => {
+  it('loads subtasks and sets selectedSubtasks', async () => {
     // Подготовьте моки до рендера!
     tasksMock.calendarEvents = { data: { events: [{ id: 1 }], parent_tasks: [] }, error: null };
     tasksMock.getSubtasksByParentId.mockResolvedValueOnce([{ id: 123 }]);
