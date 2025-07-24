@@ -268,6 +268,29 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   const [calendarEvents, setCalendarEvents] = useState({ data: [], loading: false, error: null });
   const [calendarRange, setCalendarRange] = useState({ start: null, end: null });
 
+  // ------ Calendar UI State ------
+  const [calendarUIState, setCalendarUIState] = useState({
+    taskDialogOpen: false,
+    dialogScroll: "paper",
+    selectedEvent: null,
+    selectedSubtasks: [],
+    parentTask: null,
+    overrides: [],
+    overrideSnackbar: { open: false, eventInfo: null }
+  });
+
+  // ------ Calendar Settings ------
+  const defaultCalendarSettings = {
+    slotDuration: 30,
+    timeRange: [8, 24],
+    timeOffset: 0,
+    currentView: "timeGridWeek",
+    views: "timeGridWeek,timeGridDay,dayGridMonth,listWeek",
+    isToggledBGTasksEdit: false,
+  };
+
+  const [calendarSettings, setCalendarSettings] = useState(defaultCalendarSettings);
+
   const fetchCalendarEvents = useCallback(async (range) => {
     console.log(range, calendarRange)
     const finalRange = range || calendarRange;
@@ -778,6 +801,210 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     [updateTask, updateTaskOverride, fetchCalendarEvents]
   );
 
+  // ------ Calendar UI Management ------
+  const updateCalendarUIState = useCallback((updates) => {
+    setCalendarUIState(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleCalendarDialogOpen = useCallback(
+    async (scrollType, eventObj) => {
+      let _parentTask = null;
+      let _overrides = [];
+      let _parentSubtasks = [];
+      
+      if (eventObj && eventObj.id) {
+        // Найти parentTask для повторяющейся задачи
+        if (eventObj.parent_task_id) {
+          _parentTask = (calendarEvents.data?.parent_tasks || []).find(pt => pt.id === eventObj.parent_task_id);
+        } 
+        
+        // Найти все overrides для этой серии
+        if (_parentTask) {
+          _overrides = (calendarEvents.data?.events || []).filter(ev => ev.parent_task_id === _parentTask.id && ev.is_override);
+        }
+        
+        // Загрузить подзадачи для экземпляра и для серии
+        let subtasks;
+        if (!eventObj.parent_task_id) {
+          subtasks = await getSubtasksByParentId(eventObj.id);
+        } else {
+          subtasks = await getSubtasksByParentId(_parentTask.id);
+        }
+        
+        updateCalendarUIState({
+          taskDialogOpen: true,
+          dialogScroll: scrollType,
+          selectedEvent: eventObj,
+          selectedSubtasks: subtasks,
+          parentTask: _parentTask || null,
+          overrides: _overrides
+        });
+      }
+    }, 
+    [calendarEvents, getSubtasksByParentId, updateCalendarUIState]
+  );
+
+  const handleCalendarDialogClose = useCallback(() => {
+    updateCalendarUIState({
+      taskDialogOpen: false,
+      selectedEvent: null,
+      selectedSubtasks: [],
+      parentTask: null,
+      overrides: []
+    });
+  }, [updateCalendarUIState]);
+
+  const handleCalendarEventClick = useCallback(
+    async (eventInfo) => {
+      await handleCalendarDialogOpen('paper', eventInfo.event);
+    },
+    [handleCalendarDialogOpen]
+  );
+
+  const setOverrideSnackbar = useCallback((snackbarState) => {
+    updateCalendarUIState({ overrideSnackbar: snackbarState });
+  }, [updateCalendarUIState]);
+
+  const handleCalendarOverrideChoice = useCallback(
+    async (mode, onSuccess, onError) => {
+      if (!calendarUIState.overrideSnackbar.eventInfo) return;
+      
+      const eventInfo = calendarUIState.overrideSnackbar.eventInfo;
+      try {
+        await handleOverrideChoice(mode, eventInfo, calendarRange);
+        if (onSuccess) onSuccess('Событие обновлено');
+      } catch (err) {
+        console.error('Error updating event:', err);
+        if (onError) onError(err);
+      }
+      setOverrideSnackbar({ open: false, eventInfo: null });
+    },
+    [calendarUIState.overrideSnackbar, handleOverrideChoice, calendarRange, setOverrideSnackbar]
+  );
+
+  const handleCalendarSettingsSave = useCallback(
+    (settings, containerId, handleUpdateContent, onSuccess, onError) => {
+      try {
+        setCalendarSettings(settings);
+        if (handleUpdateContent && containerId) {
+          handleUpdateContent(containerId, { calendarSettingsProp: settings });
+        }
+        if (onSuccess) onSuccess('Настройки сохранены');
+      } catch (err) {
+        if (onError) onError(err);
+      }
+    },
+    []
+  );
+
+  // Функции для работы с экземплярами задач
+  const changeInstanceStatus = useCallback(async (params) => {
+    try {
+      // Для экземпляров повторяющихся задач используем override
+      if (params.isInstance && params.originalStart) {
+        const overrideData = {
+          task_id: params.taskId,
+          date: params.originalStart,
+          data: { status_id: params.status_id },
+          type: 'status'
+        };
+        const result = await createTaskOverride(overrideData);
+        await fetchCalendarEvents();
+        return result;
+      } else {
+        // Обычная задача
+        return await changeTaskStatus(params);
+      }
+    } catch (error) {
+      console.error('Error changing instance status:', error);
+      throw error;
+    }
+  }, [changeTaskStatus, createTaskOverride, fetchCalendarEvents]);
+
+  const handleTaskChange = useCallback(async (taskData) => {
+    try {
+      // Изменение основной задачи (серии)
+      const result = await updateTask(taskData);
+      await fetchCalendarEvents();
+      return result;
+    } catch (error) {
+      console.error('Error changing task:', error);
+      throw error;
+    }
+  }, [updateTask, fetchCalendarEvents]);
+
+  const handleInstanceChange = useCallback(async (instanceData) => {
+    try {
+      // Изменение конкретного экземпляра задачи
+      if (instanceData.isInstance && instanceData.originalStart) {
+        // Создаем или обновляем override для экземпляра
+        if (instanceData.overrideId) {
+          // Обновляем существующий override
+          const result = await updateTaskOverride(instanceData.overrideId, {
+            data: instanceData,
+            type: 'data'
+          });
+          await fetchCalendarEvents();
+          return result;
+        } else {
+          // Создаем новый override
+          const overrideData = {
+            task_id: instanceData.taskId,
+            date: instanceData.originalStart,
+            data: instanceData,
+            type: 'data'
+          };
+          const result = await createTaskOverride(overrideData);
+          await fetchCalendarEvents();
+          return result;
+        }
+      } else {
+        // Обычная задача
+        return await updateTask(instanceData);
+      }
+    } catch (error) {
+      console.error('Error changing instance:', error);
+      throw error;
+    }
+  }, [updateTask, createTaskOverride, updateTaskOverride, fetchCalendarEvents]);
+
+  const handleDeleteInstanceDate = useCallback(async (taskId, originalStart, range) => {
+    try {
+      if (originalStart) {
+        // Удаляем конкретный экземпляр через override
+        const overrideData = {
+          task_id: taskId,
+          date: originalStart,
+          data: { deleted: true },
+          type: 'delete'
+        };
+        await createTaskOverride(overrideData);
+      } else {
+        // Удаляем дату у обычной задачи
+        await updateTask({ taskId, start: null, end: null });
+      }
+      if (range) {
+        await fetchCalendarEvents(range);
+      }
+    } catch (error) {
+      console.error('Error deleting instance date:', error);
+      throw error;
+    }
+  }, [createTaskOverride, updateTask, fetchCalendarEvents]);
+
+  const handleDeleteTaskDate = useCallback(async (taskId, range) => {
+    try {
+      // Удаляем дату у основной задачи (серии)
+      await updateTask({ taskId, start: null, end: null });
+      if (range) {
+        await fetchCalendarEvents(range);
+      }
+    } catch (error) {
+      console.error('Error deleting task date:', error);
+      throw error;
+    }
+  }, [updateTask, fetchCalendarEvents]);
+
   const contextValue = useMemo(() => ({
     tasks,
     myDayTasks,
@@ -791,6 +1018,8 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     calendarEvents,
     calendarRange,
     setCalendarRange,
+    calendarUIState,
+    calendarSettings,
     fetchTasks,
     fetchCalendarEvents,
     updateCalendarEvent,
@@ -831,7 +1060,35 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     createTaskOverride,
     updateTaskOverride,
     deleteTaskOverride,
-  }), [tasks, myDayTasks, myDayList, taskFields, lists, selectedListId, selectedList, calendarEvents, calendarRange, fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, fetchLists, fetchTaskFields, getTaskTypes, addTaskType, updateTaskType, deleteTaskType, getTaskTypeGroups, addTaskTypeGroup, updateTaskTypeGroup, deleteTaskTypeGroup, addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, selectedTaskId, fetchTasks, fetchTasksByIds, forceRefreshTasks, addTask, updateTask, changeTaskStatus, addSubTask, deleteTask, linkTaskList, getSubtasksByParentId, createTaskOverride, updateTaskOverride, deleteTaskOverride, handleCreateTask, handleDelDateClick, processEventChange, handleOverrideChoice]);
+    // Calendar UI functions
+    updateCalendarUIState,
+    handleCalendarDialogOpen,
+    handleCalendarDialogClose,
+    handleCalendarEventClick,
+    setOverrideSnackbar,
+    handleCalendarOverrideChoice,
+    handleCalendarSettingsSave,
+    changeInstanceStatus,
+    handleTaskChange,
+    handleInstanceChange,
+    handleDeleteInstanceDate,
+    handleDeleteTaskDate,
+  }), [
+    tasks, myDayTasks, myDayList, taskFields, lists, selectedListId, selectedList, 
+    calendarEvents, calendarRange, calendarUIState, calendarSettings,
+    fetchCalendarEvents, updateCalendarEvent, addCalendarEvent, deleteCalendarEvent, 
+    fetchLists, fetchTaskFields, getTaskTypes, addTaskType, updateTaskType, deleteTaskType, 
+    getTaskTypeGroups, addTaskTypeGroup, updateTaskTypeGroup, deleteTaskTypeGroup, 
+    addList, updateList, deleteList, linkListGroup, deleteFromChildes, changeChildesOrder, 
+    selectedTaskId, fetchTasks, fetchTasksByIds, forceRefreshTasks, addTask, updateTask, 
+    changeTaskStatus, addSubTask, deleteTask, linkTaskList, getSubtasksByParentId, 
+    createTaskOverride, updateTaskOverride, deleteTaskOverride, handleCreateTask, 
+    handleDelDateClick, processEventChange, handleOverrideChoice,
+    updateCalendarUIState, handleCalendarDialogOpen, handleCalendarDialogClose,
+    handleCalendarEventClick, setOverrideSnackbar, handleCalendarOverrideChoice,
+    handleCalendarSettingsSave, changeInstanceStatus, handleTaskChange, handleInstanceChange,
+    handleDeleteInstanceDate, handleDeleteTaskDate
+  ]);
 
   return <TasksContext.Provider value={contextValue}>{children}</TasksContext.Provider>;
 };
