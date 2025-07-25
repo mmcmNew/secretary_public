@@ -355,6 +355,9 @@ class List(db.Model):
     childes_order = db.Column('ChildesOrder', db.JSON, default=[])
     in_general_list = db.Column('InGeneralList', db.Boolean, default=True)
     deleted = db.Column('Deleted', db.Boolean, default=False)
+    unfinished_count = db.Column('unfinished_count', db.Integer, nullable=False, default=0)
+    important_count = db.Column('important_count', db.Integer, nullable=False, default=0)
+    background_count = db.Column('background_count', db.Integer, nullable=False, default=0)
 
     tasks = db.relationship('Task', secondary=task_list_relations, back_populates='lists')
     projects = db.relationship('Project', secondary=list_project_relations, back_populates='lists')

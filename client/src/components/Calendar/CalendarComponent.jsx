@@ -18,7 +18,7 @@ import {
   ToggleButton,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
-import applyTimeOffset from "../utils/applyTimeOffset";
+import applyTimeOffset from "../../utils/applyTimeOffset"
 import EditOffIcon from "@mui/icons-material/EditOff";
 import ListsList from "../ToDo/ListsList";
 import NewTaskDialog from "./NewTaskDialog";

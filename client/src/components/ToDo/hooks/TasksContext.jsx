@@ -65,7 +65,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
     if (listId === 'my_day') {
       const start = dayjs().startOf('day').utc().toISOString();
       const end = dayjs().endOf('day').utc().toISOString();
-      const params = new URLSearchParams({ list_id: 'events', start, end });
+      const params = new URLSearchParams({ list_id: 'my_day', start, end });
       url = `/tasks/get_tasks?${params.toString()}`;
     } else {
       url = `/tasks/get_tasks?list_id=${listId}&time_zone=${new Date().getTimezoneOffset()}`;

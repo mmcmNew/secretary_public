@@ -32,6 +32,8 @@ export default function TaskDialog({
 }) {
     const [activeTab, setActiveTab] = React.useState(1);
 
+    const hasParent = Boolean(task?.parentId);
+
     React.useEffect(() => {
         if (open) {
             setActiveTab(hasParent ? 1 : 0);

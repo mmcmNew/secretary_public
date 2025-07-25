@@ -3,7 +3,7 @@ from flask import current_app
 
 from .models import *
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import func
+from sqlalchemy import func, literal
 import pytz
 
 from .calendar.handlers import get_calendar_events
@@ -87,6 +87,7 @@ def get_unfinished_tasks_count_per_project(user_id):
 
 def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     from collections import defaultdict
+    from sqlalchemy import func, case, and_, or_
 
     if user_id is None:
         raise ValueError("user_id must be provided for get_lists_and_groups_data")
@@ -96,62 +97,128 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     except Exception:
         tz = pytz.UTC
 
-    # --- Предзагрузка данных
-    groups_list = Group.query.filter_by(user_id=user_id).all()
+    # Загружаем списки с предварительно посчитанными значениями
+    lists = (
+        db.session.query(List)
+        .filter_by(user_id=user_id)
+        .all()
+    )
+    
+    # Используем сохраненные счетчики
+    lists_unfinished_map = {lst.id: lst.unfinished_count for lst in lists}
+    
+    # Подсчет для групп через сумму счетчиков связанных списков
+    groups_unfinished_map = {}
+    for group in Group.query.filter_by(user_id=user_id):
+        group_count = sum(lists_unfinished_map.get(lst.id, 0) for lst in group.lists)
+        groups_unfinished_map[group.id] = group_count
+        
+    # Для специальных списков используем один запрос
+    special_tasks_counts = (
+        db.session.query(
+            func.count(Task.id).filter(and_(~Task.lists.any(), ~Task.parent_tasks.any(), Task.status_id != 2)).label('tasks_count'),
+            func.count(Task.id).filter(and_(Task.priority_id == 3, Task.status_id != 2)).label('important_count'),
+            func.count(Task.id).filter(and_(Task.is_background, Task.status_id != 2)).label('background_count')
+        )
+        .filter(Task.user_id == user_id)
+        .first()
+    )
+    
+    default_lists_unfinished_map = {
+        'tasks': special_tasks_counts.tasks_count,
+        'important': special_tasks_counts.important_count,
+        'background': special_tasks_counts.background_count
+    }
+
+    # Загружаем списки, группы и проекты
     lists_list = List.query.filter_by(user_id=user_id).all()
+    groups_list = Group.query.filter_by(user_id=user_id).all()
     projects_list = Project.query.filter_by(user_id=user_id).all()
-    tasks = Task.query.options(db.joinedload(Task.lists)).filter_by(user_id=user_id).all()
 
-    # --- Карты для ускоренного доступа
-    tasks_map = {task.id: task for task in tasks}
-    # lists_map = {lst.id: lst for lst in lists_list}
+    # Получаем только ID задач для специальных списков через оптимизированные запросы
+    # Получаем ID задач без списков
+    tasks_without_lists_ids = [
+        r.id for r in db.session.query(Task.id)
+        .filter(
+            Task.user_id == user_id,
+            ~Task.lists.any(),
+            ~Task.parent_tasks.any()
+        )
+        .order_by(Task.id.desc())
+        .all()
+    ]
+    # current_app.logger.info(f'tasks_without_lists_ids: {tasks_without_lists_ids}')
+    # Получаем ID важных задач
+    important_tasks_ids = [
+        r.id for r in db.session.query(Task.id)
+        .filter(
+            Task.user_id == user_id,
+            Task.priority_id == 3
+        )
+        .order_by(Task.id.desc())
+        .all()
+    ]
+    
+    # Получаем ID фоновых задач
+    background_tasks_ids = [
+        r.id for r in db.session.query(Task.id)
+        .filter(
+            Task.user_id == user_id,
+            Task.is_background
+        )
+        .order_by(Task.id.desc())
+        .all()
+    ]
 
-    # --- Получение задач "Мой день" через универсальную функцию get_tasks
+    # Получаем задачи для "Мой день" с учетом таймзоны пользователя
     now = datetime.now(tz)
-    start_of_day = tz.localize(datetime(now.year, now.month, now.day, 0, 0, 0)).astimezone(pytz.UTC)
-    end_of_day = tz.localize(datetime(now.year, now.month, now.day, 23, 59, 59, 999999)).astimezone(pytz.UTC)
-    calendar_data, _ = get_calendar_events(start_of_day.isoformat(), end_of_day.isoformat(), user_id=user_id)
-    my_day_tasks = calendar_data['events']
+    # start_dt = datetime(now.year, now.month, now.day, 0, 0, 0, tzinfo=tz).astimezone(pytz.UTC)
+    # end_dt = datetime(now.year, now.month, now.day, 23, 59, 59, 999999, tzinfo=tz).astimezone(pytz.UTC)
+    my_day_response, _ = get_tasks('my_day', client_timezone=tz_name, 
+                                #  start=start_dt.isoformat(), 
+                                #  end=end_dt.isoformat(), 
+                                 user_id=user_id)
+    my_day_tasks = my_day_response.get('tasks', [])
 
-    # --- Default lists
+    # --- Default lists с использованием предварительно посчитанных значений
     default_lists = []
-    tasks_without_lists = [task.to_dict() for task in tasks if not task.lists and not task.parent_tasks]
-    important_tasks = [task.to_dict() for task in tasks if task.priority_id == 3]
-    background_tasks = [task.to_dict() for task in tasks if task.is_background]
-
-    for list_id, title, task_list in [
-        ('my_day', 'Мой день', my_day_tasks),
-        ('tasks', 'Задачи', tasks_without_lists),
-        ('important', 'Важные', important_tasks),
-        ('background', 'Фоновые задачи', background_tasks),
+    for list_id, title, task_ids in [
+        ('my_day', 'Мой день', [t.get('id') for t in my_day_tasks]),
+        ('tasks', 'Задачи', tasks_without_lists_ids),
+        ('important', 'Важные', important_tasks_ids),
+        ('background', 'Фоновые задачи', background_tasks_ids),
     ]:
-        unfinished = len([t for t in task_list if t['status_id'] != 2])
+        unfinished = default_lists_unfinished_map.get(list_id, 0)
+        if list_id == 'my_day':
+            # Для "Мой день" по-прежнему нужны полные данные задач для подсчета незавершенных
+            unfinished = len([t for t in my_day_tasks if t.get('status_id', 0) != 2])
+        
         default_lists.append({
             'id': list_id,
             'title': title,
             'type': 'list',
             'children': [],
             'unfinished_tasks_count': unfinished,
-            'childes_order': [t['id'] if isinstance(t, dict) else t.id for t in task_list]
+            'childes_order': task_ids
         })
-        
-    # unfinished_per_list = get_unfinished_tasks_count_per_list(user_id)
-    unfinished_per_group = get_unfinished_tasks_count_per_group(user_id)
-    unfinished_per_project = get_unfinished_tasks_count_per_project(user_id)
 
-    # --- Словари для UI
+    # Преобразуем объекты в словари с подсчитанными значениями
     groups_dict = [
-        {**group.to_dict(), 'unfinished_tasks_count': unfinished_per_group.get(group.id, 0)}
+        {**group.to_dict(), 'unfinished_tasks_count': groups_unfinished_map.get(group.id, 0)}
         for group in groups_list
     ]
 
     lists_dict = [
-        {**lst.to_dict(), 'unfinished_tasks_count': lst.unfinished_tasks_count(tasks_map)}
+        {**lst.to_dict(), 'unfinished_tasks_count': lst.unfinished_count}
         for lst in lists_list
     ]
 
     projects_dict = [
-        {**project.to_dict(), 'unfinished_tasks_count': unfinished_per_project.get(project.id, 0)}
+        {**project.to_dict(), 'unfinished_tasks_count': sum(
+            lists_unfinished_map.get(lst.id, 0) for lst in project.lists
+        ) + sum(
+            groups_unfinished_map.get(group.id, 0) for group in project.groups
+        )}
         for project in projects_list
     ]
 
@@ -171,7 +238,7 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
     if user_id is None:
         raise ValueError("user_id must be provided")
 
-    if list_id == 'events':
+    if list_id == 'events' or list_id == 'my_day':
         tz_name = client_timezone or 'UTC'
         try:
             tz = pytz.timezone(tz_name)
@@ -186,7 +253,17 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
             end = end_dt.isoformat()
         
         calendar_data, _ = get_calendar_events(start, end, user_id=user_id)
-        return {'tasks': calendar_data['events']}, 200
+        tasks = calendar_data.get('events', [])
+        if list_id == 'my_day':
+            parent_tasks = calendar_data.get('parent_tasks', [])
+            my_day_tasks = calendar_data.get('events', [])
+            tasks = parent_tasks + my_day_tasks
+            # убрать из событий задачи с is_instance = true
+            # current_app.logger.info(f'get_tasks: tasks_ids: {tasks}')
+            tasks = [task for task in tasks if not task.get('is_instance', False)]
+            # current_app.logger.info(f'get_tasks: tasks_result: {tasks}')
+        
+        return {'tasks': tasks}, 200
 
     from .models import Task
     from .calendar.models import TaskOverride
@@ -210,7 +287,16 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
     if list_id == 'all':
         tasks_query = Task.query.options(*load_options).filter_by(user_id=user_id).all()
     elif list_id == 'tasks':
-        tasks_query = Task.query.options(*load_options).filter(~Task.lists.any(), Task.user_id == user_id).all()
+        tasks_query = (
+            Task.query.options(*load_options)
+            .filter(
+                Task.user_id == user_id,
+                ~Task.lists.any(),
+                ~Task.parent_tasks.any()
+            )
+            .all()
+        )
+        # current_app.logger.info(f'get_tasks: tasks_query: {tasks_query}')
     elif list_id == 'important':
         tasks_query = Task.query.options(*load_options).filter(Task.priority_id == 3, Task.user_id == user_id).all()
     elif list_id == 'background':
@@ -231,21 +317,7 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
                 return {'error': 'Invalid list_id'}, 400
 
     for task in tasks_query:
-        if not task.interval_id:  # исключаем повторяющиеся события
-            if _is_task_in_range(task, start_dt, end_dt, is_events=False):
-                tasks_data.append(task.to_dict())
-
-    # --- Добавляем override-экземпляры как отдельные задачи ---
-    override_query = TaskOverride.query.filter(TaskOverride.user_id == user_id)
-    if start_dt:
-        override_query = override_query.filter(TaskOverride.date >= start_dt.date())
-    if end_dt:
-        override_query = override_query.filter(TaskOverride.date <= end_dt.date())
-    overrides = override_query.all()
-    for override in overrides:
-        override_dict = override.to_dict()
-        override_dict['is_override'] = True
-        tasks_data.append(override_dict)
+        tasks_data.append(task.to_dict())
 
     return {'tasks': tasks_data}, 200
 
