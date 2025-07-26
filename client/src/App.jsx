@@ -1,5 +1,5 @@
 // App.js
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Outlet } from 'react-router-dom';
 import { memo } from 'react';
 import axios from 'axios';
 import HomePage from './HomePage.jsx';
@@ -47,12 +47,29 @@ const store = createStore({
   }),
 });
 
+// 2. Создаем компонент-обертку для провайдеров, которые требуют аутентификации
+const AuthenticatedAppProviders = memo(() => (
+  <UpdateWebSocketProvider>
+    <AudioProvider>
+      <ContainerProvider>
+        <TasksProvider>
+          <AntiScheduleProvider>
+            <Outlet /> {/* 1. Outlet будет рендерить вложенные защищенные маршруты */}
+          </AntiScheduleProvider>
+        </TasksProvider>
+      </ContainerProvider>
+    </AudioProvider>
+  </UpdateWebSocketProvider>
+));
+
 // Memoize routes to prevent unnecessary re-renders
 const AppRoutes = memo(() => (
   <Routes>
     <Route path="/login" element={<SignInPage />} />
     <Route path="/register" element={<RegisterPage />} />
+    {/* 3. Оборачиваем защищенные маршруты в AuthenticatedAppProviders */}
     <Route element={<RequireAuth loginPath="/login" />}>
+      <Route element={<AuthenticatedAppProviders />}>
       <Route path="/" element={<HomePage />} />
       <Route path="/second" element={<SecondPage />} />
       <Route path="/test" element={<TestPage />} />
@@ -60,6 +77,7 @@ const AppRoutes = memo(() => (
       <Route path="/admin" element={<AdminPanel />} />
       <Route path="/pricing" element={<PricingPlans />} />
       <Route path="/account" element={<AccountPage />} />
+      </Route>
     </Route>
   </Routes>
 ));
@@ -76,12 +94,8 @@ function App() {
     <div className="App">
       <ErrorProvider>
         <AuthProvider store={store}>
-          <UpdateWebSocketProvider>
-            <AudioProvider>
-              <ContainerProvider>
-                <TasksProvider>
-                  <AntiScheduleProvider>
-                    <Router future={{
+          {/* 4. Убираем лишние провайдеры из корневого компонента */}
+          <Router future={{
                     v7_fetcherPersist: true,
                     v7_normalizeFormMethod: true,
                     v7_partialHydration: true,
@@ -89,13 +103,8 @@ function App() {
                     v7_skipActionErrorRevalidation: true,
                     v7_startTransition: true,
                   }}>
-                      <AppRoutes />
-                    </Router>
-                  </AntiScheduleProvider>
-                </TasksProvider>
-              </ContainerProvider>
-            </AudioProvider>
-          </UpdateWebSocketProvider>
+            <AppRoutes />
+          </Router>
         </AuthProvider>
       </ErrorProvider>
     </div>

@@ -1,5 +1,6 @@
 # to_do_app/handlers.py
 from flask import current_app
+import time
 
 from .models import *
 from datetime import datetime, timezone, timedelta
@@ -23,69 +24,9 @@ from collections import defaultdict
 # from dateutil.relativedelta import relativedelta
 
 
-def get_unfinished_tasks_count_per_list(user_id):
-    """
-    Возвращает словарь: {list_id: unfinished_count} для всех списков пользователя.
-    """
-    results = (
-        db.session.query(
-            task_list_relations.c.ListID.label('list_id'),
-            func.count(Task.id).label('unfinished_count')
-        )
-        .join(Task, Task.id == task_list_relations.c.TaskID)
-        .filter(Task.status_id != 2, Task.user_id == user_id)
-        .group_by(task_list_relations.c.ListID)
-        .all()
-    )
-    return {row.list_id: row.unfinished_count for row in results}
-
-
-def get_unfinished_tasks_count_per_group(user_id):
-    """
-    Возвращает словарь: {group_id: unfinished_count} для всех групп пользователя.
-    """
-    # Получаем соответствие: group_id -> [list_id, ...]
-    from collections import defaultdict
-    group_lists = defaultdict(list)
-    group_list_rows = db.session.query(list_group_relations.c.GroupID, list_group_relations.c.ListID).all()
-    for group_id, list_id in group_list_rows:
-        group_lists[group_id].append(list_id)
-    # Получаем количество незавершённых задач по спискам
-    unfinished_per_list = get_unfinished_tasks_count_per_list(user_id)
-    # Суммируем по группам
-    unfinished_per_group = {}
-    for group_id, lists in group_lists.items():
-        unfinished_per_group[group_id] = sum(unfinished_per_list.get(list_id, 0) for list_id in lists)
-    return unfinished_per_group
-
-
-def get_unfinished_tasks_count_per_project(user_id):
-    """
-    Возвращает словарь: {project_id: unfinished_count} для всех проектов пользователя.
-    """
-    from collections import defaultdict
-    # Получаем соответствие: project_id -> [list_id, ...] и project_id -> [group_id, ...]
-    project_lists = defaultdict(list)
-    project_groups = defaultdict(list)
-    project_list_rows = db.session.query(list_project_relations.c.ProjectID, list_project_relations.c.ListID).all()
-    for project_id, list_id in project_list_rows:
-        project_lists[project_id].append(list_id)
-    project_group_rows = db.session.query(group_project_relations.c.ProjectID, group_project_relations.c.GroupID).all()
-    for project_id, group_id in project_group_rows:
-        project_groups[project_id].append(group_id)
-    # Получаем количество незавершённых задач по спискам и группам
-    unfinished_per_list = get_unfinished_tasks_count_per_list(user_id)
-    unfinished_per_group = get_unfinished_tasks_count_per_group(user_id)
-    # Суммируем по проектам
-    unfinished_per_project = {}
-    for project_id in set(list(project_lists.keys()) + list(project_groups.keys())):
-        count = sum(unfinished_per_list.get(list_id, 0) for list_id in project_lists.get(project_id, []))
-        count += sum(unfinished_per_group.get(group_id, 0) for group_id in project_groups.get(project_id, []))
-        unfinished_per_project[project_id] = count
-    return unfinished_per_project
-
-
 def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
+    start_time = time.perf_counter()
+    current_app.logger.info(f"PERF (user:{user_id}): get_lists_and_groups_data started.")
     from collections import defaultdict
     from sqlalchemy import func, case, and_, or_
 
@@ -97,22 +38,28 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     except Exception:
         tz = pytz.UTC
 
+    step_start_time = time.perf_counter()
     # Загружаем списки с предварительно посчитанными значениями
     lists = (
         db.session.query(List)
         .filter_by(user_id=user_id)
         .all()
     )
-    
+    current_app.logger.info(f"PERF (user:{user_id}): Query all lists took {time.perf_counter() - step_start_time:.4f}s.")
+
+    step_start_time = time.perf_counter()
     # Используем сохраненные счетчики
     lists_unfinished_map = {lst.id: lst.unfinished_count for lst in lists}
-    
+
     # Подсчет для групп через сумму счетчиков связанных списков
     groups_unfinished_map = {}
-    for group in Group.query.filter_by(user_id=user_id):
+    groups_list = Group.query.filter_by(user_id=user_id).all()
+    for group in groups_list:
         group_count = sum(lists_unfinished_map.get(lst.id, 0) for lst in group.lists)
         groups_unfinished_map[group.id] = group_count
-        
+    current_app.logger.info(f"PERF (user:{user_id}): Calculate group counters took {time.perf_counter() - step_start_time:.4f}s.")
+
+    step_start_time = time.perf_counter()
     # Для специальных списков используем один запрос
     special_tasks_counts = (
         db.session.query(
@@ -123,7 +70,8 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
         .filter(Task.user_id == user_id)
         .first()
     )
-    
+    current_app.logger.info(f"PERF (user:{user_id}): Query special task counts took {time.perf_counter() - step_start_time:.4f}s.")
+
     default_lists_unfinished_map = {
         'tasks': special_tasks_counts.tasks_count,
         'important': special_tasks_counts.important_count,
@@ -131,11 +79,12 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     }
 
     # Загружаем списки, группы и проекты
-    lists_list = List.query.filter_by(user_id=user_id).all()
-    groups_list = Group.query.filter_by(user_id=user_id).all()
+    step_start_time = time.perf_counter()
+    lists_list = lists  # Re-use already queried lists
     projects_list = Project.query.filter_by(user_id=user_id).all()
-
+    current_app.logger.info(f"PERF (user:{user_id}): Query projects took {time.perf_counter() - step_start_time:.4f}s.")
     # Получаем только ID задач для специальных списков через оптимизированные запросы
+    step_start_time = time.perf_counter()
     # Получаем ID задач без списков
     tasks_without_lists_ids = [
         r.id for r in db.session.query(Task.id)
@@ -147,6 +96,8 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
         .order_by(Task.id.desc())
         .all()
     ]
+    current_app.logger.info(f"PERF (user:{user_id}): Query tasks_without_lists_ids took {time.perf_counter() - step_start_time:.4f}s.")
+    step_start_time = time.perf_counter()
     # current_app.logger.info(f'tasks_without_lists_ids: {tasks_without_lists_ids}')
     # Получаем ID важных задач
     important_tasks_ids = [
@@ -158,7 +109,8 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
         .order_by(Task.id.desc())
         .all()
     ]
-    
+    current_app.logger.info(f"PERF (user:{user_id}): Query important_tasks_ids took {time.perf_counter() - step_start_time:.4f}s.")
+    step_start_time = time.perf_counter()
     # Получаем ID фоновых задач
     background_tasks_ids = [
         r.id for r in db.session.query(Task.id)
@@ -169,16 +121,19 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
         .order_by(Task.id.desc())
         .all()
     ]
+    current_app.logger.info(f"PERF (user:{user_id}): Query background_tasks_ids took {time.perf_counter() - step_start_time:.4f}s.")
 
+    step_start_time = time.perf_counter()
     # Получаем задачи для "Мой день" с учетом таймзоны пользователя
     now = datetime.now(tz)
     # start_dt = datetime(now.year, now.month, now.day, 0, 0, 0, tzinfo=tz).astimezone(pytz.UTC)
     # end_dt = datetime(now.year, now.month, now.day, 23, 59, 59, 999999, tzinfo=tz).astimezone(pytz.UTC)
-    my_day_response, _ = get_tasks('my_day', client_timezone=tz_name, 
-                                #  start=start_dt.isoformat(), 
-                                #  end=end_dt.isoformat(), 
+    my_day_response, _ = get_tasks('my_day', client_timezone=tz_name,
+                                #  start=start_dt.isoformat(),
+                                #  end=end_dt.isoformat(),
                                  user_id=user_id)
     my_day_tasks = my_day_response.get('tasks', [])
+    current_app.logger.info(f"PERF (user:{user_id}): Get 'My Day' tasks took {time.perf_counter() - step_start_time:.4f}s.")
 
     # --- Default lists с использованием предварительно посчитанных значений
     default_lists = []
@@ -192,7 +147,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
         if list_id == 'my_day':
             # Для "Мой день" по-прежнему нужны полные данные задач для подсчета незавершенных
             unfinished = len([t for t in my_day_tasks if t.get('status_id', 0) != 2])
-        
+
         default_lists.append({
             'id': list_id,
             'title': title,
@@ -202,6 +157,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
             'childes_order': task_ids
         })
 
+    step_start_time = time.perf_counter()
     # Преобразуем объекты в словари с подсчитанными значениями
     groups_dict = [
         {**group.to_dict(), 'unfinished_tasks_count': groups_unfinished_map.get(group.id, 0)}
@@ -226,7 +182,10 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     combined = groups_dict + lists_dict
     sorted_combined = sorted(combined, key=lambda x: x['order'])
     sorted_projects = sorted(projects_dict, key=lambda x: x['order'])
+    current_app.logger.info(f"PERF (user:{user_id}): Final data structuring took {time.perf_counter() - step_start_time:.4f}s.")
 
+    total_time = time.perf_counter() - start_time
+    current_app.logger.info(f"PERF (user:{user_id}): get_lists_and_groups_data finished. Total time: {total_time:.4f}s.")
     return {
         'lists': sorted_combined,
         'projects': sorted_projects,
@@ -240,6 +199,7 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
 
     if list_id == 'events' or list_id == 'my_day':
         tz_name = client_timezone or 'UTC'
+        current_app.logger.info(f'get_tasks: list_id: {list_id}, client_timezone: {tz_name}, start: {start}, end: {end}')
         try:
             tz = pytz.timezone(tz_name)
         except Exception:

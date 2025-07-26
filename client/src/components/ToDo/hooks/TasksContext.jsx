@@ -76,7 +76,7 @@ export const TasksProvider = ({ children, onError, setLoading }) => {
   };
 
   const fetchListsApi = async () => {
-    const { data } = await apiGet(`/tasks/get_lists?time_zone=${new Date().getTimezoneOffset()}`);
+    const { data } = await apiGet(`/tasks/get_lists`);
     console.log(data)
     return data;
   };

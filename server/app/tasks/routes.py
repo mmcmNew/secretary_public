@@ -1,5 +1,6 @@
 # to_do_app/routes.py
 from . import to_do_app
+from functools import wraps
 from flask import request, jsonify, current_app
 from flask_jwt_extended import jwt_required
 from .handlers import (
@@ -24,28 +25,52 @@ from flask_jwt_extended import current_user
 from app.socketio_utils import notify_data_update, notify_task_change
 
 
-def make_cache_key(prefix):
+def make_cache_key(prefix, version_key='tasksVersion'):
     def _key():
-        version = DataVersion.get_version('tasksVersion')
+        version = DataVersion.get_version(version_key)
         return f"{prefix}:{current_user.id}:{version}:{request.full_path}"
     return _key
+
+def etag(version_key):
+    """
+    Декоратор, который добавляет обработку ETag к маршруту Flask.
+    Обернутая функция должна возвращать данные для json-сериализации
+    или кортеж (данные, код_статуса).
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Вызываем исходную функцию маршрута
+            rv = f(*args, **kwargs)
+
+            data, status_code = rv if isinstance(rv, tuple) else (rv, 200)
+
+            # Не добавляем ETag для ответов с ошибками
+            if status_code >= 300:
+                return jsonify(data), status_code
+
+            version = DataVersion.get_version(version_key)
+            response = jsonify(data)
+            if version is not None:
+                response.set_etag(version)
+            
+            # make_conditional вернет 304 Not Modified, если ETag совпадает
+            return response.make_conditional(request)
+        return decorated_function
+    return decorator
 
 
 @to_do_app.route('/tasks/get_lists', methods=['GET'])
 @jwt_required()
-@cache.cached(timeout=60, key_prefix=make_cache_key('lists'))
+@cache.cached(timeout=60, key_prefix=make_cache_key('lists', 'tasksVersion'))
+@etag('tasksVersion')
 def get_lists_and_groups():
     client_timezone = request.args.get('time_zone', 'UTC')
     user_id = current_user.id
     data = get_lists_and_groups_data(client_timezone, user_id=user_id)
     if isinstance(data, dict) and 'error' in data:
-        return jsonify(data), 500
-    version = DataVersion.get_version('tasksVersion')
-    response = jsonify(data)
-    response.set_etag(version)
-    if request.if_none_match and version in request.if_none_match:
-        return '', 304
-    return response
+        return data, 500
+    return data
 
 
 @to_do_app.route('/tasks/add_list', methods=['POST'])
@@ -87,7 +112,7 @@ def edit_list_route():
     if not isinstance(data, dict):
         current_app.logger.error(f'edit_list_route: Invalid data type: {type(data)}, data: {data}')
         return jsonify({'success': False, 'message': 'Invalid JSON data'}), 400
-    result, status_code = edit_list(data, user_id=current_user.user_id)
+    result, status_code = edit_list(data, user_id=current_user.id)
     response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
@@ -155,7 +180,7 @@ def change_task_status_route():
 
 @to_do_app.route('/tasks/get_tasks', methods=['GET'])
 @jwt_required()
-@cache.cached(timeout=60, key_prefix=make_cache_key('tasks'))
+@etag('tasksVersion')
 def get_tasks_route():
     list_id = request.args.get('list_id')
     start = request.args.get('start')
@@ -163,38 +188,23 @@ def get_tasks_route():
     client_timezone = request.args.get('time_zone', 'UTC')
     user_id = current_user.id
     # current_app.logger.info(f'get_tasks, list_id: {list_id}')
-    result, status_code = get_tasks(list_id, client_timezone, start, end, user_id=user_id)
-    if status_code == 200:
-        version = DataVersion.get_version('tasksVersion')
-        response = jsonify(result)
-        response.set_etag(version)
-        if request.if_none_match and version in request.if_none_match:
-            return '', 304
-        return response
-    return jsonify(result), status_code
+    return get_tasks(list_id, client_timezone, start, end, user_id=user_id)
 
 
 
 
 @to_do_app.route('/tasks/get_tasks_by_ids', methods=['GET'])
 @jwt_required()
-@cache.cached(timeout=60, key_prefix=make_cache_key('tasks_by_ids'))
+@cache.cached(timeout=60, key_prefix=make_cache_key('tasks_by_ids', 'tasksVersion'))
+@etag('tasksVersion')
 def get_tasks_by_ids_route():
     ids_param = request.args.get('ids', '')
     try:
         ids = [int(i) for i in ids_param.split(',') if i.strip()]
     except ValueError:
-        return jsonify({'error': 'Invalid ids'}), 400
+        return {'error': 'Invalid ids'}, 400
     user_id = current_user.id
-    result, status_code = get_tasks_by_ids(ids, user_id=user_id)
-    if status_code == 200:
-        version = DataVersion.get_version('tasksVersion')
-        response = jsonify(result)
-        response.set_etag(version)
-        if request.if_none_match and version in request.if_none_match:
-            return '', 304
-        return response
-    return jsonify(result), status_code
+    return get_tasks_by_ids(ids, user_id=user_id)
 
 
 @to_do_app.route('/tasks/del_task', methods=['DELETE'])
@@ -260,6 +270,8 @@ def link_task_route():
 
 @to_do_app.route('/tasks/fields_config', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=3600, key_prefix=make_cache_key('fields_config', 'taskTypesVersion'))
+@etag('taskTypesVersion')
 def get_fields_config():
     # Заглушка полей задач
     fields = {
@@ -325,14 +337,16 @@ def get_fields_config():
 
     fields["type_id"]["options"] = types_list
 
-    return jsonify(fields)
+    return fields
 
 
 @to_do_app.route('/tasks/task_type_groups', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=3600, key_prefix=make_cache_key('task_type_groups', 'taskTypesVersion'))
+@etag('taskTypesVersion')
 def get_task_type_groups():
     groups = TaskTypeGroup.query.filter_by(user_id=current_user.id).all()
-    return jsonify({g.id: g.to_dict() for g in groups})
+    return {g.id: g.to_dict() for g in groups}
 
 
 @to_do_app.route('/tasks/task_type_groups', methods=['POST'])
@@ -352,7 +366,9 @@ def add_task_type_group():
     )
     db.session.add(group)
     db.session.commit()
-    return jsonify(group.to_dict()), 201
+    new_version = DataVersion.update_version('taskTypesVersion')
+    notify_data_update(taskTypesVersion=new_version)
+    return jsonify(group.to_dict()), 201, {'ETag': new_version}
 
 
 @to_do_app.route('/tasks/task_type_groups/<int:group_id>', methods=['PUT'])
@@ -368,7 +384,9 @@ def edit_task_type_group(group_id):
     group.is_active = data.get('is_active', group.is_active)
     group.description = data.get('description', group.description)
     db.session.commit()
-    return jsonify(group.to_dict())
+    new_version = DataVersion.update_version('taskTypesVersion')
+    notify_data_update(taskTypesVersion=new_version)
+    return jsonify(group.to_dict()), 200, {'ETag': new_version}
 
 
 @to_do_app.route('/tasks/task_type_groups/<int:group_id>', methods=['DELETE'])
@@ -379,14 +397,18 @@ def delete_task_type_group(group_id):
         return jsonify({'error': 'Not found'}), 404
     db.session.delete(group)
     db.session.commit()
-    return jsonify({'result': 'deleted'})
+    new_version = DataVersion.update_version('taskTypesVersion')
+    notify_data_update(taskTypesVersion=new_version)
+    return jsonify({'result': 'deleted'}), 200, {'ETag': new_version}
 
 
 @to_do_app.route('/tasks/task_types', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=3600, key_prefix=make_cache_key('task_types', 'taskTypesVersion'))
+@etag('taskTypesVersion')
 def get_task_types_route():
     types = TaskType.query.filter_by(user_id=current_user.id).all()
-    return jsonify({t.id: t.to_dict() for t in types})
+    return {t.id: t.to_dict() for t in types}
 
 
 @to_do_app.route('/tasks/task_types', methods=['POST'])
@@ -407,7 +429,9 @@ def add_task_type_route():
     )
     db.session.add(task_type)
     db.session.commit()
-    return jsonify(task_type.to_dict()), 201
+    new_version = DataVersion.update_version('taskTypesVersion')
+    notify_data_update(taskTypesVersion=new_version)
+    return jsonify(task_type.to_dict()), 201, {'ETag': new_version}
 
 
 @to_do_app.route('/tasks/task_types/<int:type_id>', methods=['PUT'])
@@ -424,7 +448,9 @@ def edit_task_type_route(type_id):
     task_type.group_id = data.get('group_id', task_type.group_id)
     task_type.is_active = data.get('is_active', task_type.is_active)
     db.session.commit()
-    return jsonify(task_type.to_dict())
+    new_version = DataVersion.update_version('taskTypesVersion')
+    notify_data_update(taskTypesVersion=new_version)
+    return jsonify(task_type.to_dict()), 200, {'ETag': new_version}
 
 
 @to_do_app.route('/tasks/task_types/<int:type_id>', methods=['DELETE'])
@@ -435,22 +461,16 @@ def delete_task_type_route(type_id):
         return jsonify({'error': 'Not found'}), 404
     db.session.delete(task_type)
     db.session.commit()
-    return jsonify({'result': 'deleted'})
+    new_version = DataVersion.update_version('taskTypesVersion')
+    notify_data_update(taskTypesVersion=new_version)
+    return jsonify({'result': 'deleted'}), 200, {'ETag': new_version}
 
 
 @to_do_app.route('/tasks/get_subtasks', methods=['GET'])
 @jwt_required()
-@cache.cached(timeout=60, key_prefix=make_cache_key('subtasks'))
+@cache.cached(timeout=60, key_prefix=make_cache_key('subtasks', 'tasksVersion'))
+@etag('tasksVersion')
 def get_subtasks_route():
     parent_task_id = request.args.get('parent_task_id', type=int)
     user_id = current_user.id
-    result, status_code = get_subtasks_by_parent_id(parent_task_id, user_id=user_id)
-    if status_code == 200:
-        version = DataVersion.get_version('tasksVersion')
-        response = jsonify(result)
-        response.set_etag(version)
-        if request.if_none_match and version in request.if_none_match:
-            return '', 304
-        return response
-    return jsonify(result), status_code
-
+    return get_subtasks_by_parent_id(parent_task_id, user_id=user_id)
