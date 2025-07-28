@@ -32,40 +32,40 @@ def get_calendar_events_route():
     return get_calendar_events(start, end, user_id=user_id)
 
 
-@calendar_bp.route('/tasks/override/<int:override_id>', methods=['GET'])
-@jwt_required()
-@cache.cached(timeout=60, key_prefix=make_cache_key('tasks'))
-@etag('tasksVersion')
-def get_task_override_route(override_id):
-    user_id = current_user.id
-    return get_task_override_by_id(override_id, user_id=user_id)
+# @calendar_bp.route('/tasks/override/<int:override_id>', methods=['GET'])
+# @jwt_required()
+# @cache.cached(timeout=60, key_prefix=make_cache_key('tasks'))
+# @etag('tasksVersion')
+# def get_task_override_route(override_id):
+#     user_id = current_user.id
+#     return get_task_override_by_id(override_id, user_id=user_id)
 
 
-@calendar_bp.route('/tasks/override', methods=['POST'])
-@jwt_required()
-@update_version_on_success('tasksVersion', success_codes=[201])
-def create_task_override_route():
-    data = request.get_json()
-    user_id = current_user.id
-    current_app.logger.info(create_task_override_route)
-    return create_task_override(data, user_id=user_id)
+# @calendar_bp.route('/tasks/override', methods=['POST'])
+# @jwt_required()
+# @update_version_on_success('tasksVersion', success_codes=[201])
+# def create_task_override_route():
+#     data = request.get_json()
+#     user_id = current_user.id
+#     current_app.logger.info(create_task_override_route)
+#     return create_task_override(data, user_id=user_id)
 
 
-@calendar_bp.route('/tasks/override/<int:override_id>', methods=['PATCH'])
-@jwt_required()
-@update_version_on_success('tasksVersion')
-def update_task_override_route(override_id):
-    data = request.get_json()
-    user_id = current_user.id
-    return update_task_override(override_id, data, user_id=user_id)
+# @calendar_bp.route('/tasks/override/<int:override_id>', methods=['PATCH'])
+# @jwt_required()
+# @update_version_on_success('tasksVersion')
+# def update_task_override_route(override_id):
+#     data = request.get_json()
+#     user_id = current_user.id
+#     return update_task_override(override_id, data, user_id=user_id)
 
 
-@calendar_bp.route('/tasks/override/<int:override_id>', methods=['DELETE'])
-@jwt_required()
-@update_version_on_success('tasksVersion')
-def delete_task_override_route(override_id):
-    user_id = current_user.id
-    return delete_task_override(override_id, user_id=user_id)
+# @calendar_bp.route('/tasks/override/<int:override_id>', methods=['DELETE'])
+# @jwt_required()
+# @update_version_on_success('tasksVersion')
+# def delete_task_override_route(override_id):
+#     user_id = current_user.id
+#     return delete_task_override(override_id, user_id=user_id)
 
 
 @calendar_bp.route('/tasks/instance', methods=['PATCH'])
