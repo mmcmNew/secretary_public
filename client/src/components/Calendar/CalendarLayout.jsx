@@ -1,12 +1,8 @@
 import { PropTypes } from 'prop-types';
 import { useEffect, useMemo } from "react";
 import useContainer from "../DraggableComponents/useContainer";
-import useCalendar from "./hooks/useCalendar";
-import TaskDialog from "./TaskDialog";
+import useCalendar from './hooks/useCalendar';
 import CalendarComponent from "./CalendarComponent";
-import Button from '@mui/material/Button';
-import Snackbar from '@mui/material/Snackbar';
-import Box from '@mui/material/Box';
 
 /**
  * Оптимизированный компонент календаря с использованием кастомного хука
@@ -20,47 +16,21 @@ export default function CalendarLayout({
   onError = null,
 }) {
   const { handleUpdateContent } = useContainer();
-  
-  // Используем кастомный хук для всей календарной логики
-  const {
-    calendarRef,
-    tasks,
-    lists,
-    taskFields,
-    calendarEvents,
-    calendarUIState,
-    calendarSettings,
-    fetchTasks,
-    fetchCalendarEvents,
-    handleCreateTask,
-    handleEventClick,
-    handleEventChange,
-    handleDelDateClick,
-    handleDialogClose,
-    handleOverrideChoice,
-    handleSaveSettings,
-    setOverrideSnackbar,
-    changeInstanceStatus,
-    handleTaskChange,
-    handleInstanceChange,
-    handleDeleteInstanceDate,
-    handleDeleteTaskDate,
-    addSubTask,
-    changeTaskStatus,
-    deleteTask,
-  } = useCalendar({ onSuccess, onError });
+
+  // Use the hook to get all calendar-related state and functions
+  const calendarProps = useCalendar({ onSuccess, onError });
 
   // Мемоизированные настройки календаря
   const effectiveCalendarSettings = useMemo(() => {
-    return calendarSettingsProp || calendarSettings;
-  }, [calendarSettingsProp, calendarSettings]);
+    return calendarSettingsProp || calendarProps.calendarSettings;
+  }, [calendarSettingsProp, calendarProps.calendarSettings]);
 
   // Мемоизированная функция сохранения настроек
   const handleSaveCalendarSettings = useMemo(() => {
     return (settings) => {
-      handleSaveSettings(settings, containerId, handleUpdateContent);
+      calendarProps.handleSaveSettings(settings, containerId, handleUpdateContent);
     };
-  }, [handleSaveSettings, containerId, handleUpdateContent]);
+  }, [calendarProps.handleSaveSettings, containerId, handleUpdateContent]);
 
   // Обновление настроек календаря при изменении пропсов
   useEffect(() => {
@@ -70,69 +40,12 @@ export default function CalendarLayout({
   }, [calendarSettingsProp, handleSaveCalendarSettings]);
 
   return (
-    <>
-      <CalendarComponent
-        calendarRef={calendarRef}
-        newSettings={effectiveCalendarSettings}
-        saveSettings={handleSaveCalendarSettings}
-        events={calendarEvents}
-        tasks={tasks}
-        lists={lists}
-        handleEventClick={handleEventClick}
-        handleEventChange={handleEventChange}
-        eventReceive={handleEventChange}
-        onCreateTask={handleCreateTask}
-        fetchTasks={fetchTasks}
-        fetchEvents={fetchCalendarEvents}
-        datesSet={handleDatesSet}
-      />
-      
-      <TaskDialog
-        open={calendarUIState.taskDialogOpen}
-        handleClose={handleDialogClose}
-        scroll={calendarUIState.dialogScroll}
-        instance={calendarUIState.selectedEvent}
-        subtasks={calendarUIState.selectedSubtasks}
-        task={calendarUIState.parentTask}
-        overrides={calendarUIState.overrides}
-        taskFields={taskFields}
-        addSubTask={addSubTask}
-        changeTaskStatus={changeTaskStatus}
-        changeInstanceStatus={changeInstanceStatus}
-        onChangeTask={handleTaskChange}
-        onChangeInstance={handleInstanceChange}
-        onDeleteTaskDate={handleDeleteTaskDate}
-      />
-      
-      <Snackbar
-        open={calendarUIState.overrideSnackbar.open}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        message={
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span>Что изменить?</span>
-            <Button 
-              variant="contained" 
-              color="primary" 
-              onClick={() => handleOverrideChoice('single')}
-            >
-              Только этот экземпляр (только {
-                calendarUIState.overrideSnackbar.eventInfo?.event?.extendedProps?.originalStart 
-                  ? new Date(calendarUIState.overrideSnackbar.eventInfo.event.extendedProps.originalStart).toLocaleDateString() 
-                  : 'этот день'
-              })
-            </Button>
-            <Button 
-              variant="outlined" 
-              color="secondary" 
-              onClick={() => handleOverrideChoice('series')}
-            >
-              Всю серию
-            </Button>
-          </Box>
-        }
-        onClose={() => setOverrideSnackbar({ open: false, eventInfo: null })}
-      />
-    </>
+    <CalendarComponent
+      {...calendarProps} // Pass all props from the hook
+      newSettings={effectiveCalendarSettings}
+      saveSettings={handleSaveCalendarSettings}
+      datesSet={handleDatesSet}
+    />
   );
 }
 

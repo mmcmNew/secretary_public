@@ -38,17 +38,8 @@ function TaskEditor({
     addSubTask = null,
     changeTaskStatus = null,
     deleteTask = null,
+    showJournalButton = true,
 }) {
-    const isInstance = task?.is_instance;
-    const allowedFields = ['start', 'end', 'type_id', 'priority_id', 'color', 'note'];
-    const filteredTaskFields = isInstance
-        ? Object.entries(taskFields).reduce((acc, [key, value]) => {
-              if (allowedFields.includes(key) || value.type === 'range') {
-                  acc[key] = value;
-              }
-              return acc;
-          }, {})
-        : taskFields;
     const methods = useForm({ defaultValues: { subtasks: [] } });
     const { control, setValue, reset, watch, formState: { errors } } = methods;
     const { fields: subtaskFields, append, remove, replace } = useFieldArray({ control, name: 'subtasks' });
@@ -260,21 +251,19 @@ function TaskEditor({
                 </Typography>
             )}
             <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexDirection: 'column', gap: 1.5, paddingY: 2 }}>
-                {!isInstance && <Button variant="outlined" onClick={() => setNewRecordDialogOpen(true)}>Добавить запись в журнал проекта</Button>}
-                {Object.entries(filteredTaskFields)
+                {showJournalButton && <Button variant="outlined" onClick={() => setNewRecordDialogOpen(true)}>Добавить запись в журнал проекта</Button>}
+                {Object.entries(taskFields)
                     .sort(([, a], [, b]) => (a.id || 0) - (b.id || 0))
                     .map(([key, field]) => {
                         if (!field) return null;
                         if (field.type === 'divider') return <Divider key={key} sx={{ my: 0.5 }} />;
                         return (
                             <Box key={key} sx={{ mt: 1 }}>
-                                {field.type === 'range' ? (
-                                    isInstance ? (
-                                        <TimeRangePickerField name={key} onValidBlur={handleRangeUpdate} />
-                                    ) : (
+                                {field.type === 'range' ?
                                     <DateTimeRangePickerField name={key} onValidBlur={handleRangeUpdate} />
-                                    )
-                                ) : field.type === 'datetime' ? (
+                                 : field.type === 'time-range' ?
+                                    <TimeRangePickerField name={key} onValidBlur={handleRangeUpdate} />
+                                 : field.type === 'datetime' ? (
                                     <FormControl fullWidth>
                                         <Controller
                                             name={key}
@@ -422,11 +411,6 @@ function TaskEditor({
                         setTypeDialogOpen(false);
                 }}
             />
-            {/* {!isInstance && <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 1 }}>
-                <Button variant="outlined" color="error" onClick={handleDeleteTask}>
-                    Удалить задачу
-                </Button>
-            </Box>} */}
         </Box>
         </FormProvider>
     );
@@ -441,6 +425,7 @@ TaskEditor.propTypes = {
     updateTask: PropTypes.func,
     changeTaskStatus: PropTypes.func,
     deleteTask: PropTypes.func,
+    showJournalButton: PropTypes.bool,
 };
 
 export default TaskEditor;

@@ -17,12 +17,14 @@ import {
   useTheme,
   ToggleButton,
 } from "@mui/material";
+import Snackbar from '@mui/material/Snackbar';
 import EditIcon from "@mui/icons-material/Edit";
 import applyTimeOffset from "../../utils/applyTimeOffset"
 import EditOffIcon from "@mui/icons-material/EditOff";
 import ListsList from "../ToDo/ListsList";
 import NewTaskDialog from "./NewTaskDialog";
 import SettingsDialog from "./SettingsDialog";
+import TaskDialog from "./TaskDialog";
 import PropTypes from "prop-types";
 
 function CalendarComponent({
@@ -39,6 +41,19 @@ function CalendarComponent({
   handleEventChange,
   eventReceive,
   datesSet = null,
+  // Props for TaskDialog and Snackbar
+  calendarUIState,
+  taskFields,
+  handleDialogClose,
+  handleOverrideChoice,
+  setOverrideSnackbar,
+  changeInstanceStatus,
+  handleTaskChange,
+  handleInstanceChange,
+  handleDeleteTaskDate,
+  addSubTask,
+  changeTaskStatus,
+  deleteTask,
 }) {
   const draggableEl = useRef(null);
   const draggableInstance = useRef(null);
@@ -465,6 +480,43 @@ function CalendarComponent({
               timeRange={timeRange}
               timeOffset={timeOffset}
             />
+            {calendarUIState && (
+              <>
+                <TaskDialog
+                  open={calendarUIState.taskDialogOpen}
+                  handleClose={handleDialogClose}
+                  scroll={calendarUIState.dialogScroll}
+                  instance={calendarUIState.selectedEvent}
+                  subtasks={calendarUIState.selectedSubtasks}
+                  task={calendarUIState.parentTask}
+                  overrides={calendarUIState.overrides}
+                  taskFields={taskFields}
+                  addSubTask={addSubTask}
+                  changeTaskStatus={changeTaskStatus}
+                  changeInstanceStatus={changeInstanceStatus}
+                  onChangeTask={handleTaskChange}
+                  onChangeInstance={handleInstanceChange}
+                  onDeleteTaskDate={handleDeleteTaskDate}
+                  deleteTask={deleteTask}
+                />
+                <Snackbar
+                  open={calendarUIState.overrideSnackbar.open}
+                  anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                  message={
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <span>Что изменить?</span>
+                      <Button variant="contained" color="primary" onClick={() => handleOverrideChoice('single')}>
+                        Только этот экземпляр (только {calendarUIState.overrideSnackbar.eventInfo?.event?.extendedProps?.originalStart ? new Date(calendarUIState.overrideSnackbar.eventInfo.event.extendedProps.originalStart).toLocaleDateString() : 'этот день'})
+                      </Button>
+                      <Button variant="outlined" color="secondary" onClick={() => handleOverrideChoice('series')}>
+                        Всю серию
+                      </Button>
+                    </Box>
+                  }
+                  onClose={() => setOverrideSnackbar({ open: false, eventInfo: null })}
+                />
+              </>
+            )}
           </Paper>
         </Grid>
           <Grid
@@ -579,6 +631,18 @@ CalendarComponent.propTypes = {
   handleEventChange: PropTypes.func,
   eventReceive: PropTypes.func,
   datesSet: PropTypes.func,
+  calendarUIState: PropTypes.object,
+  taskFields: PropTypes.object,
+  handleDialogClose: PropTypes.func,
+  handleOverrideChoice: PropTypes.func,
+  setOverrideSnackbar: PropTypes.func,
+  changeInstanceStatus: PropTypes.func,
+  handleTaskChange: PropTypes.func,
+  handleInstanceChange: PropTypes.func,
+  handleDeleteTaskDate: PropTypes.func,
+  addSubTask: PropTypes.func,
+  changeTaskStatus: PropTypes.func,
+  deleteTask: PropTypes.func,
 };
 
 export default React.memo(CalendarComponent);

@@ -1,15 +1,16 @@
 from . import calendar_bp
 from flask import request, jsonify, current_app
 from flask_jwt_extended import jwt_required, current_user
+from app.decorators import etag, update_version_on_success
 from .handlers import (
     get_calendar_events,
     get_task_override_by_id,
     create_task_override,
     update_task_override,
     delete_task_override,
+    patch_instance_handler,
 )
 from app.tasks.models import DataVersion
-from app.socketio_utils import notify_data_update
 from app import cache
 
 
@@ -23,72 +24,54 @@ def make_cache_key(prefix):
 @calendar_bp.route('/tasks/get_calendar_events', methods=['GET'])
 @jwt_required()
 @cache.cached(timeout=60, key_prefix=make_cache_key('tasks'))
+@etag('tasksVersion')
 def get_calendar_events_route():
     start = request.args.get('start')
     end = request.args.get('end')
     user_id = current_user.id
-    result, status_code = get_calendar_events(start, end, user_id=user_id)
-    if status_code == 200:
-        version = DataVersion.get_version('tasksVersion')
-        response = jsonify(result)
-        response.set_etag(version)
-        if request.if_none_match and version in request.if_none_match:
-            return '', 304
-        return response
-    return jsonify(result), status_code
+    return get_calendar_events(start, end, user_id=user_id)
 
 
 @calendar_bp.route('/tasks/override/<int:override_id>', methods=['GET'])
 @jwt_required()
 @cache.cached(timeout=60, key_prefix=make_cache_key('tasks'))
+@etag('tasksVersion')
 def get_task_override_route(override_id):
     user_id = current_user.id
-    result, status_code = get_task_override_by_id(override_id, user_id=user_id)
-    return jsonify(result), status_code
+    return get_task_override_by_id(override_id, user_id=user_id)
 
 
 @calendar_bp.route('/tasks/override', methods=['POST'])
 @jwt_required()
+@update_version_on_success('tasksVersion', success_codes=[201])
 def create_task_override_route():
     data = request.get_json()
     user_id = current_user.id
     current_app.logger.info(create_task_override_route)
-    result, status_code = create_task_override(data, user_id=user_id)
-    if status_code == 201:
-        new_version = DataVersion.update_version('tasksVersion')
-        notify_data_update(tasksVersion=new_version)
-    return jsonify(result), status_code
+    return create_task_override(data, user_id=user_id)
 
 
 @calendar_bp.route('/tasks/override/<int:override_id>', methods=['PATCH'])
 @jwt_required()
+@update_version_on_success('tasksVersion')
 def update_task_override_route(override_id):
     data = request.get_json()
     user_id = current_user.id
-    result, status_code = update_task_override(override_id, data, user_id=user_id)
-    if status_code == 200:
-        new_version = DataVersion.update_version('tasksVersion')
-        notify_data_update(tasksVersion=new_version)
-    return jsonify(result), status_code
+    return update_task_override(override_id, data, user_id=user_id)
 
 
 @calendar_bp.route('/tasks/override/<int:override_id>', methods=['DELETE'])
 @jwt_required()
+@update_version_on_success('tasksVersion')
 def delete_task_override_route(override_id):
     user_id = current_user.id
-    result, status_code = delete_task_override(override_id, user_id=user_id)
-    if status_code == 200:
-        new_version = DataVersion.update_version('tasksVersion')
-        notify_data_update(tasksVersion=new_version)
-    return jsonify(result), status_code
+    return delete_task_override(override_id, user_id=user_id)
 
 
 @calendar_bp.route('/tasks/instance', methods=['PATCH'])
 @jwt_required()
-def patch_instance():
-    from .handlers import patch_instance_handler
+@update_version_on_success('tasksVersion')
+def patch_instance_route():
     data = request.get_json()
     user_id = current_user.id
-    result, status_code = patch_instance_handler(data, user_id)
-    return jsonify(result), status_code
-
+    return patch_instance_handler(data, user_id)

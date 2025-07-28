@@ -51,6 +51,20 @@ export default function TaskDialog({
 
     if (!task) return null;
 
+    const isInstance = !!instance;
+
+    // Готовим поля для редактора экземпляра задачи
+    const allowedFields = ['start', 'end', 'type_id', 'priority_id', 'color', 'note'];
+    const instanceTaskFields = Object.entries(taskFields).reduce((acc, [key, value]) => {
+        if (allowedFields.includes(key) || value.type === 'range') {
+            // Для экземпляров повторяющихся задач мы хотим редактировать только время, а не дату.
+            // Поэтому меняем тип поля с 'range' (datetime) на 'time-range'.
+            acc[key] = value.type === 'range' ? { ...value, type: 'time-range' } : value;
+        }
+        return acc;
+    }, {});
+
+
     const handleDelClick = () => {
         if (activeTab === 0 && onChangeInstance && instance?.id) {
             onChangeInstance({ ...instance, type: 'skip' });
@@ -64,12 +78,13 @@ export default function TaskDialog({
     };
 
     const renderContent = () => {
-        if (!instance) {
+        if (!isInstance) {
             return (
                 <TaskEditor
                     task={task}
                     subtasks={subtasks}
                     taskFields={taskFields}
+                    showJournalButton={true}
                     onChange={(t) => onChangeTask(t)}
                     addSubTask={addSubTask}
                 />
@@ -86,10 +101,10 @@ export default function TaskDialog({
                 {activeTab === 0 && (
                     <TaskEditor
                         task={instance}
-                        // TODO: taskFields для Instance
-                        taskFields={taskFields}
+                        taskFields={instanceTaskFields}
                         onChange={(t) => onChangeInstance(t)}
                         changeTaskStatus={changeInstanceStatus}
+                        showJournalButton={false}
                     />
                 )}
                 {activeTab === 1 && (
@@ -97,6 +112,7 @@ export default function TaskDialog({
                         task={task}
                         subtasks={subtasks}
                         taskFields={taskFields}
+                        showJournalButton={true}
                         onChange={(t) => onChangeTask(t)}
                         addSubTask={addSubTask}
                         changeTaskStatus={changeTaskStatus}
@@ -155,14 +171,15 @@ TaskDialog.propTypes = {
     open: PropTypes.bool.isRequired,
     handleClose: PropTypes.func,
     scroll: PropTypes.string,
+    instance: PropTypes.object,
     task: PropTypes.object,
-    parentTask: PropTypes.object,
     subtasks: PropTypes.array,
     overrides: PropTypes.array,
     taskFields: PropTypes.object,
     onChangeTask: PropTypes.func,
-    onChangeParentTask: PropTypes.func,
+    onChangeInstance: PropTypes.func,
     addSubTask: PropTypes.func,
     onDeleteTaskDate: PropTypes.func,
-    onDeleteParentDate: PropTypes.func,
+    changeInstanceStatus: PropTypes.func,
+    changeTaskStatus: PropTypes.func,
 };
