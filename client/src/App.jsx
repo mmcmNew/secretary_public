@@ -21,7 +21,11 @@ import AuthProvider from 'react-auth-kit';
 import createStore from 'react-auth-kit/createStore';
 import createRefresh from 'react-auth-kit/createRefresh';
 import RequireAuth from './components/RequireAuth.jsx';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 // import ReactGridLayout from "./components/GridLayout";
+
+const queryClient = new QueryClient();
 
 const store = createStore({
   authName: '_auth',
@@ -83,30 +87,25 @@ const AppRoutes = memo(() => (
 ));
 
 function App() {
-  // useEffect(() => {
-  //   if (process.env.NODE_ENV === 'development' && window.mainStart) {
-  //     const renderTime = performance.now() - window.mainStart;
-  //     console.log(`Initial render completed in ${renderTime.toFixed(2)}ms`);
-  //   }
-  // }, []);
-
   return (
     <div className="App">
-      <ErrorProvider>
-        <AuthProvider store={store}>
-          {/* 4. Убираем лишние провайдеры из корневого компонента */}
-          <Router future={{
-                    v7_fetcherPersist: true,
-                    v7_normalizeFormMethod: true,
-                    v7_partialHydration: true,
-                    v7_relativeSplatPath: true,
-                    v7_skipActionErrorRevalidation: true,
-                    v7_startTransition: true,
-                  }}>
-            <AppRoutes />
-          </Router>
-        </AuthProvider>
-      </ErrorProvider>
+      <QueryClientProvider client={queryClient}>
+        <ErrorProvider>
+          <AuthProvider store={store}>
+            <Router future={{
+                      v7_fetcherPersist: true,
+                      v7_normalizeFormMethod: true,
+                      v7_partialHydration: true,
+                      v7_relativeSplatPath: true,
+                      v7_skipActionErrorRevalidation: true,
+                      v7_startTransition: true,
+                    }}>
+              <AppRoutes />
+            </Router>
+          </AuthProvider>
+        </ErrorProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
     </div>
   );
 }

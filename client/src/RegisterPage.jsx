@@ -31,7 +31,11 @@ export default function RegisterPage() {
         setError('Registration failed');
       }
     } catch (err) {
-      setError(err.message || 'Registration failed');
+      if (err.response && err.response.data && err.response.data.error) {
+        setError(err.response.data.error);
+      } else {
+        setError(err.message || 'Registration failed');
+      }
     }
   };
 

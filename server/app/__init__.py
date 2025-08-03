@@ -155,4 +155,11 @@ def register_cli_commands(app):
         Interval.add_initial_intervals()
         from .init_subscription_data import init_subscription_data
         init_subscription_data()
+        # Создаем триггеры для автоматического обновления счетчиков в списках
+        try:
+            from .tasks.triggers import create_list_counter_triggers
+            create_list_counter_triggers()
+            app.logger.info("List counter triggers created successfully.")
+        except Exception as e:
+            app.logger.error(f"Failed to create list counter triggers: {e}")
         print("Данные успешно инициализированы.")

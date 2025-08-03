@@ -30,7 +30,11 @@ export default function SignInPage() {
         setError('Login failed');
       }
     } catch (err) {
-      setError(err.message || 'Login failed');
+      if (err.response && err.response.data && err.response.data.error) {
+        setError(err.response.data.error);
+      } else {
+        setError(err.message || 'Login failed');
+      }
     }
   };
 

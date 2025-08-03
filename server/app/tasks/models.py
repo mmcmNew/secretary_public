@@ -254,22 +254,6 @@ class Project(db.Model):
     lists = db.relationship('List', secondary=list_project_relations, back_populates='projects')
     groups = db.relationship('Group', secondary=group_project_relations, back_populates='projects')
 
-    def unfinished_tasks_count(self):
-        unfinished_tasks_count = 0
-        for list in self.lists:
-            unfinished_tasks_count += list.unfinished_tasks_count()
-        for group in self.groups:
-            unfinished_tasks_count += group.unfinished_tasks_count()
-        return unfinished_tasks_count
-
-    def tasks_count(self):
-        tasks_count = 0
-        for list in self.lists:
-            tasks_count += len(list.childes_order)
-        for group in self.groups:
-            tasks_count += group.tasks_count()
-        return tasks_count
-
     def to_dict(self):
         groups_dict = [group.to_dict() for group in self.groups]
         lists_dict = [lst.to_dict() for lst in self.lists]
@@ -283,8 +267,6 @@ class Project(db.Model):
             'order': self.order,
             'childes_order': self.childes_order if self.childes_order else [],
             'childes': combined,
-            # 'unfinished_tasks_count': self.unfinished_tasks_count(),
-            'tasks_count': self.tasks_count(),
             'deleted': self.deleted
         }
 
@@ -303,35 +285,6 @@ class Group(db.Model):
     lists = db.relationship('List', secondary=list_group_relations, back_populates='groups')
     projects = db.relationship('Project', secondary=group_project_relations, back_populates='groups')
 
-    def unfinished_tasks_count(self, lists_map=None, tasks_map=None):
-        """Return count of unfinished tasks within this group.
-
-        Optionally accepts a mapping of list_id -> List objects and a mapping of
-        task_id -> Task objects to avoid per-item database queries."""
-        unfinished_tasks_count = 0
-        for list_id in self.childes_order:
-            lst = None
-            if lists_map is not None:
-                lst = lists_map.get(list_id)
-            if lst is None:
-                lst = db.session.get(List, list_id)
-            if lst:
-                unfinished_tasks_count += lst.unfinished_tasks_count(tasks_map)
-        return unfinished_tasks_count
-
-    def tasks_count(self, lists_map=None):
-        """Return total number of tasks within this group."""
-        tasks_count = 0
-        for list_id in self.childes_order:
-            lst = None
-            if lists_map is not None:
-                lst = lists_map.get(list_id)
-            if lst is None:
-                lst = db.session.get(List, list_id)
-            if lst:
-                tasks_count += len(lst.childes_order)
-        return tasks_count
-
     def to_dict(self):
         return {
             'id': f'group_{self.id}',
@@ -340,8 +293,6 @@ class Group(db.Model):
             'order': self.order,
             'childes_order': self.childes_order,
             'inGeneralList': self.in_general_list,
-            # 'unfinished_tasks_count': self.unfinished_tasks_count(),
-            'tasks_count': self.tasks_count(),
             'deleted': self.deleted,
         }
 
@@ -364,21 +315,6 @@ class List(db.Model):
     projects = db.relationship('Project', secondary=list_project_relations, back_populates='lists')
     groups = db.relationship('Group', secondary=list_group_relations, back_populates='lists')
 
-    def unfinished_tasks_count(self, tasks_map=None):
-        """Return number of unfinished tasks in this list.
-
-        A mapping of task_id -> Task can be provided to avoid database lookups."""
-        unfinished_tasks_count = 0
-        for task_id in self.childes_order:
-            task = None
-            if tasks_map is not None:
-                task = tasks_map.get(task_id)
-            if task is None:
-                task = db.session.get(Task, task_id)
-            if task and task.status_id != 2:
-                unfinished_tasks_count += 1
-        return unfinished_tasks_count
-
     def to_dict(self):
         return {
             'id': self.id,
@@ -386,7 +322,9 @@ class List(db.Model):
             'title': self.title,
             'order': self.order,
             'childes_order': self.childes_order,
-            # 'unfinished_tasks_count': self.unfinished_tasks_count(),
+            'unfinished_tasks_count': self.unfinished_count,
+            'important_tasks_count': self.important_count,
+            'background_tasks_count': self.background_count,
             'inGeneralList': self.in_general_list,
             'deleted': self.deleted,
         }

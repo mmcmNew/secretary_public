@@ -137,6 +137,7 @@ export default defineConfig({
   },
   server: {
     host: true,
+    historyApiFallback: true,
     https: fs.existsSync('./localhost-key.pem') && fs.existsSync('./localhost.pem') ? {
       key: fs.readFileSync('./localhost-key.pem'),
       cert: fs.readFileSync('./localhost.pem')
@@ -263,16 +264,16 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
-      '/login': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
-      '/register': {
-        target: 'https://localhost:5100',
-        changeOrigin: true,
-        secure: false
-      },
+      // '/login': {
+      //   target: 'https://localhost:5100',
+      //   changeOrigin: true,
+      //   secure: false
+      // },
+      // '/register': {
+      //   target: 'https://localhost:5100',
+      //   changeOrigin: true,
+      //   secure: false
+      // },
     },
   },
   test: {
