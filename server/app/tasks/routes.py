@@ -108,7 +108,17 @@ def add_task_route():
 @to_do_app.route('/tasks/edit_list', methods=['PUT'])
 @jwt_required()
 def edit_list_route():
-    data = request.get_json()
+    try:
+        data = request.get_json()
+    except Exception as e:
+        current_app.logger.error(f'edit_list_route: Failed to parse JSON: {e}')
+        return jsonify({'success': False, 'message': 'Invalid JSON data'}), 400
+    
+    if data is None:
+        current_app.logger.error('edit_list_route: No JSON data provided')
+        return jsonify({'success': False, 'message': 'Invalid JSON data'}), 400
+    
+    current_app.logger.info(f'edit_list_route: data: {data}')
     if not isinstance(data, dict):
         current_app.logger.error(f'edit_list_route: Invalid data type: {type(data)}, data: {data}')
         return jsonify({'success': False, 'message': 'Invalid JSON data'}), 400
@@ -182,7 +192,9 @@ def change_task_status_route():
 @jwt_required()
 @etag('tasksVersion')
 def get_tasks_route():
-    list_id = request.args.get('list_id')
+    list_id = request.args.get('list_id', None)
+    if not list_id:
+        return {'error': 'list_id is required'}, 400
     start = request.args.get('start')
     end = request.args.get('end')
     client_timezone = request.args.get('time_zone', 'UTC')
@@ -418,13 +430,18 @@ def add_task_type_route():
     name = data.get('name')
     if not name:
         return jsonify({'error': 'Name required'}), 400
+    group_id = data.get('group_id')
+    if group_id is not None:
+        group = TaskTypeGroup.query.filter_by(id=group_id, user_id=current_user.id).first()
+        if not group:
+            return jsonify({'error': 'Group not found'}), 400
     task_type = TaskType(
         user_id=current_user.id,
         name=name,
         color=data.get('color', '#3788D8'),
         description=data.get('description'),
         order=data.get('order'),
-        group_id=data.get('group_id'),
+        group_id=group_id,
         is_active=data.get('is_active', True)
     )
     db.session.add(task_type)
@@ -441,11 +458,16 @@ def edit_task_type_route(type_id):
     if not task_type:
         return jsonify({'error': 'Not found'}), 404
     data = request.get_json() or {}
+    group_id = data.get('group_id', task_type.group_id)
+    if group_id != task_type.group_id and group_id is not None:
+        group = TaskTypeGroup.query.filter_by(id=group_id, user_id=current_user.id).first()
+        if not group:
+            return jsonify({'error': 'Group not found'}), 400
     task_type.name = data.get('name', task_type.name)
     task_type.color = data.get('color', task_type.color)
     task_type.description = data.get('description', task_type.description)
     task_type.order = data.get('order', task_type.order)
-    task_type.group_id = data.get('group_id', task_type.group_id)
+    task_type.group_id = group_id
     task_type.is_active = data.get('is_active', task_type.is_active)
     db.session.commit()
     new_version = DataVersion.update_version('taskTypesVersion')

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, memo, useCallback } from "react";
 import { useForm, Controller, useFieldArray, FormProvider } from "react-hook-form";
 import {
     Box,
@@ -428,4 +428,4 @@ TaskEditor.propTypes = {
     showJournalButton: PropTypes.bool,
 };
 
-export default TaskEditor;
+export default memo(TaskEditor);

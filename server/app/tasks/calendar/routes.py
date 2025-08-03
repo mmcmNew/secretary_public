@@ -4,10 +4,10 @@ from flask_jwt_extended import jwt_required, current_user
 from app.decorators import etag, update_version_on_success
 from .handlers import (
     get_calendar_events,
-    get_task_override_by_id,
-    create_task_override,
-    update_task_override,
-    delete_task_override,
+    # get_task_override_by_id,
+    # create_task_override,
+    # update_task_override,
+    # delete_task_override,
     patch_instance_handler,
 )
 from app.tasks.models import DataVersion
@@ -23,13 +23,19 @@ def make_cache_key(prefix):
 
 @calendar_bp.route('/tasks/get_calendar_events', methods=['GET'])
 @jwt_required()
-@cache.cached(timeout=60, key_prefix=make_cache_key('tasks'))
 @etag('tasksVersion')
+@cache.cached(timeout=60, key_prefix=make_cache_key('tasks'))
 def get_calendar_events_route():
-    start = request.args.get('start')
-    end = request.args.get('end')
-    user_id = current_user.id
-    return get_calendar_events(start, end, user_id=user_id)
+    try:
+        start = request.args.get('start')
+        end = request.args.get('end')
+        user_id = current_user.id
+
+        data, status_code = get_calendar_events(start, end, user_id=user_id)
+        return jsonify(data), status_code
+
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
 
 
 # @calendar_bp.route('/tasks/override/<int:override_id>', methods=['GET'])

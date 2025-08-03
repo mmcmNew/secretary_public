@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, memo, useCallback, useContext, useMemo } from 'react';
 import {
   Menu,
   MenuItem,
@@ -10,12 +10,14 @@ import PropTypes from 'prop-types';
 import ListsSection from './ListsList/ListsSection';
 import ContextMenu from './ListsList/ContextMenu';
 
-import useTasks from './hooks/useTasks';
+import { useTasks } from './hooks/useTasks';
+import { useListsLogic } from './hooks/useListsLogic';
 import useContextMenu from './hooks/useContextMenu'
 import { clearAllCache } from '../../utils/api';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import { ErrorContext } from '../../contexts/ErrorContext';
 
-export default function ListsList({
+function ListsList({
   listsList = [],
   defaultLists = [],
   projects = [],
@@ -35,17 +37,15 @@ export default function ListsList({
   changeChildesOrder = null,
   selectedList = null,
   setSelectedList = null,
-  calendarRange = null, // <--- добавляем пропс
+  calendarRange = null,
+  // deleteFromChildes = null,
 }) {
-  const [openGroups, setOpenGroups] = useState({});
   const { anchorEl, openMenu, closeMenu } = useContextMenu();
-  const [editingItemId, setEditingItemId] = useState(null);
   const [targetItemId, setTargetItemId] = useState(null);
-  const [editingTitle, setEditingTitle] = useState('');
-  const [targetGroupId, setTargetGroupId] = useState(null); // Хранит id группы в которой находится список для которого вызвано контекстное меню
+  const [targetGroupId, setTargetGroupId] = useState(null);
   const [groupMenuPosition, setGroupMenuPosition] = useState(null);
   const [projectMenuPosition, setProjectMenuPosition] = useState(null);
-  const [actionType, setActionType] = useState(null); // Хранит текущее действие: "move" или "link"
+  const [actionType, setActionType] = useState(null);
   const [dropMenuAnchorEl, setDropMenuAnchorEl] = useState(null);
   const [droppedTask, setDroppedTask] = useState(null);
   const [dropTargetListId, setDropTargetListId] = useState(null);
@@ -53,53 +53,82 @@ export default function ListsList({
   const [droppedListItem, setDroppedListItem] = useState(null);
   const [listDropTargetId, setListDropTargetId] = useState(null);
   const inputRef = useRef(null);
-  const { fetchTasks, fetchLists: fetchListsHook, updateList, fetchCalendarEvents } = useTasks();
+  const { setError } = useContext(ErrorContext);
+  const { fetchTasks, fetchLists: fetchListsHook, updateList, fetchCalendarEvents } = useTasks({
+    onError: (error) => {
+      console.error('Error in useTasks:', error);
+      setError(error);
+    }
+  });
 
-  function handleToggleGroup(id) {
-    setOpenGroups((prevOpenGroups) => ({
-      ...prevOpenGroups,
-      [id]: !prevOpenGroups[id],
-    }));
-  }
+  // Используем новый хук для логики списков
+  const {
+    openGroups,
+    editingItemId,
+    editingTitle,
+    setEditingTitle,
+    handleToggleGroup,
+    handleListSelect,
+    handleEditStart,
+    handleEditSave,
+    handleEditCancel,
+    handleOrderChange,
+    handleTaskDrop,
+    handleListDrop,
+    lists,
+    default_lists,
+    projects_list,
+    // deleteFromChildes
+  } = useListsLogic({
+    listsList,
+    defaultLists,
+    projects,
+    listsObject: listsList?.lists && listsList?.default_lists && listsList?.projects ? listsList : null,
+    selectedListId,
+    onListSelect: setSelectedListId,
+    onListUpdate: updateList,
+    onListLink: linkListGroup,
+    onListDelete: deleteFromChildes,
+    onTaskLink: linkTaskList,
+    onSuccess: (message) => console.log(message),
+    onError: setError,
+  });
 
-  async function handleFullRefresh() {
+  // Мемоизированные обработчики
+  const handleFullRefresh = useCallback(async () => {
     await clearAllCache();
     if (typeof fetchLists === 'function') await fetchLists({ id: 'get-lists' });
     else if (typeof fetchListsHook === 'function') await fetchListsHook({ id: 'get-lists' });
     if (typeof fetchTasks === 'function' && selectedListId) await fetchTasks(selectedListId);
     if (typeof fetchCalendarEvents === 'function') await fetchCalendarEvents(calendarRange);
-  }
+  }, [fetchLists, fetchListsHook, fetchTasks, fetchCalendarEvents, selectedListId, calendarRange]);
 
-  function handleListItemClick(event, index) {
-    if (editingItemId) return;
-    if (targetItemId !== index) {
-      setTargetItemId(null);
-      setEditingItemId(null);
-    }
-    if (typeof setSelectedListId === 'function')
-      setSelectedListId(index);
-    if (typeof setSelectedTaskId === 'function')
-      setSelectedTaskId(null);
-  }
+  const handleListItemClick = useCallback((event, index) => {
+    handleListSelect(index);
+    if (typeof setSelectedTaskId === 'function') setSelectedTaskId(null);
+  }, [handleListSelect, setSelectedTaskId]);
 
-  function handleContextMenu(event, item, groupId) {
+  const handleContextMenu = useCallback((event, item, groupId) => {
     console.log(item, groupId)
     openMenu(event);
-    setEditingItemId(null);
     setTargetGroupId(groupId);
     setTargetItemId(item.id);
-    setEditingTitle(item.title);
-  }
+    handleEditStart(item.id, item.title);
+  }, [openMenu, handleEditStart]);
 
-  function handleCloseMenu() {
+  const handleCloseMenu = useCallback(() => {
     closeMenu();
     setTargetGroupId(null);
-  }
+    handleEditCancel();
+  }, [closeMenu, handleEditCancel]);
 
-  function handleEditClick(itemId) {
-    setEditingItemId(itemId);
+  const handleEditClick = useCallback((itemId) => {
+    const item = [...lists, ...projects_list, ...default_lists].find(i => i.id === itemId);
+    if (item) {
+      handleEditStart(itemId, item.title);
+    }
     closeMenu();
-  }
+  }, [lists, projects_list, default_lists, handleEditStart, closeMenu]);
 
   useEffect(() => {
     if (inputRef.current !== null) {
@@ -107,85 +136,23 @@ export default function ListsList({
     }
   }, [editingItemId])
 
-  function handleTitleChange(event) {
+  const handleTitleChange = useCallback((event) => {
     setEditingTitle(event.target.value);
-  }
+  }, [setEditingTitle]);
 
-  function handleDeleteFromChildes(elementId, groupId) {
+  const handleDeleteFromChildesClick = useCallback((elementId, groupId) => {
     closeMenu();
     if (typeof deleteFromChildes === 'function') {
       deleteFromChildes({source_id: elementId, group_id: groupId});
     }
-  }
+  }, [closeMenu, deleteFromChildes]);
 
-  async function handleChangeChildesOrder(elementId, direction, groupId) {
+  const handleChangeChildesOrder = useCallback(async (elementId, direction, groupId) => {
     closeMenu();
-    // Если targetGroupId не передан, работаем с listsList
-    if (!groupId || String(elementId).startsWith('project_')) {
-      console.log(elementId, direction);
-
-      let generalList = String(elementId).startsWith('project_')
-        ? listsList
-        : defaultLists.filter(item => item.inGeneralList == 1 && !item.deleted);
-      console.log(generalList);
-
-      // Находим индекс элемента по его id
-      const index = generalList.findIndex((list) => list.id === elementId);
-      console.log(index);
-
-      if (index === -1 || (direction === 'up' && index === 0) || (direction === 'down' && index === generalList.length - 1)) return;
-
-      // Запоминаем старый order
-      let oldOrder = generalList[index].order;
-      console.log('oldOrder ', oldOrder);
-
-      // Определяем индекс заменяемого элемента
-      let replacedElementIndex = direction === 'up' ? index - 1 : index + 1;
-      let replacedElement = generalList[replacedElementIndex];
-
-      // Меняем order между элементами
-      let newOrder = replacedElement.order;
-      console.log('newOrder ', newOrder)
-
-      // Обновляем элементы на сервере
-      if (typeof updateList === 'function') {
-        await updateList({listId: elementId, order: newOrder});
-        await updateList({listId: replacedElement.id, order: oldOrder});
-      }
-      if (typeof updateAll === 'function') {
-        await updateAll();
-      }
-      if (typeof updateEvents === 'function') {
-        await updateEvents();
-      }
-      return;
-    }
-
-    // Если targetGroupId передан, работаем с группой
-    console.log(`handleChangeChildesOrder: ${groupId}`, elementId, direction);
-
-    let targetGroup = listsList.find((group) => group.id === groupId) || listsList.find((group) => group.id === groupId);
-
-    if (!targetGroup) return; // Если targetGroup не найден
-
-    const index = targetGroup.childes_order.indexOf(elementId);
-
-    // Проверяем, что элемент найден в childes_order
-    if (index === -1) return;
-
-    if (direction === 'up' && index > 0) {
-      // Меняем местами с предыдущим элементом
-      [targetGroup.childes_order[index - 1], targetGroup.childes_order[index]] =
-        [targetGroup.childes_order[index], targetGroup.childes_order[index - 1]];
-    } else if (direction === 'down' && index < targetGroup.childes_order.length - 1) {
-      // Меняем местами со следующим элементом
-      [targetGroup.childes_order[index + 1], targetGroup.childes_order[index]] =
-        [targetGroup.childes_order[index], targetGroup.childes_order[index + 1]];
-    }
-
-    // Сохраняем изменения в childes_order
-    updateList({listId: targetGroup.id, childes_order: targetGroup.childes_order});
-  }
+    await handleOrderChange(elementId, direction, groupId);
+    if (typeof updateAll === 'function') await updateAll();
+    if (typeof updateEvents === 'function') await updateEvents();
+  }, [closeMenu, handleOrderChange, updateAll, updateEvents]);
 
   async function handleAction(targetId) {
     // Сохраняем группу источника, так как handleCloseMenu обнуляет targetGroupId
@@ -233,49 +200,46 @@ export default function ListsList({
     setProjectMenuPosition(null);
   }
 
-  function handleKeyDown(event) {
+  const handleKeyDown = useCallback((event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      updateList({listId: editingItemId, title: editingTitle});
-      setEditingItemId(null);
+      handleEditSave();
       inputRef.current = null;
     }
-  }
+  }, [handleEditSave]);
 
-  function handleBlur() {
-    updateList({listId: editingItemId, title: editingTitle});
-    setEditingItemId(null);
-    // сбросить ref
+  const handleBlur = useCallback(() => {
+    handleEditSave();
     inputRef.current = null;
-  }
+  }, [handleEditSave]);
 
-  function handleAddToGeneralList(itemId) {
+  const handleAddToGeneralList = useCallback((itemId) => {
     updateList({listId: itemId, inGeneralList: 1});
     closeMenu();
-  }
+  }, [updateList, closeMenu]);
 
   function findParentId(id) {
-    const grp = listsList.find(g => Array.isArray(g.childes_order) && g.childes_order.includes(id));
+    const grp = lists.find(g => Array.isArray(g.childes_order) && g.childes_order.includes(id));
     if (grp) return grp.id;
-    const proj = projects?.find(p => Array.isArray(p.childes_order) && p.childes_order.includes(id));
+    const proj = projects_list?.find(p => Array.isArray(p.childes_order) && p.childes_order.includes(id));
     if (proj) return proj.id;
     return null;
   }
 
-  function handleTaskDrop(event, listId) {
+  const handleTaskDropEvent = useCallback((event, listId) => {
     event.preventDefault();
     const taskData = event.dataTransfer.getData('task');
     if (!taskData) return;
     setDroppedTask(JSON.parse(taskData));
     setDropTargetListId(listId);
     setDropMenuAnchorEl(event.currentTarget);
-  }
+  }, []);
 
-  function handleListDragStart(event, item) {
+  const handleListDragStart = useCallback((event, item) => {
     event.dataTransfer.setData('list', JSON.stringify(item));
-  }
+  }, []);
 
-  async function handleListDrop(event, targetId) {
+  const handleListDropEvent = useCallback((event, targetId) => {
     event.preventDefault();
     const listData = event.dataTransfer.getData('list');
     if (!listData) return;
@@ -283,46 +247,32 @@ export default function ListsList({
     setDroppedListItem(dropped);
     setListDropTargetId(targetId);
     setListDropMenuAnchorEl(event.currentTarget);
-  }
+  }, []);
 
-  async function handleDropAction(action) {
+  const handleDropAction = useCallback(async (action) => {
     if (!droppedTask) return;
-    const params = { task_id: droppedTask.id, list_id: dropTargetListId, action };
-    if (action === 'move' && droppedTask.lists_ids?.length) {
-      params.source_list_id = droppedTask.lists_ids[0];
-    }
-    if (typeof linkTaskList === 'function') {
-      await linkTaskList(params);
-    }
+    await handleTaskDrop(droppedTask, dropTargetListId, action);
     handleCloseDropMenu();
-  }
+  }, [droppedTask, dropTargetListId, handleTaskDrop]);
 
-  function handleCloseDropMenu() {
+  const handleCloseDropMenu = useCallback(() => {
     setDropMenuAnchorEl(null);
     setDroppedTask(null);
     setDropTargetListId(null);
-  }
+  }, []);
 
-  async function handleListDropAction(action) {
+  const handleListDropAction = useCallback(async (action) => {
     if (!droppedListItem) return;
-    if (typeof linkListGroup === 'function') {
-      await linkListGroup({ source_id: droppedListItem.id, target_id: listDropTargetId });
-    }
-    if (action === 'move' && typeof deleteFromChildes === 'function') {
-      const parent = findParentId(droppedListItem.id);
-      if (parent) {
-        await deleteFromChildes({ source_id: droppedListItem.id, group_id: parent });
-      }
-    }
+    await handleListDrop(droppedListItem, listDropTargetId, action);
     if (typeof updateAll === 'function') await updateAll();
     handleCloseListDropMenu();
-  }
+  }, [droppedListItem, listDropTargetId, handleListDrop, updateAll]);
 
-  function handleCloseListDropMenu() {
+  const handleCloseListDropMenu = useCallback(() => {
     setListDropMenuAnchorEl(null);
     setDroppedListItem(null);
     setListDropTargetId(null);
-  }
+  }, []);
 
 
 
@@ -353,7 +303,7 @@ export default function ListsList({
           overflowY: 'auto'
         }}>
           <ListsSection
-            items={defaultLists}
+            items={default_lists}
             sectionType="default"
             selectedListId={selectedListId}
             selectedTaskId={selectedTaskId}
@@ -368,14 +318,14 @@ export default function ListsList({
           handleBlur={handleBlur}
           handleTitleChange={handleTitleChange}
           editingTitle={editingTitle}
-          listsList={listsList} // Pass listsList and projects for GroupItem children lookup
+          listsList={lists} // Pass listsList and projects for GroupItem children lookup
           onTaskDrop={handleTaskDrop}
           onDragStart={handleListDragStart}
           onListDrop={handleListDrop}
         />
           <Divider />
           <ListsSection
-            items={projects}
+            items={projects_list}
             sectionType="projects"
             selectedListId={selectedListId}
             selectedTaskId={selectedTaskId}
@@ -390,14 +340,14 @@ export default function ListsList({
           handleBlur={handleBlur}
           handleTitleChange={handleTitleChange}
           editingTitle={editingTitle}
-          listsList={listsList} // Pass listsList and projects for GroupItem children lookup
+          listsList={lists} // Pass listsList and projects for GroupItem children lookup
           onTaskDrop={handleTaskDrop}
           onDragStart={handleListDragStart}
           onListDrop={handleListDrop}
         />
           <Divider />
           <ListsSection
-            items={listsList}
+            items={lists}
             sectionType="lists"
             selectedListId={selectedListId}
             selectedTaskId={selectedTaskId}
@@ -409,27 +359,27 @@ export default function ListsList({
             onContextMenu={handleContextMenu}
             inputRef={inputRef}
             handleKeyDown={handleKeyDown}
-          handleBlur={handleBlur}
-          handleTitleChange={handleTitleChange}
-          editingTitle={editingTitle}
-          listsList={listsList} // Pass listsList and projects for GroupItem children lookup
-          onTaskDrop={handleTaskDrop}
-          onDragStart={handleListDragStart}
-          onListDrop={handleListDrop}
+            handleBlur={handleBlur}
+            handleTitleChange={handleTitleChange}
+            editingTitle={editingTitle}
+            listsList={lists} // Pass listsList and projects for GroupItem children lookup
+            onTaskDrop={handleTaskDropEvent}
+            onDragStart={handleListDragStart}
+            onListDrop={handleListDropEvent}
         />
         </Box>
       <ContextMenu
         anchorEl={anchorEl}
-        item={listsList?.find(item => item.id === targetItemId) || projects?.find(item => item.id === targetItemId)}
+        item={lists?.find(item => item.id === targetItemId) || projects_list?.find(item => item.id === targetItemId)}
         groupId={targetGroupId}
         onClose={handleCloseMenu}
         onEditClick={handleEditClick}
         onOpenGroupMenu={handleOpenGroupMenu}
         onOpenProjectMenu={handleOpenProjectMenu}
-        onDeleteFromChildes={handleDeleteFromChildes}
+        // onDeleteFromChildes={handleDeleteFromChildes}
         onChangeChildesOrder={handleChangeChildesOrder}
         onAddToGeneralList={handleAddToGeneralList}
-        listsList={listsList} // Pass listsList and projects for ContextMenu to filter available groups/projects
+        listsList={lists} // Pass listsList and projects for ContextMenu to filter available groups/projects
       />
 
       {/* Submenu for groups */}
@@ -439,7 +389,7 @@ export default function ListsList({
         open={Boolean(groupMenuPosition)}
         onClose={handleCloseGroupMenu}
       >
-        {listsList && listsList
+        {lists && lists
           .filter(item => item.type === 'group' && !item.deleted) // Filter for active groups
           .map(group => (
             <MenuItem key={group.id} onClick={() => handleAction(group.id)}>
@@ -455,7 +405,7 @@ export default function ListsList({
         open={Boolean(projectMenuPosition)}
         onClose={handleCloseProjectMenu}
       >
-        {projects?.map(project => (
+        {projects_list?.map(project => (
           <MenuItem key={project.id} onClick={() => handleAction(project.id)}>
             {project.title}
           </MenuItem>
@@ -490,7 +440,14 @@ ListsList.propTypes = {
   setSelectedTaskId: PropTypes.func,
   isNeedContextMenu: PropTypes.bool,
   updateAll: PropTypes.func,
-  listsList: PropTypes.array,
+  listsList: PropTypes.oneOfType([
+    PropTypes.array,
+    PropTypes.shape({
+      lists: PropTypes.array,
+      default_lists: PropTypes.array,
+      projects: PropTypes.array
+    })
+  ]),
   projects: PropTypes.array,
   defaultLists: PropTypes.array,
   updateList: PropTypes.func,
@@ -501,3 +458,5 @@ ListsList.propTypes = {
   changeChildesOrder: PropTypes.func,
   calendarRange: PropTypes.object, // Добавляем пропс для диапазона календаря
 };
+
+export default memo(ListsList);

@@ -1,8 +1,9 @@
 import { PropTypes } from 'prop-types';
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useContext } from "react";
 import useContainer from "../DraggableComponents/useContainer";
 import useCalendar from './hooks/useCalendar';
 import CalendarComponent from "./CalendarComponent";
+import { ErrorContext } from '../../contexts/ErrorContext';
 
 /**
  * Оптимизированный компонент календаря с использованием кастомного хука
@@ -12,13 +13,12 @@ export default function CalendarLayout({
   containerId = null,
   handleDatesSet = null,
   calendarSettingsProp = null,
-  onSuccess = null,
-  onError = null,
 }) {
+  const { setError, setSuccess } = useContext(ErrorContext);
   const { handleUpdateContent } = useContainer();
 
   // Use the hook to get all calendar-related state and functions
-  const calendarProps = useCalendar({ onSuccess, onError });
+  const calendarProps = useCalendar({ onSuccess: setSuccess, onError: setError });
 
   // Мемоизированные настройки календаря
   const effectiveCalendarSettings = useMemo(() => {
@@ -34,10 +34,10 @@ export default function CalendarLayout({
 
   // Обновление настроек календаря при изменении пропсов
   useEffect(() => {
-    if (calendarSettingsProp) {
+    if (calendarSettingsProp && JSON.stringify(calendarSettingsProp) !== JSON.stringify(calendarProps.calendarSettings)) {
       handleSaveCalendarSettings(calendarSettingsProp);
     }
-  }, [calendarSettingsProp, handleSaveCalendarSettings]);
+  }, [calendarSettingsProp, calendarProps.calendarSettings, handleSaveCalendarSettings]);
 
   return (
     <CalendarComponent
@@ -53,6 +53,4 @@ CalendarLayout.propTypes = {
   containerId: PropTypes.string,
   handleDatesSet: PropTypes.func,
   calendarSettingsProp: PropTypes.object,
-  onSuccess: PropTypes.func,
-  onError: PropTypes.func,
 };

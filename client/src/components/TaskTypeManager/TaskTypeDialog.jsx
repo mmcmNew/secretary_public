@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Box, IconButton, Autocomplete } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import PropTypes from 'prop-types';
 import ColorPicker from '../ColorPicker.jsx';
-import useTasks from '../ToDo/hooks/useTasks';
+import { useTasks } from '../ToDo/hooks/useTasks';
 import TaskTypeGroupDialog from './TaskTypeGroupDialog.jsx';
+import { ErrorContext } from '../../contexts/ErrorContext';
 
 export default function TaskTypeDialog({ open, onClose, data, onChange, onSave, title }) {
-  const { getTaskTypeGroups, addTaskTypeGroup } = useTasks();
+  const { setError } = useContext(ErrorContext);
+  const { getTaskTypeGroups, addTaskTypeGroup } = useTasks({
+    onError: (error) => {
+      console.error('Error in useTasks:', error);
+      if (setError) setError(error);
+    }
+  });
   const [groups, setGroups] = useState([]);
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [groupForm, setGroupForm] = useState({ name: '', color: '#3788D8', description: '' });

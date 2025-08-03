@@ -1,9 +1,14 @@
 import { useState, useCallback, useContext } from 'react';
-import useTasks from './useTasks';
+import { useTasks } from './useTasks';
 import { ErrorContext } from '../../../contexts/ErrorContext';
 
 export default function useNewTaskInput() {
-  const { addTask } = useTasks();
+  const { addTask } = useTasks({
+    onError: (error) => {
+      console.error('Error in useTasks:', error);
+      if (setError) setError(error);
+    }
+  });
   const { setError, setSuccess } = useContext(ErrorContext);
   const [newTask, setNewTask] = useState('');
 

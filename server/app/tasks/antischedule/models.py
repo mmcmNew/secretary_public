@@ -33,7 +33,7 @@ class AntiTask(db.Model):
     def to_dict(self):
         type_data = None
         if self.type_id:
-            type_obj = TaskType.query.get(self.type_id)
+            type_obj = db.session.get(TaskType, self.type_id)
             if type_obj:
                 type_data = type_obj.to_dict()
 

@@ -2,11 +2,14 @@ import { Box, Button, IconButton } from '@mui/material';
 import ListsList from './ListsList';
 import QueueIcon from '@mui/icons-material/Queue';
 import { AccountTree } from '@mui/icons-material';
-import useTasks from './hooks/useTasks';
+import { useContext, memo } from 'react';
+import { TasksContext } from './hooks/TasksContext';
 
-export default function ToDoListsPanel({ mobile = false }) {
+function ToDoListsPanel({ mobile = false }) {
   const {
     lists,
+    default_lists,
+    projects,
     selectedListId,
     setSelectedListId: setListId,
     deleteFromChildes,
@@ -16,7 +19,7 @@ export default function ToDoListsPanel({ mobile = false }) {
     fetchLists,
     selectedTaskId,
     setSelectedTaskId,
-  } = useTasks();
+  } = useContext(TasksContext);
 
   return (
     <Box
@@ -30,9 +33,9 @@ export default function ToDoListsPanel({ mobile = false }) {
     >
       <Box sx={{ flexGrow: 1, overflowY: 'auto', height: mobile ? '90%' : '100%' }}>
         <ListsList
-          listsList={lists.lists}
-          defaultLists={lists.default_lists}
-          projects={lists.projects}
+          listsList={lists}
+          defaultLists={default_lists}
+          projects={projects}
           isNeedContextMenu={true}
           selectedListId={selectedListId}
           setSelectedListId={setListId}
@@ -57,4 +60,6 @@ export default function ToDoListsPanel({ mobile = false }) {
       </Box>
     </Box>
   );
-} 
+}
+
+export default memo(ToDoListsPanel);

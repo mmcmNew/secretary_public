@@ -1,9 +1,9 @@
-import { useCallback } from 'react';
+import { useCallback, memo } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import TaskEditor from './TaskEditor';
 
-export default function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId, task, subtasks, taskFields, addSubTask, updateTask, changeTaskStatus, deleteTask, fetchTasks }) {
+function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId, task, subtasks, taskFields, addSubTask, updateTask, changeTaskStatus, deleteTask, fetchTasks }) {
   // onChange для TaskEditor
   const handleTaskEditorChange = useCallback(async (updatedTask) => {
     if (!updatedTask || !updatedTask.id) return;
@@ -45,4 +45,6 @@ export default function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId,
       </Box>
     </Box>
   );
-} 
+}
+
+export default memo(ToDoTaskEditorPanel);

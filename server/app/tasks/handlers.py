@@ -4,7 +4,8 @@ import time
 
 from .models import *
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import func, literal
+from sqlalchemy import func, literal, cast, and_, or_, case
+from sqlalchemy.dialects.postgresql import JSON
 import pytz
 
 from .calendar.handlers import get_calendar_events
@@ -138,7 +139,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     # --- Default lists с использованием предварительно посчитанных значений
     default_lists = []
     for list_id, title, task_ids in [
-        ('my_day', 'Мой день', [t.get('id') for t in my_day_tasks]),
+        ('my_day', 'Мой день', [t.get('id') for t in my_day_tasks if t.get('id')]),
         ('tasks', 'Задачи', tasks_without_lists_ids),
         ('important', 'Важные', important_tasks_ids),
         ('background', 'Фоновые задачи', background_tasks_ids),
@@ -152,11 +153,11 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
             'id': list_id,
             'title': title,
             'type': 'list',
-            'children': [],
             'unfinished_tasks_count': unfinished,
             'childes_order': task_ids
         })
-
+    current_app.logger.info(f"PERF (user:{user_id}): Default lists processing took {time.perf_counter() - step_start_time:.4f}s.")
+    current_app.logger.info(f"PERF (user:{user_id}): Default lists: {default_lists}")
     step_start_time = time.perf_counter()
     # Преобразуем объекты в словари с подсчитанными значениями
     groups_dict = [
@@ -412,11 +413,11 @@ def edit_list(data, user_id=None):
     updated_fields = {key: value for key, value in data.items() if key != 'listId'}
 
     if str(list_id).startswith('group'):
-        updated_list = Group.query.get(list_id.replace('group_', ''))
+        updated_list = db.session.get(Group, list_id.replace('group_', ''))
     elif str(list_id).startswith('project'):
-        updated_list = Project.query.get(list_id.replace('project_', ''))
+        updated_list = db.session.get(Project, list_id.replace('project_', ''))
     else:
-        updated_list = List.query.get(list_id)
+        updated_list = db.session.get(List, list_id)
 
     if not updated_list:
         return {'success': False, 'message': 'List not found'}, 404
@@ -507,7 +508,9 @@ def change_task_status(data, user_id=None):
 
     task = Task.query.options(db.joinedload(Task.subtasks),
                               db.joinedload(Task.lists)).filter_by(id=task_id, user_id=user_id).first()
-    status = Status.query.get(status_id)
+    status = db.session.get(Status, status_id)
+    if not status:
+        return {'success': False, 'message': 'Status not found'}, 400
 
     if not task:
         return {'success': False, 'message': 'Task not found'}, 404
@@ -608,7 +611,7 @@ def del_task(data, user_id=None):
             parent_task.childes_order = childes_order
             db.session.add(parent_task)
 
-    lists = List.query.filter(List.childes_order.contains([task_id]), List.user_id == user_id).all()
+    lists = List.query.filter(List.childes_order.op('@>')(cast([task_id], JSONB)), List.user_id == user_id).all()
 
     for list_item in lists:
         if task_id in list_item.childes_order:
@@ -624,56 +627,112 @@ def del_task(data, user_id=None):
     return {'success': True, 'message': 'Subtask deleted successfully'}, 200
 
 
+def parse_entity(entity_id, user_id, entity_type):
+    """Общая функция для извлечения сущности по ID и типу"""
+    try:
+        entity_id_int = int(str(entity_id).split('_')[1])
+    except (ValueError, IndexError):
+        raise ValueError(f"Invalid {entity_type} ID format")
+
+    model_map = {
+        'group': Group,
+        'project': Project,
+        'list': List,
+    }
+
+    model = model_map.get(entity_type)
+    if not model:
+        raise ValueError(f"Unsupported entity type: {entity_type}")
+
+    instance = model.query.filter_by(id=entity_id_int, user_id=user_id).first()
+    if not instance:
+        raise ValueError(f"{entity_type.capitalize()} not found")
+    return instance
+
+
+def get_entity_by_id(raw_id, user_id):
+    if isinstance(raw_id, int):
+        obj = List.query.filter_by(id=raw_id, user_id=user_id).first()
+        current_app.logger.debug(f"Resolved int ID {raw_id} → {obj}")
+        return obj
+
+    raw_id = str(raw_id)
+    try:
+        if raw_id.startswith('group_'):
+            obj = Group.query.filter_by(id=int(raw_id.split('_')[1]), user_id=user_id).first()
+            current_app.logger.debug(f"Resolved group ID {raw_id} → {obj}")
+            return obj
+        elif raw_id.startswith('project_'):
+            obj = Project.query.filter_by(id=int(raw_id.split('_')[1]), user_id=user_id).first()
+            current_app.logger.debug(f"Resolved project ID {raw_id} → {obj}")
+            return obj
+        else:
+            obj = List.query.filter_by(id=int(raw_id), user_id=user_id).first()
+            current_app.logger.debug(f"Resolved list ID {raw_id} → {obj}")
+            return obj
+    except Exception as e:
+        current_app.logger.error(f"get_entity_by_id failed for {raw_id}: {e}")
+        raise ValueError(f"Invalid ID format: {raw_id}")
+
+
 def link_group_list(data, user_id=None):
     if user_id is None:
         raise ValueError("user_id must be provided for link_group_list")
+
+    source = None
+    target = None
+
     try:
-        source_id = data['source_id']
-        target_id = data['target_id']
+        source_id = data.get('source_id')
+        target_id = data.get('target_id')
 
-        if str(source_id).startswith('group_'):
-            source = Group.query.filter_by(id=int(source_id.split('_')[1]), user_id=user_id).first()
-        elif str(source_id).startswith('project_'):
-            source = Project.query.filter_by(id=int(source_id.split('_')[1]), user_id=user_id).first()
-        else:
-            source = List.query.filter_by(id=int(source_id), user_id=user_id).first()
+        if not source_id or not target_id:
+            return {"error": "source_id and target_id must be provided"}, 400
 
+        source = get_entity_by_id(source_id, user_id)
+        if not source:
+            return {"error": "Source entity not found"}, 404
+
+        target = get_entity_by_id(target_id, user_id)
+        if not target:
+            return {"error": "Target entity not found"}, 404
+
+        current_app.logger.debug(f"source: {source}, type: {type(source)}")
+        current_app.logger.debug(f"target: {target}, type: {type(target)}")
+
+        # Обработка связей
         if str(target_id).startswith('group_'):
-            target = Group.query.filter_by(id=int(target_id.split('_')[1]), user_id=user_id).first()
-            if isinstance(source, List):
-                if target and target not in source.groups:
-                    source.groups.append(target)
-            elif isinstance(source, Group):
-                if target and target not in source.projects:
-                    source.projects.append(target)
+            if isinstance(source, List) and target not in source.groups:
+                source.groups.append(target)
+            elif isinstance(source, Group) and target not in source.projects:
+                source.projects.append(target)
+
         elif str(target_id).startswith('project_'):
-            target = Project.query.filter_by(id=int(target_id.split('_')[1]), user_id=user_id).first()
-            if isinstance(source, List):
-                if target and target not in source.projects:
-                    source.projects.append(target)
-            elif isinstance(source, Group):
-                if target and target not in source.projects:
-                    source.projects.append(target)
-        else:
-            return {"error": "Invalid target ID"}, 400
+            if isinstance(source, List) and target not in source.projects:
+                source.projects.append(target)
+            elif isinstance(source, Group) and target not in source.projects:
+                source.projects.append(target)
 
-        # Добавляем элемент в конец списка детей
-        if target and source:
+        elif isinstance(target_id, int) or str(target_id).isdigit():
+            if not isinstance(source, Task):
+                return {"error": "Only tasks can be linked to list"}, 400
             if source_id not in target.childes_order:
-                updated_childes_order = target.childes_order.copy()
-                updated_childes_order.append(source_id)
-                target.childes_order = updated_childes_order
+                updated = target.childes_order.copy()
+                updated.append(source_id)
+                target.childes_order = updated
 
-            db.session.add(target)
-            db.session.add(source)
-            db.session.commit()
+        # Сохраняем
+        db.session.add(source)
+        db.session.add(target)
+        db.session.commit()
 
         return {"success": True}, 200
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f'link_group_list: {e}')
-        return {"error": str(e)}, 500
+        current_app.logger.error(f'link_group_list failed: {e}', exc_info=True)
+        return {"error": "Internal server error"}, 500
+
 
 
 def delete_from_childes(data, user_id=None):
@@ -689,12 +748,30 @@ def delete_from_childes(data, user_id=None):
         if group_id in ['my_day', 'tasks', 'important', 'all', 'events']:
             return {"success": True}, 200
 
-        if str(source_id).startswith('task_'):
-            source = Task.query.filter_by(id=int(source_id.split('_')[1]), user_id=user_id).first()
+        # Обработка source_id
+        # Если source_id уже является целым числом, используем его напрямую
+        if isinstance(source_id, int):
+            source_id_int = source_id
+            source = List.query.filter_by(id=source_id_int, user_id=user_id).first()
+        elif str(source_id).startswith('task_'):
+            try:
+                source_id_int = int(source_id.split('_')[1])
+                source = Task.query.filter_by(id=source_id_int, user_id=user_id).first()
+            except (ValueError, IndexError):
+                return {"error": "Invalid source_id format for task"}, 400
         elif str(source_id).startswith('group_'):
-            source = Group.query.filter_by(id=int(source_id.split('_')[1]), user_id=user_id).first()
+            try:
+                source_id_int = int(source_id.split('_')[1])
+                source = Group.query.filter_by(id=source_id_int, user_id=user_id).first()
+            except (ValueError, IndexError):
+                return {"error": "Invalid source_id format for group"}, 400
         else:
-            source = List.query.filter_by(id=int(source_id), user_id=user_id).first()
+            # Предполагаем, что это ID списка
+            try:
+                source_id_int = int(source_id)
+                source = List.query.filter_by(id=source_id_int, user_id=user_id).first()
+            except ValueError:
+                return {"error": "Invalid source_id format for list"}, 400
 
         if (isinstance(source, List) or isinstance(source, Group) or isinstance(source, Project)) and group_id is None:
             source.in_general_list = False
@@ -702,19 +779,40 @@ def delete_from_childes(data, user_id=None):
             db.session.commit()
             return {"success": True}, 200
 
-        if str(group_id).startswith('task_'):
-            group = Task.query.filter_by(id=int(group_id.split('_')[1]), user_id=user_id).first()
-        elif str(group_id).startswith('group_'):
-            group = Group.query.filter_by(id=int(group_id.split('_')[1]), user_id=user_id).first()
-        elif str(group_id).startswith('project_'):
-            group = Project.query.filter_by(id=int(group_id.split('_')[1]), user_id=user_id).first()
-        else:
-            group = List.query.filter_by(id=int(group_id), user_id=user_id).first()
+        # Обработка group_id
+        if group_id is not None:
+            # Если group_id уже является целым числом, используем его напрямую
+            if isinstance(group_id, int):
+                group_id_int = group_id
+                group = List.query.filter_by(id=group_id_int, user_id=user_id).first()
+            elif str(group_id).startswith('task_'):
+                try:
+                    group_id_int = int(group_id.split('_')[1])
+                    group = Task.query.filter_by(id=group_id_int, user_id=user_id).first()
+                except (ValueError, IndexError):
+                    return {"error": "Invalid group_id format for task"}, 400
+            elif str(group_id).startswith('group_'):
+                try:
+                    group_id_int = int(group_id.split('_')[1])
+                    group = Group.query.filter_by(id=group_id_int, user_id=user_id).first()
+                except (ValueError, IndexError):
+                    return {"error": "Invalid group_id format for group"}, 400
+            elif str(group_id).startswith('project_'):
+                try:
+                    group_id_int = int(group_id.split('_')[1])
+                    group = Project.query.filter_by(id=group_id_int, user_id=user_id).first()
+                except (ValueError, IndexError):
+                    return {"error": "Invalid group_id format for project"}, 400
+            else:
+                # Предполагаем, что это ID списка
+                try:
+                    group_id_int = int(group_id)
+                    group = List.query.filter_by(id=group_id_int, user_id=user_id).first()
+                except ValueError:
+                    return {"error": "Invalid group_id format for list"}, 400
 
-        if source and group:
+        if source and group_id is not None and group:
             # Удаление элемента из списка детей
-            if isinstance(source, Task):
-                source_id_int = int(source_id.split('_')[1])
             if source_id_int in group.childes_order:
                 updated_childes_order = group.childes_order.copy()
                 updated_childes_order.remove(source_id_int)
@@ -758,13 +856,22 @@ def link_task(data, user_id=None):
 
         task = Task.query.filter_by(id=task_id, user_id=user_id).first()
         if str(target_id).startswith('task_'):
-            if task_id == int(target_id.split('_')[1]) or task in task.parent_tasks or task in task.subtasks:
+            try:
+                target_id_int = int(target_id.split('_')[1])
+            except (ValueError, IndexError):
+                return {"error": "Invalid target_id format for task"}, 400
+            
+            if task_id == target_id_int or task in task.parent_tasks or task in task.subtasks:
                 return {"error": "Task cannot be linked to itself"}, 400
-            target = Task.query.filter_by(id=int(target_id.split('_')[1]), user_id=user_id).first()
+            target = Task.query.filter_by(id=target_id_int, user_id=user_id).first()
             if task and target and task_id not in [t.id for t in target.subtasks]:
                 task.parent_tasks.append(target)
         else:
-            target = List.query.filter_by(id=int(target_id), user_id=user_id).first()
+            try:
+                target_id_int = int(target_id)
+            except ValueError:
+                return {"error": "Invalid target_id format for list"}, 400
+            target = List.query.filter_by(id=target_id_int, user_id=user_id).first()
             if task and target and task_id not in [t.id for t in target.tasks]:
                 task.lists.append(target)
         if target and task and task_id not in target.childes_order:

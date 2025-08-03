@@ -3,7 +3,7 @@ import { Box } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import AntischeduleComponent from "./AntischeduleComponent";
 import useContainer from "../DraggableComponents/useContainer";
-import useTasks from "../ToDo/hooks/useTasks";
+import { useTasks } from "../ToDo/hooks/useTasks";
 import useAntiSchedule from "../ToDo/hooks/useAntiSchedule";
 import PropTypes from "prop-types";
 import dayjs from "dayjs";

@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useRef } from 'react';
-import useTasks from '../../ToDo/hooks/useTasks';
+import { useCallback, useMemo, useRef, useContext } from 'react';
+import { TasksContext } from '../../ToDo/hooks/TasksContext';
 import useContainer from '../../DraggableComponents/useContainer';
+import { useCalendarSync } from './useCalendarSync';
 
 /**
  * Кастомный хук для управления календарной логикой
@@ -11,28 +12,37 @@ export const useCalendar = ({ onSuccess, onError }) => {
     tasks,
     lists,
     taskFields,
-    calendarEvents,
     calendarUIState,
-    calendarSettings,
     fetchTasks,
-    fetchCalendarEvents,
     handleCreateTask,
     handleCalendarEventClick,
     handleCalendarDialogClose,
     handleCalendarOverrideChoice,
-    handleCalendarSettingsSave,
     processEventChange,
     setOverrideSnackbar,
     changeInstanceStatus,
     handleTaskChange,
     handleInstanceChange,
-    handleDeleteInstanceDate,
     handleDeleteTaskDate,
+    handleDeleteInstanceDate,
     addSubTask,
     changeTaskStatus,
     deleteTask,
     handleDelDateClick,
-  } = useTasks();
+  } = useContext(TasksContext);
+
+  // Используем новый хук синхронизации календаря
+  const {
+    calendarEvents,
+    calendarSettings,
+    addEvent,
+    updateEvent,
+    deleteEvent,
+    patchInstance,
+    fetchCalendarEvents,
+    handleCalendarSettingsSave,
+    handleWebSocketUpdate,
+  } = useCalendarSync({ onError, setLoading: () => {} });
 
   const { setUpdates } = useContainer();
   const calendarRef = useRef(null);
@@ -189,11 +199,18 @@ export const useCalendar = ({ onSuccess, onError }) => {
     changeInstanceStatus,
     handleTaskChange,
     handleInstanceChange,
-    handleDeleteInstanceDate,
     handleDeleteTaskDate,
+    handleDeleteInstanceDate,
     addSubTask,
     changeTaskStatus,
     deleteTask,
+    
+    // Новые функции для синхронизации
+    addEvent,
+    updateEvent,
+    deleteEvent,
+    patchInstance,
+    handleWebSocketUpdate,
   };
 };
 

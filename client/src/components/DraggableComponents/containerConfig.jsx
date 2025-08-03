@@ -11,7 +11,7 @@ import Chat from "../Chat";
 // import ToDoLayoutMobile from "../ToDo/ToDoLayoutMobile";
 import JournalEditorDrawer from "../JournalEditor/JournalEditorDrawer";
 import FocusModeComponent from "../Antischedule/FocusMode";
-import CalendarWithContext from "../Calendar/CalendarWithContext";
+import CalendarLayout from "../Calendar/CalendarLayout";
 import AntiScheduleWithContext from "../Antischedule/AntiScheduleWithContext";
 // import ToDoLayoutTree from "../ToDo/ToDoLayoutTest";
 // import ToDoLayout from "../ToDo/ToDoLayout";
@@ -96,19 +96,6 @@ export const containerTypes = {
         content: <ToDoLayoutUniversal />,
 
     },
-    // tasksTree: {
-    //     type: "tasksTree",
-    //     name: "ToDo",
-    //     position: { x: 600, y: 100 },
-    //     size: { width: 1400, height: 800 },
-    //     minSize: { width: 1100, height: 700 },
-    //     isLockAspectRatio: false,
-    //     isResizable: true,
-    //     isDisableDragging: false,
-    //     isMinimized: false,
-    //     isLocked: false,
-    //     content: <ToDoLayoutTree />,
-    // },
     tasksMobile: {
         type: "tasksMobile",
         name: "ToDo",
@@ -133,7 +120,7 @@ export const containerTypes = {
         isDisableDragging: false,
         isMinimized: false,
         isLocked: false,
-        content: <CalendarWithContext />,
+        content: <CalendarLayout/>,
     },
     memory: {
         type: "Memory",

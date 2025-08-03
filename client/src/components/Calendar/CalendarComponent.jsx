@@ -51,6 +51,7 @@ function CalendarComponent({
   handleTaskChange,
   handleInstanceChange,
   handleDeleteTaskDate,
+  handleDeleteInstanceDate,
   addSubTask,
   changeTaskStatus,
   deleteTask,
@@ -280,8 +281,10 @@ function CalendarComponent({
 
   function handleApplySettings(tempSlotDuration, tempTimeRange, tempTimeOffset) {
     handleSettingsDialogClose();
-    const updatedSettings = { ...newSettings, slotDuration: tempSlotDuration, timeRange: tempTimeRange, timeOffset: tempTimeOffset, }
-    saveSettings(updatedSettings);
+    const updatedSettings = { ...newSettings, slotDuration: tempSlotDuration, timeRange: tempTimeRange, timeOffset: tempTimeOffset };
+    if (JSON.stringify(updatedSettings) !== JSON.stringify(newSettings)) {
+      saveSettings(updatedSettings);
+    }
   }
 
   const slotLabelContent = useCallback(
@@ -335,7 +338,7 @@ function CalendarComponent({
     handleSettingsDialogClose();
   }
 
-  const handleDatesSet = () => {
+  const handleDatesSet = useCallback(() => {
     const calendarApi = calendarRef?.current?.getApi();
     if (!calendarApi) return;
     const currentView = calendarApi.view.type;
@@ -343,18 +346,18 @@ function CalendarComponent({
     const startStr = calendarApi.view.activeStart.toISOString();
     const endStr = calendarApi.view.activeEnd.toISOString();
     fetchEvents({ start: startStr, end: endStr });
-    if (newSettings.currentView !== currentView) {
+    if (newSettings && newSettings.currentView !== currentView) {
       saveSettings({ ...newSettings, currentView });
     }
     if (datesSet && typeof datesSet === "function")
       datesSet(currentView, currentDate);
-  };
+  }, [calendarRef, fetchEvents, newSettings, saveSettings, datesSet]);
 
   useEffect(() => {
     if (calendarRef?.current?.getApi) {
       handleDatesSet();
     }
-  }, []);
+  }, [calendarRef, handleDatesSet]);
 
   const calendarProps = {
     locale: ruLocale,
@@ -430,10 +433,13 @@ function CalendarComponent({
           <Button onClick={handleSettingsDialogOpen}>Настройки</Button>
           <ToggleButton
             onClick={() => {
-              saveSettings({
+              const updatedSettings = {
                 ...newSettings,
                 isToggledBGTasksEdit: !newSettings.isToggledBGTasksEdit,
-              });
+              };
+              if (JSON.stringify(updatedSettings) !== JSON.stringify(newSettings)) {
+                saveSettings(updatedSettings);
+              }
             }}
             selected={isToggledBGTasksEdit}
             value="backgroundsEdit"
@@ -497,6 +503,7 @@ function CalendarComponent({
                   onChangeTask={handleTaskChange}
                   onChangeInstance={handleInstanceChange}
                   onDeleteTaskDate={handleDeleteTaskDate}
+                  onDeleteInstanceDate={handleDeleteInstanceDate}
                   deleteTask={deleteTask}
                 />
                 <Snackbar
@@ -640,6 +647,7 @@ CalendarComponent.propTypes = {
   handleTaskChange: PropTypes.func,
   handleInstanceChange: PropTypes.func,
   handleDeleteTaskDate: PropTypes.func,
+  handleDeleteInstanceDate: PropTypes.func,
   addSubTask: PropTypes.func,
   changeTaskStatus: PropTypes.func,
   deleteTask: PropTypes.func,

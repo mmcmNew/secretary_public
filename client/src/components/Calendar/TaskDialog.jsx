@@ -27,6 +27,7 @@ export default function TaskDialog({
     onChangeInstance = null,
     addSubTask = null,
     onDeleteTaskDate = null,
+    onDeleteInstanceDate = null,
     changeInstanceStatus = null,
     changeTaskStatus = null,
 }) {
@@ -67,7 +68,15 @@ export default function TaskDialog({
 
     const handleDelClick = () => {
         if (activeTab === 0 && onChangeInstance && instance?.id) {
-            onChangeInstance({ ...instance, type: 'skip' });
+            // For instances, we use the onDeleteInstanceDate function
+            if (onDeleteInstanceDate && instance?.parent_task_id && instance?.originalStart) {
+                onDeleteInstanceDate({ 
+                    parent_task_id: instance.parent_task_id, 
+                    originalStart: instance.originalStart 
+                });
+            } else {
+                onChangeInstance({ ...instance, type: 'skip' });
+            }
         } else if (activeTab === 1 && onDeleteTaskDate && task?.id) {
             onDeleteTaskDate(task.id);
         }
@@ -180,6 +189,7 @@ TaskDialog.propTypes = {
     onChangeInstance: PropTypes.func,
     addSubTask: PropTypes.func,
     onDeleteTaskDate: PropTypes.func,
+    onDeleteInstanceDate: PropTypes.func,
     changeInstanceStatus: PropTypes.func,
     changeTaskStatus: PropTypes.func,
 };

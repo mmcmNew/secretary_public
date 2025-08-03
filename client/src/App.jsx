@@ -8,7 +8,7 @@ import { ContainerProvider } from './components/DraggableComponents/ContainerCon
 import { TasksProvider } from './components/ToDo/hooks/TasksContext';
 import { AntiScheduleProvider } from './components/ToDo/hooks/AntiScheduleContext';
 import UpdateWebSocketProvider from './components/DraggableComponents/UpdateWebSocketContext';
-import TestPage from './TestPage.jsx';
+// import TestPage from './TestPage.jsx';
 import MainContainerMobile from './components/MobileMain.jsx';
 import { ErrorProvider } from './contexts/ErrorContext';
 import AdminPanel from './components/Admin/AdminPanel.jsx';
@@ -72,7 +72,7 @@ const AppRoutes = memo(() => (
       <Route element={<AuthenticatedAppProviders />}>
       <Route path="/" element={<HomePage />} />
       <Route path="/second" element={<SecondPage />} />
-      <Route path="/test" element={<TestPage />} />
+      {/* <Route path="/test" element={<TestPage />} /> */}
       <Route path="/mobile" element={<MainContainerMobile />} />
       <Route path="/admin" element={<AdminPanel />} />
       <Route path="/pricing" element={<PricingPlans />} />

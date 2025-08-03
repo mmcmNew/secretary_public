@@ -13,11 +13,16 @@ from .models import TaskOverride
 def _parse_iso_datetime(value):
     if not value:
         return None
-    # 'Z' в конце строки ISO 8601 означает UTC.
     if value.endswith('Z'):
         value = value[:-1] + '+00:00'
-    dt = datetime.fromisoformat(value)
-    # Преобразуем в UTC и делаем "наивным" (без tzinfo), как ожидается в остальном коде
+    try:
+        dt = datetime.fromisoformat(value)
+    except ValueError:
+        raise ValueError(f"Invalid ISO datetime format: {value}")
+    
+    if dt.tzinfo is None:
+        raise ValueError(f"Datetime must include timezone: {value}")
+    
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 def _is_task_in_range(task, start_dt, end_dt, is_events=False):
@@ -70,6 +75,10 @@ def get_calendar_events(start=None, end=None, user_id=None):
 
     start_dt = _parse_iso_datetime(start) if start else None
     end_dt = _parse_iso_datetime(end) if end else None
+
+    if start_dt and end_dt and start_dt > end_dt:
+        raise ValueError("start date must not be after end date")
+
     load_options = [
         db.joinedload(Task.lists),
         db.joinedload(Task.status),
@@ -181,61 +190,17 @@ def get_task_override_by_id(override_id, user_id=None):
     return {'success': True, 'override': override.to_dict()}, 200
 
 
-def create_task_override(data, user_id=None):
-    if user_id is None:
-        raise ValueError("user_id must be provided for create_task_override")
-    task_id = data.get('task_id')
-    date_str = data.get('date')
-    override_type = data.get('type', 'modified')
-    override_data = data.get('data', {})
-    if not (task_id and date_str):
-        return {'success': False, 'message': 'task_id and date required'}, 400
-    date = datetime.fromisoformat(date_str).date()
-    override = TaskOverride(
-        task_id=task_id,
-        user_id=user_id,
-        date=date,
-        type=override_type,
-        data=override_data
-    )
-    db.session.add(override)
-    db.session.commit()
-    return {'success': True, 'override': override.to_dict()}, 201
-
-
-def update_task_override(override_id, data, user_id=None):
-    if user_id is None:
-        raise ValueError("user_id must be provided for update_task_override")
-    override = TaskOverride.query.filter_by(id=override_id, user_id=user_id).first()
-    if not override:
-        return {'success': False, 'message': 'Override not found'}, 404
-    override_data = data.get('data', {})
-    override.type = data.get('type', override.type)
-    override.data = override_data
-    db.session.add(override)
-    db.session.commit()
-    return {'success': True, 'override': override.to_dict()}, 200
-
-
-def delete_task_override(override_id, user_id=None):
-    if user_id is None:
-        raise ValueError("user_id must be provided for delete_task_override")
-    override = TaskOverride.query.filter_by(id=override_id, user_id=user_id).first()
-    if not override:
-        return {'success': False, 'message': 'Override not found'}, 404
-    db.session.delete(override)
-    db.session.commit()
-    return {'success': True}, 200
-
-
 def patch_instance_handler(data, user_id):
     from datetime import datetime
-    task_id = data.get('parent_task_id')
+    task_id = data.get('task_id') or data.get('parent_task_id')
     date_str = data.get('date')
     patch_data = data.get('data', {})
     if not (task_id and date_str):
-        return {'success': False, 'message': 'parent_task_id and date required'}, 400
-    date = datetime.fromisoformat(date_str).date()
+        return {'success': False, 'message': 'task_id and date required'}, 400
+    try:
+        date = datetime.fromisoformat(date_str).date()
+    except ValueError:
+        return {'success': False, 'message': 'Invalid date format'}, 400
     parent_task = Task.query.filter_by(id=task_id, user_id=user_id).first()
     if not parent_task:
         return {'success': False, 'message': 'Parent task not found'}, 404
@@ -256,7 +221,7 @@ def patch_instance_handler(data, user_id):
             new_override = TaskOverride(task_id=task_id, user_id=user_id, date=date, type='skip', data={})
             db.session.add(new_override)
             db.session.commit()
-            return {'success': True, 'instance': {'parent_task_id': task_id, 'date': date_str, 'override_id': new_override.id, 'is_override': True, 'type': 'skip', 'data': {}}}, 201
+            return {'success': True, 'instance': {'parent_task_id': task_id, 'date': date_str, 'override_id': new_override.id, 'is_override': True, 'type': 'skip', 'data': {}}}, 200
     # Если изменений нет — удалить override, если был
     if not changed:
         if override:
@@ -273,4 +238,5 @@ def patch_instance_handler(data, user_id):
         new_override = TaskOverride(task_id=task_id, user_id=user_id, date=date, type='modified', data=changed)
         db.session.add(new_override)
         db.session.commit()
-        return {'success': True, 'instance': {'parent_task_id': task_id, 'date': date_str, 'override_id': new_override.id, 'is_override': True, 'type': 'modified', 'data': {**parent_data, **changed}}}, 201
+        return {'success': True, 'instance': {'parent_task_id': task_id, 'date': date_str, 'override_id': new_override.id, 'is_override': True, 'type': 'modified', 'data': {**parent_data, **changed}}}, 200
+

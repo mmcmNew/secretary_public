@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, memo, useCallback, useMemo } from "react";
 import {
     List,
     ListItem,
@@ -20,10 +20,12 @@ import dayjs from "dayjs";
 import PropTypes from "prop-types";
 import { Draggable } from "@fullcalendar/interaction";
 import useContextMenu from "./hooks/useContextMenu";
-import useTasks from "./hooks/useTasks";
+import { useTasks } from "./hooks/useTasks.js";
+import { useTasksLogic } from "./hooks/useTasksLogic.js";
 import { AudioContext } from "../../contexts/AudioContext.jsx";
+import TaskItem from "./TaskItem.jsx";
 
-export default function TasksList({
+function TasksList({
     containerId,
     listsList,
     projects = [],
@@ -31,43 +33,62 @@ export default function TasksList({
     isNeedContextMenu = false,
     setSelectedTaskId = null,
     linkTaskList = null,
-    additionalButtonClick = null,
     deleteFromChildes = null,
     additionalButton = null,
+    additionalButtonClick = null,
     tasks = [],
     selectedTaskId = null,
     updateTask = null,
     changeTaskStatus = null,
     onSuccess = null,
     onError = null,
-    calendarRange = null, // <--- добавляем пропс
+    calendarRange = null, 
 }) {
     const { playAudio } = useContext(AudioContext);
-    const [open, setOpen] = useState({});
-    const [completedOpen, setCompletedOpen] = useState(true);
     const { anchorEl, openMenu, closeMenu } = useContextMenu();
-    const { fetchCalendarEvents, getSubtasksByParentId } = useTasks();
+    const { fetchCalendarEvents, getSubtasksByParentId } = useTasks({
+        onError: (error) => {
+            console.error('Error in useTasks:', error);
+            if (onError) onError(error);
+        }
+    });
+    
+    // Используем новый хук для логики задач
+    const {
+        open,
+        completedOpen,
+        setCompletedOpen,
+        activeTasks,
+        completedTasks,
+        handleTaskToggle,
+        handleTaskClick,
+        handleTaskSelect,
+        handleAddToMyDay,
+    } = useTasksLogic({
+        tasks,
+        selectedList,
+        selectedTaskId,
+        onTaskSelect: setSelectedTaskId,
+        onTaskToggle: changeTaskStatus,
+        onTaskUpdate: updateTask,
+        onSubtasksLoad: getSubtasksByParentId,
+        onCalendarUpdate: fetchCalendarEvents,
+        onSuccess,
+        onError,
+        calendarRange,
+    });
+
     const [listsMenuAnchorEl, setListsMenuAnchorEl] = useState(null);
     const [actionType, setActionType] = useState(null);
     const [targetItemId, setTargetItemId] = useState(null);
 
-    // useEffect(() => {
-    //     console.log('TasksList received props:', {
-    //         tasks,
-    //         selectedList,
-    //         selectedTaskId,
-    //         containerId
-    //     });
-    // }, [tasks, selectedList, selectedTaskId, containerId]);
-
+    // useEffect for Draggable initialization - moved to be closer to other hooks
     useEffect(() => {
         const draggableEl = document.getElementById(`tasksList${containerId}`);
         if (!draggableEl) {
-            // console.log('Draggable element not found:', `tasksList${containerId}`);
             return;
         }
 
-        // console.log('Initializing draggable for tasks:', tasks);
         const draggable = new Draggable(draggableEl, {
             itemSelector: '.draggable-task',
             eventData: (eventEl) => {
@@ -83,47 +104,25 @@ export default function TasksList({
             },
         });
 
-        return () => draggable.destroy(); // Очистка Draggable при размонтировании
+        return () => draggable.destroy();
     }, [tasks, containerId]);
 
     if (!tasks || !selectedList) {
-        // console.log('TasksList render blocked:', { tasks, selectedList });
         return null;
     }
 
-    async function handleToggle(task_id, checked) {
+    // Мемоизированные обработчики
+    const handleToggle = useCallback(async (task_id, checked) => {
         const status_id = checked ? 2 : 1;
-        if (status_id == 2) {
+        if (status_id === 2) {
             playAudio("/sounds/isComplited.wav", { queued: false });
         }
-        const updatedFields = { status_id };
-        if (status_id == 2) {
-            updatedFields.completed_at = dayjs().toISOString();
-        }
-        if (typeof changeTaskStatus === "function")
-            await changeTaskStatus({ taskId: task_id, ...updatedFields, listId: selectedList.id });
-        if (fetchCalendarEvents) await fetchCalendarEvents(calendarRange);
-    }
+        await handleTaskToggle(task_id, checked);
+    }, [playAudio, handleTaskToggle]);
 
-    // const isDefaultList = (listId) => defaultLists.some(list => list.id === listId);
-
-    async function handleClick(id) {
-        const willOpen = !open[id];
-        setOpen((prevOpen) => ({
-            ...prevOpen,
-            [id]: willOpen,
-        }));
-        if (willOpen && typeof getSubtasksByParentId === "function") {
-            const task = tasks.find((t) => t.id === id);
-            if (task && task.childes_order?.length) {
-                    await getSubtasksByParentId(task.id);
-            }
-        }
-    }
-
-    function handleAdditionalButtonClick(task) {
+    const handleAdditionalButtonClick = useCallback((task) => {
         if (typeof additionalButtonClick === "function") additionalButtonClick(task);
-    }
+    }, [additionalButtonClick]);
 
     function handleContextMenu(event, item) {
         openMenu(event);
@@ -229,102 +228,34 @@ export default function TasksList({
     //   setTasksMenuAnchorEl(null);
     // }
 
-
     function handleDragStart(event, task){
         event.dataTransfer.setData("task", JSON.stringify(task));
     }
 
-    async function handleAddToMyDay() {
-        // Найти задачу по targetItemId
-        const task = tasks.find((t) => t.id === targetItemId);
-        if (!task) return;
-        // Установить дату на сегодня с 12:00 до 13:00
-        const today = dayjs().hour(12).minute(0).second(0).millisecond(0);
-        const end = today.clone().add(1, 'hour');
-        // Обновить задачу через updateTask, если доступно
-        if (typeof updateTask === 'function') {
-            try {
-                await updateTask({
-                    taskId: task.id,
-                    start: today.toISOString(),
-                    end: end.toISOString(),
-                });
-                if (fetchCalendarEvents) await fetchCalendarEvents(calendarRange);
-                if (onSuccess) onSuccess('Добавлено в "Мой день"');
-            } catch (err) {
-                if (onError) onError(err);
-            }
-        }
+    const handleAddToMyDayClick = useCallback(async () => {
+        await handleAddToMyDay(targetItemId);
         handleCloseMenu();
-    }
+    }, [handleAddToMyDay, targetItemId]);
 
-    function renderTask(task) {
-        const labelId = `checkbox-list-label-${task.id}`;
+    // Мемоизированная функция рендера задачи
+    const renderTask = useCallback((task) => {
         const hasChildren = task.childes_order && task.childes_order.length > 0;
 
         return (
-            <div key={task.id}>
-                <ListItem disablePadding>
-                    <Paper sx={{ mb: 1, width: "100%" }}>
-                        <ListItemButton
-                            className="draggable-task"
-                            data-id={task.id}
-                            draggable="true"
-                            selected={selectedTaskId === task.id}
-                            onClick={() => {
-                                if (typeof setSelectedTaskId === "function") setSelectedTaskId(task.id);
-                            }}
-                            onDragStart={(event) => handleDragStart(event, task)}
-                            onContextMenu={isNeedContextMenu ? (event) => handleContextMenu(event, task) : undefined}
-                        >
-                            <ListItemIcon onClick={(e) => e.stopPropagation()}>
-                                <Checkbox
-                                    edge="start"
-                                    checked={task.status_id === 2}
-                                    tabIndex={-1}
-                                    disableRipple
-                                    inputProps={{ "aria-labelledby": labelId }}
-                                    onChange={(e) => {
-                                        e.stopPropagation();
-                                        handleToggle(task.id, e.target.checked);
-                                    }}
-                                />
-                            </ListItemIcon>
-                            <ListItemText id={labelId} primary={task.title} />
-                            {hasChildren && (
-                                <IconButton
-                                    edge="end"
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        handleClick(task.id);
-                                    }}
-                                >
-                                    {open[task.id] ? <ExpandLess /> : <ExpandMore />}
-                                </IconButton>
-                            )}
-                            <IconButton
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    handleAdditionalButtonClick(task);
-                                }}
-                            >
-                                {additionalButton ? React.createElement(additionalButton) : task.priority_id === 3 ? <StarIcon /> : <StarBorderIcon />}
-                            </IconButton>
-                            {isNeedContextMenu && (
-                                <IconButton
-                                    edge="end"
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        openMenu(event);
-                                        setTargetItemId(task.id);
-                                    }}
-                                >
-                                    <MoreVertIcon />
-                                </IconButton>
-                            )}
-                        </ListItemButton>
-                    </Paper>
-                </ListItem>
+            <TaskItem
+                key={task.id}
+                task={task}
+                selectedTaskId={selectedTaskId}
+                open={open}
+                onTaskSelect={handleTaskSelect}
+                onTaskToggle={handleToggle}
+                onExpandToggle={handleTaskClick}
+                onAdditionalButtonClick={handleAdditionalButtonClick}
+                onContextMenu={handleContextMenu}
+                onDragStart={handleDragStart}
+                additionalButton={additionalButton}
+                isNeedContextMenu={isNeedContextMenu}
+            >
                 {hasChildren && (
                     <Collapse in={open[task.id]} timeout="auto" unmountOnExit>
                         <List disablePadding sx={{ pl: 3 }}>
@@ -335,26 +266,23 @@ export default function TasksList({
                         </List>
                     </Collapse>
                 )}
-            </div>
+            </TaskItem>
         );
-    }
+    }, [
+        selectedTaskId,
+        open,
+        handleTaskSelect,
+        handleToggle,
+        handleTaskClick,
+        handleAdditionalButtonClick,
+        handleContextMenu,
+        handleDragStart,
+        additionalButton,
+        isNeedContextMenu,
+        tasks,
+    ]);
 
-    // const activeTasks = isDefaultList(selectedList.id)
-    //   ? tasks.filter(task => task.status_id !== 2)
-    //   : selectedList.childes_order.map(taskId => tasks.find(t => t.id === taskId && t.status_id !== 2)).filter(Boolean);
-
-    // const completedTasks = isDefaultList(selectedList.id)
-    //   ? tasks.filter(task => task.status_id === 2)
-    //   : selectedList.childes_order.map(taskId => tasks.find(t => t.id === taskId && t.status_id === 2)).filter(Boolean);
-
-    // console.log(`selectedList: `, selectedList);
-    const activeTasks = selectedList.childes_order
-        .map((taskId) => tasks?.find((t) => t.id === taskId && t.status_id != 2))
-        .filter(Boolean);
-
-    const completedTasks = selectedList.childes_order
-        .map((taskId) => tasks?.find((t) => t.id === taskId && t.status_id == 2))
-        .filter(Boolean);
+    // Задачи теперь вычисляются в useTasksLogic
 
     return (
         <>
@@ -374,7 +302,7 @@ export default function TasksList({
             </List>
             {isNeedContextMenu && (
                 <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleCloseMenu}>
-                    <MenuItem key="addToMyDay" onClick={handleAddToMyDay}>
+                    <MenuItem key="addToMyDay" onClick={handleAddToMyDayClick}>
                         Добавить в Мой день
                     </MenuItem>
                     {listsList?.filter((item) => item.type == "list") && [
@@ -488,3 +416,5 @@ TasksList.propTypes = {
     onError: PropTypes.func,
     calendarRange: PropTypes.object, // Добавляем пропс для диапазона календаря
 };
+
+export default memo(TasksList);

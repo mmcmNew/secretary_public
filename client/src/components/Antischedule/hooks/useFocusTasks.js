@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { findNextTask, isTaskInPast } from './focusUtils';
-import useTasks from '../../ToDo/hooks/useTasks';
+import { useTasks } from '../../ToDo/hooks/useTasks';
 
 export default function useFocusTasks(modeSettings, tasksArg = null, selectedListArg = null) {
   const context = useTasks();

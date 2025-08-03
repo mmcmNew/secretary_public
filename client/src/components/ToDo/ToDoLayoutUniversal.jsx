@@ -3,7 +3,7 @@ import { useMediaQuery, Box, Grid, Typography } from '@mui/material';
 import ToDoListsPanel from './ToDoListsPanel';
 import ToDoTasksPanel from './ToDoTasksPanel';
 import ToDoTaskEditorPanel from './ToDoTaskEditorPanel';
-import useTasks from './hooks/useTasks';
+import { TasksContext } from './hooks/TasksContext';
 import { ErrorContext } from '../../contexts/ErrorContext';
 
 function ToDoLayoutUniversal() {
@@ -17,13 +17,13 @@ function ToDoLayoutUniversal() {
     selectedListId,
     fetchLists,
     lists,
-    getSubtasksByParentId,
-    setTasks,
+    // getSubtasksByParentId,
+    // setTasks,
     taskFields,
     addSubTask,
     changeTaskStatus,
     deleteTask,
-  } = useTasks();
+  } = useContext(TasksContext);
   const tasksLoading = tasks.loading;
   const listsLoading = lists.loading;
   const { setError, setSuccess } = useContext(ErrorContext);
@@ -54,21 +54,22 @@ function ToDoLayoutUniversal() {
     const allTasks = [...(tasks?.data || []), ...(myDayTasks?.data || [])];
     const foundTask = allTasks.find(t => t.id === selectedTaskId);
     setEditorTask(foundTask || null);
-    if (foundTask) {
-      getSubtasksByParentId(foundTask.id).then(subs => {
-        setEditorSubtasks(subs);
-        // Добавляем подзадачи в общий список задач, если их там нет
-        if (subs && subs.length > 0) {
-          setTasks(prev => ({
-            ...prev,
-            data: [...prev.data, ...subs.filter(s => !prev.data.some(t => t.id === s.id))]
-          }));
-        }
-      });
-    } else {
-      setEditorSubtasks([]);
-    }
-  }, [selectedTaskId, getSubtasksByParentId, setTasks]);
+    // TODO: Implement subtasks loading if needed
+    // if (foundTask) {
+    //   getSubtasksByParentId(foundTask.id).then(subs => {
+    //     setEditorSubtasks(subs);
+    //     // Добавляем подзадачи в общий список задач, если их там нет
+    //     if (subs && subs.length > 0) {
+    //       setTasks(prev => ({
+    //         ...prev,
+    //         data: [...prev.data, ...subs.filter(s => !prev.data.some(t => t.id === s.id))]
+    //       }));
+    //     }
+    //   });
+    // } else {
+    //   setEditorSubtasks([]);
+    // }
+  }, [selectedTaskId, tasks, myDayTasks]);
 
   const handleAdditionalButtonClick = useCallback(async (task) => {
     const priority = task.priority_id === 3 ? 1 : 3;
@@ -155,7 +156,7 @@ function ToDoLayoutUniversal() {
 
   return (
     <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-      <Box sx={{ pointerEvents: loading ? 'none' : 'auto', height: '100%'}}> 
+      <Box sx={{ pointerEvents: loading ? 'none' : 'auto', height: '100%'}}>
          {/* opacity: loading ? 0.5 : 1, }}> */}
         {content}
       </Box>

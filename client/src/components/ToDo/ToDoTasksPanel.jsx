@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useContext, memo, useCallback } from 'react';
 import { Box, Button, Paper, InputBase, Typography, TextField, IconButton } from '@mui/material';
 import ListIcon from '@mui/icons-material/List';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
 import TasksList from './TasksList';
-import useTasks from './hooks/useTasks';
 import AddIcon from '@mui/icons-material/Add';
+import { TasksContext } from './hooks/TasksContext';
 
-export default function ToDoTasksPanel({ mobile = false, setSelectedListId, additionalButtonClick = null, additionalButton = null, onSuccess = null, onError = null }) {
+function ToDoTasksPanel({ mobile = false, setSelectedListId, additionalButtonClick = null, additionalButton = null, onSuccess = null, onError = null }) {
   const {
     tasks,
     myDayTasks,
@@ -23,7 +23,7 @@ export default function ToDoTasksPanel({ mobile = false, setSelectedListId, addi
     updateList,
     linkListGroup,
     deleteFromChildes,
-  } = useTasks();
+  } = useContext(TasksContext);
 
   // Для редактирования названия списка
   const [editingTitle, setEditingTitle] = useState('');
@@ -32,26 +32,28 @@ export default function ToDoTasksPanel({ mobile = false, setSelectedListId, addi
 
   // Для добавления новой задачи
   const [newTask, setNewTask] = useState('');
-  const handleKeyDown = (event) => {
+  
+  const handleKeyDown = useCallback((event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
       if (newTask.trim() === '') return;
       addTask({ title: newTask, listId: selectedList?.id });
       setNewTask('');
     }
-  };
-  const handleAddTask = () => {
+  }, [addTask, newTask, selectedList?.id]);
+  
+  const handleAddTask = useCallback(() => {
     if (newTask.trim() === '') return;
     addTask({ title: newTask, listId: selectedList?.id });
     setNewTask('');
-  };
+  }, [addTask, newTask, selectedList?.id]);
 
-  const handleTitleEdit = () => {
+  const handleTitleEdit = useCallback(() => {
     if (editingTitle.trim() !== '' && selectedList) {
       updateList({ listId: selectedList.id, title: editingTitle.trim() });
       setIsEditingTitle(false);
     }
-  };
+  }, [editingTitle, selectedList, updateList]);
 
   // Определяем тип выбранного списка
   const isGroup = selectedList?.type === 'group';
@@ -177,4 +179,6 @@ export default function ToDoTasksPanel({ mobile = false, setSelectedListId, addi
       )}
     </Box>
   );
-} 
+}
+
+export default memo(ToDoTasksPanel);

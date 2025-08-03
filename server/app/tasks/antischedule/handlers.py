@@ -48,7 +48,7 @@ def add_anti_task(data, user_id=None):
 
 def del_anti_task(data):
     anti_task_id = data.get('taskId')
-    anti_task = AntiTask.query.get(anti_task_id)
+    anti_task = db.session.get(AntiTask, anti_task_id)
     if anti_task:
         db.session.delete(anti_task)
         db.session.commit()
@@ -63,7 +63,7 @@ def edit_anti_task(data):
 
     # print(f'edit_anti_task: updated_fields: {updated_fields}')
 
-    anti_task = AntiTask.query.get(anti_task_id)
+    anti_task = db.session.get(AntiTask, anti_task_id)
 
     if not anti_task:
         return {'success': False, 'message': 'Task not found'}, 404

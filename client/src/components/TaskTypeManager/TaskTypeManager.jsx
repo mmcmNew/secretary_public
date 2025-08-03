@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Box, Button, Typography, List, ListItem, Card, CardContent, IconButton } from '@mui/material';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, DragIndicator as DragIndicatorIcon } from '@mui/icons-material';
 import TaskTypeDialog from './TaskTypeDialog.jsx';
-import useTasks from '../ToDo/hooks/useTasks';
+import { useTasks } from '../ToDo/hooks/useTasks';
+import { ErrorContext } from '../../contexts/ErrorContext';
 
 export default function TaskTypeManager() {
+  const { setError } = useContext(ErrorContext);
   const {
     getTaskTypes,
     addTaskType,
@@ -13,7 +15,12 @@ export default function TaskTypeManager() {
     deleteTaskType,
     getTaskTypeGroups,
     updateTaskTypeGroup
-  } = useTasks();
+  } = useTasks({
+    onError: (error) => {
+      console.error('Error in useTasks:', error);
+      if (setError) setError(error);
+    }
+  });
   const [types, setTypes] = useState({});
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);

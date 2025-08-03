@@ -3,6 +3,7 @@ from dateutil.rrule import rrule, rruleset, WEEKLY, DAILY, MONTHLY, YEARLY, MO, 
 from flask import current_app
 from flask_jwt_extended import current_user
 from sqlalchemy.orm import joinedload
+from sqlalchemy.dialects.postgresql import JSONB
 import hashlib
 import json
 import random
@@ -246,7 +247,7 @@ class Project(db.Model):
     user_id = db.Column(db.Integer, nullable=False)
     title = db.Column('ProjectName', db.String(255))
     order = db.Column('Order', db.Integer, default=-1)
-    childes_order = db.Column('Childes', db.JSON, default=[])
+    childes_order = db.Column('Childes', JSONB, default=[])
     deleted = db.Column('Deleted', db.Boolean, default=False)
 
     tasks = db.relationship('Task', secondary=task_project_relations, back_populates='projects')
@@ -295,7 +296,7 @@ class Group(db.Model):
     user_id = db.Column(db.Integer, nullable=False)
     title = db.Column('GroupName', db.String(255))
     order = db.Column('Order', db.Integer, default=-1)
-    childes_order = db.Column('ChildesOrder', db.JSON, default=[])
+    childes_order = db.Column('ChildesOrder', JSONB, default=[])
     in_general_list = db.Column('InGeneralList', db.Boolean, default=True)
     deleted = db.Column('Deleted', db.Boolean, default=False)
 
@@ -313,7 +314,7 @@ class Group(db.Model):
             if lists_map is not None:
                 lst = lists_map.get(list_id)
             if lst is None:
-                lst = List.query.get(list_id)
+                lst = db.session.get(List, list_id)
             if lst:
                 unfinished_tasks_count += lst.unfinished_tasks_count(tasks_map)
         return unfinished_tasks_count
@@ -326,7 +327,7 @@ class Group(db.Model):
             if lists_map is not None:
                 lst = lists_map.get(list_id)
             if lst is None:
-                lst = List.query.get(list_id)
+                lst = db.session.get(List, list_id)
             if lst:
                 tasks_count += len(lst.childes_order)
         return tasks_count
@@ -352,7 +353,7 @@ class List(db.Model):
     user_id = db.Column(db.Integer, nullable=False)
     title = db.Column('ListName', db.String(255))
     order = db.Column('Order', db.Integer, default=-1)
-    childes_order = db.Column('ChildesOrder', db.JSON, default=[])
+    childes_order = db.Column('ChildesOrder', JSONB, default=[])
     in_general_list = db.Column('InGeneralList', db.Boolean, default=True)
     deleted = db.Column('Deleted', db.Boolean, default=False)
     unfinished_count = db.Column('unfinished_count', db.Integer, nullable=False, default=0)
@@ -373,7 +374,7 @@ class List(db.Model):
             if tasks_map is not None:
                 task = tasks_map.get(task_id)
             if task is None:
-                task = Task.query.get(task_id)
+                task = db.session.get(Task, task_id)
             if task and task.status_id != 2:
                 unfinished_tasks_count += 1
         return unfinished_tasks_count
@@ -403,7 +404,7 @@ class Task(db.Model):
     completed_at = db.Column('EndDate', db.DateTime)
     attachments = db.Column('Attachments', db.String(255))
     note = db.Column('Note', db.Text)
-    childes_order = db.Column('ChildesOrder', db.JSON, default=[])
+    childes_order = db.Column('ChildesOrder', JSONB, default=[])
     color = db.Column('Color', db.String(20))
     type_id = db.Column('TaskTypeID', db.Integer, db.ForeignKey('productivity.task_types.id'))
     status_id = db.Column('StatusID', db.Integer, db.ForeignKey('productivity.statuses.StatusID'), default=1)
@@ -427,7 +428,7 @@ class Task(db.Model):
     def to_dict(self):
         type_data = None
         if self.type_id:
-            type_obj = TaskType.query.get(self.type_id)
+            type_obj = db.session.get(TaskType, self.type_id)
             if type_obj:
                 type_data = type_obj.to_dict()
 
@@ -532,6 +533,3 @@ class Task(db.Model):
 
         # Возвращаем строковое представление rrule
         return rule_params
-
-
-
