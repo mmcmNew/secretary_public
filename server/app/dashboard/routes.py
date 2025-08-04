@@ -11,6 +11,38 @@ import logging
 
 from app import socketio
 
+# Контейнеры по умолчанию для нового Dashboard
+DEFAULT_CONTAINERS = [
+    {
+        "containerId": "17542512414069942",
+        "id": "17542512414069942",
+        "type": "tasks",
+        "name": "ToDo",
+        "position": {"x": 976, "y": 111},
+        "size": {"width": 1400, "height": 800},
+        "minSize": {"width": 1100, "height": 700},
+        "isLockAspectRatio": False,
+        "isResizable": True,
+        "isDisableDragging": False,
+        "isLocked": False,
+        "isMinimized": False
+    },
+    {
+        "containerId": "17542512420066089",
+        "id": "17542512420066089",
+        "type": "calendar",
+        "name": "Calendar",
+        "position": {"x": 0, "y": 71},
+        "size": {"width": 800, "height": 800},
+        "minSize": {"width": 1100, "height": 700},
+        "isLockAspectRatio": False,
+        "isResizable": True,
+        "isDisableDragging": False,
+        "isLocked": False,
+        "isMinimized": False
+    }
+]
+
 
 @dashboard.route('/dashboard', methods=['POST'])
 @jwt_required()
@@ -66,16 +98,24 @@ def get_dashboard(dashboard_id):
 @jwt_required()
 def get_last_dashboard():
     dashboard_db = None
+    # Проверяем наличие Dashboard по last_dashboard_id
     if current_user.last_dashboard_id:
         dashboard_db = Dashboard.query.filter_by(id=current_user.last_dashboard_id, user_id=current_user.id).first()
 
+    # Если Dashboard не найден по last_dashboard_id, ищем любой Dashboard пользователя
     if not dashboard_db:
-        dashboard_db = Dashboard(user_id=current_user.id, name="dashboard", containers=[], theme_mode='light')
+        dashboard_db = Dashboard.query.filter_by(user_id=current_user.id).first()
+
+    # Если у пользователя нет ни одного Dashboard, создаем новый с контейнерами по умолчанию
+    if not dashboard_db:
+        dashboard_db = Dashboard(user_id=current_user.id, name="dashboard", containers=DEFAULT_CONTAINERS, theme_mode='light')
         db.session.add(dashboard_db)
         db.session.commit()
-        current_user.last_dashboard_id = dashboard_db.id
-        db.session.add(current_user)
-        db.session.commit()
+        
+    # Обновляем last_dashboard_id пользователя
+    current_user.last_dashboard_id = dashboard_db.id
+    db.session.add(current_user)
+    db.session.commit()
 
     return jsonify(dashboard_db.to_dict())
 

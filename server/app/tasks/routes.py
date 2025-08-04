@@ -3,21 +3,26 @@ from . import to_do_app
 from functools import wraps
 from flask import request, jsonify, current_app
 from flask_jwt_extended import jwt_required
-from .handlers import (
+from .list_handlers import (
     get_lists_and_groups_data,
+    get_lists_tree_data,
     add_object,
-    add_task,
     edit_list,
+)
+from .task_handlers import (
+    add_task,
     add_subtask,
     edit_task,
     change_task_status,
     get_tasks,
     get_tasks_by_ids,
     del_task,
+    get_subtasks_by_parent_id,
+)
+from .entity_handlers import (
     link_group_list,
     delete_from_childes,
     link_task,
-    get_subtasks_by_parent_id,
 )
 from .models import DataVersion, TaskTypeGroup, TaskType
 from app import db, cache
@@ -68,6 +73,19 @@ def get_lists_and_groups():
     client_timezone = request.args.get('time_zone', 'UTC')
     user_id = current_user.id
     data = get_lists_and_groups_data(client_timezone, user_id=user_id)
+    if isinstance(data, dict) and 'error' in data:
+        return data, 500
+    return data
+
+
+@to_do_app.route('/tasks/get_lists_tree', methods=['GET'])
+@jwt_required()
+@cache.cached(timeout=60, key_prefix=make_cache_key('lists_tree', 'tasksVersion'))
+@etag('tasksVersion')
+def get_lists_tree():
+    client_timezone = request.args.get('time_zone', 'UTC')
+    user_id = current_user.id
+    data = get_lists_tree_data(client_timezone, user_id=user_id)
     if isinstance(data, dict) and 'error' in data:
         return data, 500
     return data

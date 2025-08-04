@@ -9,7 +9,7 @@ from app import socketio
 from . import main
 from .handlers import fetch_table_records
 from app.db_utils import save_to_base_modules
-from ..tasks.handlers import create_daily_scenario
+from ..tasks.task_handlers import create_daily_scenario
 
 
 @socketio.on("connect", namespace="/updates")

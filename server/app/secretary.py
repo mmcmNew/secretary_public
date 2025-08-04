@@ -3,7 +3,9 @@ from app.command_utils import find_target_module, find_info, find_command_type
 
 from app.modules.MetaAIAPI import get_eden_ai_response
 
-from app.tasks.handlers import *
+from app.tasks.list_handlers import get_lists_and_groups_data, add_object
+from app.tasks.task_handlers import add_task, add_subtask, change_task_status, get_tasks
+from app.tasks.entity_handlers import link_group_list, delete_from_childes, link_task
 
 from rapidfuzz import fuzz, process
 
