@@ -5,24 +5,12 @@
       "origin": "https://localhost:5173",
       "localStorage": [
         {
-          "name": "user_time_zone",
-          "value": "Europe/Moscow"
+          "name": "accessToken",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc1NDQ2NTY4MCwianRpIjoiNDY5MDM0NjAtOWUxNy00ZDRhLTg1MGQtODNhMTI3OGJhYWUwIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjEiLCJuYmYiOjE3NTQ0NjU2ODAsImNzcmYiOiJmZDk0OGJiOS0xM2EyLTQzODQtOTU3YS0yZDcyMTRlNzFmMWUiLCJleHAiOjE3NTQ0NjkyODB9.47BNQJ56cNo4mgLaPcrkaxgEK6yO-wgEeSmsb9RMNBo"
         },
         {
-          "name": "_auth_state",
-          "value": "{\"avatar_src\":null,\"email\":\"testuser@example.com\",\"id\":13,\"is_admin\":false,\"last_dashboard_id\":12,\"modules\":[],\"user_name\":\"testuser\"}"
-        },
-        {
-          "name": "_auth",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc1NDI1MDgzNywianRpIjoiNmQ4M2IxZTUtOTlhNC00ZTAxLTgxNDAtMzYwYWEyMDM3YzYzIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjEzIiwibmJmIjoxNzU0MjUwODM3LCJjc3JmIjoiZjQ3OGM3YTMtNTczMy00ZGQ4LTgwZjAtNTEyMDZiNWQzNTFjIiwiZXhwIjoxNzU0MjU0NDM3fQ.y5WCwbt7HVPeQJQJfT3MOLGTV8eu0z1t7yrbKDbJ89g"
-        },
-        {
-          "name": "_auth_type",
-          "value": "Bearer"
-        },
-        {
-          "name": "_auth_refresh",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc1NDI1MDgzNywianRpIjoiOWVhNWYzYmMtOTYwMS00ZjdiLTg2ZjAtNDhmOGRiNDYyMGZjIiwidHlwZSI6InJlZnJlc2giLCJzdWIiOiIxMyIsIm5iZiI6MTc1NDI1MDgzNywiY3NyZiI6IjgxMmYyMTJmLWMyNmYtNDY2MS1iYjYzLTRhNGQ5Njk0NjU4NiIsImV4cCI6MTc1Njg0MjgzN30.Dj0LHjU6Wxh5D_u-c1MUhGnzkDn2ml-EKsnyx7WuQFc"
+          "name": "refreshToken",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc1NDQ2NTY4MCwianRpIjoiYzJjOTRiOWYtYjgyMi00ZGVjLWI0MmYtOWI4ZGUxZWMzNTA4IiwidHlwZSI6InJlZnJlc2giLCJzdWIiOiIxIiwibmJmIjoxNzU0NDY1NjgwLCJjc3JmIjoiYzkwMWNhOGMtNGU2OS00NWVhLWFmYjEtMTlkZTZlNmJlNGIzIiwiZXhwIjoxNzU3MDU3NjgwfQ.ZybYTW64dmS-eZtP-E--x5tBHTrTX-nLNPWdzHTXmQo"
         }
       ]
     }

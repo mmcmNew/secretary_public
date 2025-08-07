@@ -29,15 +29,14 @@ setup('authenticate', async ({ page }) => {
     if (usernameTaken || emailRegistered) {
       // Выполнить вход в систему
       await page.goto('/login');
-      await page.getByRole('textbox', { name: 'Username' }).fill(username);
+      await page.getByRole('textbox', { name: 'Email' }).fill(email);
       await page.getByRole('textbox', { name: 'Password' }).fill(password);
       await page.getByRole('button', { name: 'Sign In' }).click();
       await page.waitForURL('/');
     }
   } catch (error) {
-    // Если не было ни перехода на главную страницу, ни сообщения об ошибке,
-    // то, возможно, регистрация прошла успешно
-    await page.waitForURL('/');
+    console.error('Error during authentication:', error);
+    throw error;
   }
   
   // Сохранить состояние авторизации
