@@ -43,11 +43,14 @@ config.set_main_option('sqlalchemy.url', get_engine_url())
 bind_names = []
 if current_app.config.get('SQLALCHEMY_BINDS') is not None:
     bind_names = list(current_app.config['SQLALCHEMY_BINDS'].keys())
+    print (f'SQLALCHEMY_BINDS, {bind_names}')
 else:
     get_bind_names = getattr(current_app.extensions['migrate'].db,
                              'bind_names', None)
     if get_bind_names:
         bind_names = get_bind_names()
+    
+    print (f'current_app.extensions[migrate].db, {bind_names}')
 for bind in bind_names:
     context.config.set_section_option(
         bind, "sqlalchemy.url", get_engine_url(bind_key=bind))
@@ -108,6 +111,7 @@ def run_migrations_offline():
                 output_buffer=buffer,
                 target_metadata=get_metadata(name),
                 literal_binds=True,
+                include_schemas=True,
             )
             with context.begin_transaction():
                 context.run_migrations(engine_name=name)
@@ -166,6 +170,7 @@ def run_migrations_online():
                 upgrade_token="%s_upgrades" % name,
                 downgrade_token="%s_downgrades" % name,
                 target_metadata=get_metadata(name),
+                include_schemas=True,
                 **conf_args
             )
             context.run_migrations(engine_name=name)
