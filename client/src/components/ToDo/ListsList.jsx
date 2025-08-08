@@ -13,7 +13,7 @@ import ContextMenu from './ListsList/ContextMenu';
 import { useTasks } from './hooks/useTasks';
 import { useListsLogic } from './hooks/useListsLogic';
 import useContextMenu from './hooks/useContextMenu'
-import { clearAllCache } from '../../utils/api';
+// import { clearAllCache } from '../../utils/api';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { ErrorContext } from '../../contexts/ErrorContext';
 

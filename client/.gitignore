@@ -27,3 +27,6 @@ public/vite.svg
 src.rar
 localhost.pem
 localhost-key.pem
+
+*storybook.log
+storybook-static

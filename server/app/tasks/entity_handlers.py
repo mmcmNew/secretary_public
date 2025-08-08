@@ -37,15 +37,15 @@ def get_entity_by_id(raw_id, user_id):
     try:
         if raw_id.startswith('group_'):
             obj = Group.query.filter_by(id=int(raw_id.split('_')[1]), user_id=user_id).first()
-            current_app.logger.debug(f"Resolved group ID {raw_id} → {obj}")
+            current_app.logger.debug(f"Resolved group ID {raw_id} -> {obj}")
             return obj
         elif raw_id.startswith('project_'):
             obj = Project.query.filter_by(id=int(raw_id.split('_')[1]), user_id=user_id).first()
-            current_app.logger.debug(f"Resolved project ID {raw_id} → {obj}")
+            current_app.logger.debug(f"Resolved project ID {raw_id} -> {obj}")
             return obj
         else:
             obj = List.query.filter_by(id=int(raw_id), user_id=user_id).first()
-            current_app.logger.debug(f"Resolved list ID {raw_id} → {obj}")
+            current_app.logger.debug(f"Resolved list ID {raw_id} -> {obj}")
             return obj
     except Exception as e:
         current_app.logger.error(f"get_entity_by_id failed for {raw_id}: {e}")
@@ -268,3 +268,202 @@ def link_task(data, user_id=None):
         db.session.rollback()
         current_app.logger.error(f'link_task: Error {e}')
         return {"error": str(e)}, 500
+
+
+def sort_items(data, user_id=None):
+    if user_id is None:
+        raise ValueError("user_id must be provided")
+    
+    source_id = data.get('source_id')
+    new_order = data.get('new_order')
+    
+    if not source_id:
+        return {"error": "source_id is required"}, 400
+    
+    try:
+        source_entity = get_entity_by_id(source_id, user_id)
+        if not source_entity:
+            return {"error": "Source entity not found"}, 404
+        
+        # Сортировка в основном списке через order
+        if new_order is not None:
+            source_entity.order = new_order
+        
+        db.session.add(source_entity)
+        db.session.commit()
+        
+        # Нормализуем order для siblings того же типа
+        _normalize_orders_by_type(type(source_entity), user_id)
+        
+        return {"success": True}, 200
+    
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'sort_items failed: {e}', exc_info=True)
+        return {"error": "Internal server error"}, 500
+
+
+def sort_items_in_container(data, user_id=None):
+    if user_id is None:
+        raise ValueError("user_id must be provided")
+    
+    container_id = data.get('container_id')
+    source_id = data.get('source_id')
+    new_position = data.get('new_position')
+    
+    if not container_id or not source_id or new_position is None:
+        return {"error": "container_id, source_id, and new_position are required"}, 400
+    
+    try:
+        container_entity = get_entity_by_id(container_id, user_id)
+        if not container_entity:
+            return {"error": "Container entity not found"}, 404
+        
+        # Обновляем childes_order
+        childes_order = container_entity.childes_order or []
+        
+        # Удаляем элемент если он уже есть
+        if source_id in childes_order:
+            childes_order.remove(source_id)
+        
+        # Вставляем на новую позицию
+        if new_position < len(childes_order):
+            childes_order.insert(new_position, source_id)
+        else:
+            childes_order.append(source_id)
+        
+        container_entity.childes_order = childes_order
+        db.session.add(container_entity)
+        db.session.commit()
+        
+        return {"success": True}, 200
+    
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'sort_items_in_container failed: {e}', exc_info=True)
+        return {"error": "Internal server error"}, 500
+
+
+def link_items(data, user_id=None):
+    if user_id is None:
+        raise ValueError("user_id must be provided")
+    
+    source_id = data.get('source_id')
+    target_id = data.get('target_id')
+    
+    if not source_id or not target_id:
+        return {"error": "source_id and target_id are required"}, 400
+    
+    try:
+        source_entity = get_entity_by_id(source_id, user_id)
+        target_entity = get_entity_by_id(target_id, user_id)
+        
+        if not source_entity or not target_entity:
+            return {"error": "Source or target entity not found"}, 404
+        
+        # Создаем связь через childes_order
+        if isinstance(source_entity, List) and isinstance(target_entity, (Group, Project)):
+            childes_order = target_entity.childes_order or []
+            if source_id not in childes_order:
+                childes_order.append(source_id)
+                target_entity.childes_order = childes_order
+        elif isinstance(source_entity, Group) and isinstance(target_entity, Project):
+            childes_order = target_entity.childes_order or []
+            if source_id not in childes_order:
+                childes_order.append(source_id)
+                target_entity.childes_order = childes_order
+        else:
+            return {"error": "Invalid link combination"}, 400
+        
+        db.session.add(target_entity)
+        db.session.commit()
+        
+        return {"success": True}, 200
+    
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'link_items failed: {e}', exc_info=True)
+        return {"error": "Internal server error"}, 500
+
+
+def move_items(data, user_id=None):
+    if user_id is None:
+        raise ValueError("user_id must be provided")
+    
+    source_id = data.get('source_id')
+    target_id = data.get('target_id')
+    
+    if not source_id or not target_id:
+        return {"error": "source_id and target_id are required"}, 400
+    
+    try:
+        source_entity = get_entity_by_id(source_id, user_id)
+        target_entity = get_entity_by_id(target_id, user_id)
+        
+        if not source_entity or not target_entity:
+            return {"error": "Source or target entity not found"}, 404
+        
+        # Remove from old parent
+        if hasattr(source_entity, 'project_id') and source_entity.project_id:
+            source_entity.project_id = None
+        if hasattr(source_entity, 'group_id') and source_entity.group_id:
+            source_entity.group_id = None
+        
+        # Move to new parent
+        if isinstance(target_entity, Group) and isinstance(source_entity, List):
+            source_entity.group_id = target_entity.id
+        elif isinstance(target_entity, Project):
+            if isinstance(source_entity, (List, Group)):
+                source_entity.project_id = target_entity.id
+            else:
+                return {"error": "Invalid move combination"}, 400
+        else:
+            return {"error": "Invalid target for move"}, 400
+        
+        # Добавляем в childes_order контейнера
+        childes_order = target_entity.childes_order or []
+        if source_id not in childes_order:
+            childes_order.append(source_id)
+            target_entity.childes_order = childes_order
+            db.session.add(target_entity)
+        
+        db.session.add(source_entity)
+        db.session.commit()
+        
+        return {"success": True}, 200
+    
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'move_items failed: {e}', exc_info=True)
+        return {"error": "Internal server error"}, 500
+
+
+def _normalize_orders_by_type(entity_type, user_id):
+    """Normalize order values for all entities of the same type"""
+    siblings = entity_type.query.filter_by(user_id=user_id).order_by(entity_type.order).all()
+    
+    for i, sibling in enumerate(siblings):
+        sibling.order = i
+        db.session.add(sibling)
+    
+    db.session.commit()
+
+
+def _get_max_order(entity):
+    """Get maximum order value for siblings of the given entity"""
+    entity_type = type(entity)
+    
+    if entity_type.__name__ == 'List':
+        if hasattr(entity, 'group_id') and entity.group_id:
+            return db.session.query(func.max(entity_type.order)).filter_by(group_id=entity.group_id, user_id=entity.user_id).scalar() or 0
+        elif hasattr(entity, 'project_id') and entity.project_id:
+            return db.session.query(func.max(entity_type.order)).filter_by(project_id=entity.project_id, group_id=None, user_id=entity.user_id).scalar() or 0
+        else:
+            return db.session.query(func.max(entity_type.order)).filter_by(group_id=None, project_id=None, user_id=entity.user_id).scalar() or 0
+    elif entity_type.__name__ == 'Group':
+        if hasattr(entity, 'project_id') and entity.project_id:
+            return db.session.query(func.max(entity_type.order)).filter_by(project_id=entity.project_id, user_id=entity.user_id).scalar() or 0
+        else:
+            return db.session.query(func.max(entity_type.order)).filter_by(project_id=None, user_id=entity.user_id).scalar() or 0
+    else:
+        return db.session.query(func.max(entity_type.order)).filter_by(user_id=entity.user_id).scalar() or 0

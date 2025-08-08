@@ -11,7 +11,7 @@ class User(db.Model):
     __tablename__ = 'users'
     __table_args__ = {'schema': 'users'}
     user_id = Column(Integer, primary_key=True)
-    user_name = Column(Text, unique=True)
+    user_name = Column(Text, nullable=False)
     email = Column(String(255), unique=True)
     password_hash = Column(String(255))
     avatar_src = Column(Text)

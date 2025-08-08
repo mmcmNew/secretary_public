@@ -7,7 +7,7 @@ from flask_jwt_extended import current_user
 
 from app import db
 from app.journals.models import JournalEntry
-from .command_utils import modules
+from .command_utils import get_modules
 from .file_utils import upload_files_to_server
 
 
@@ -40,7 +40,8 @@ def save_to_base_modules(target_module, command_type, message_info=None, files_l
             raise ValueError("message_info должен быть JSON-строкой или словарём")
 
     message_info = message_info or {}
-    module_cfg = modules.get(target_module, {})
+    modules_data = get_modules()
+    module_cfg = modules_data.get(target_module, {})
 
     if files_list:
         save_files_result, files_names = upload_files_to_server(files_list, target_module)

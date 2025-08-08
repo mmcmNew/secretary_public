@@ -42,11 +42,16 @@ def create_app(config_type='work'):
     jwt.init_app(app)
     socketio.init_app(app)
     cache.init_app(app, config={'CACHE_TYPE': 'SimpleCache'})
+    
     # Включаем DebugToolbar только в режиме отладки
     if app.debug or app.config.get('DEBUG', False):
         app.config['SECRET_KEY'] = app.config.get('SECRET_KEY', 'dev')
         app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
         toolbar = DebugToolbarExtension(app)
+
+    # Регистрация демо-маршрутов
+    from .demo_routes import demo_bp
+    app.register_blueprint(demo_bp)
 
     with app.app_context():
         # if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):
@@ -64,7 +69,7 @@ def create_app(config_type='work'):
         from .main import main as main_blueprint
         app.register_blueprint(main_blueprint)
         from .tasks import to_do_app as tasks_blueprint
-        app.register_blueprint(tasks_blueprint)
+        app.register_blueprint(tasks_blueprint, url_prefix='/api')
         from .dashboard import dashboard as dashboard_blueprint
         app.register_blueprint(dashboard_blueprint)
         from .journals import journals as journals_blueprint
@@ -155,6 +160,9 @@ def register_cli_commands(app):
         Interval.add_initial_intervals()
         from .init_subscription_data import init_subscription_data
         init_subscription_data()
+        from app.main.models import User
+        User.add_initial_users()
+
         # Создаем триггеры для автоматического обновления счетчиков в списках
         try:
             from .tasks.triggers import create_list_counter_triggers

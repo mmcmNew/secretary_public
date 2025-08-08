@@ -1,11 +1,10 @@
 // WebSocketContext.jsx
 
 import { createContext, useEffect, useState } from 'react';
-import axios from 'axios';
 import PropTypes from 'prop-types';
 import io from 'socket.io-client';
 import useContainer from '../DraggableComponents/useContainer';
-import { apiPost } from '../../utils/api';
+import { useSendMessageAPIMutation } from '../../store/websocketApi';
 
 const WebSocketContext = createContext(null);
 
@@ -15,6 +14,7 @@ export const WebSocketProvider = ({ children }) => {
   const [isNewMessage, setIsNewMessage] = useState(false);
   const [files, setFiles] = useState([])
   const { setUpdates, addContainer } = useContainer()
+  const [sendMessageAPI] = useSendMessageAPIMutation();
 
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
@@ -80,7 +80,7 @@ export const WebSocketProvider = ({ children }) => {
   }
 
 
-  async function sendMessageAPI(user_id, text, sendingFiles) {
+  async function handleSendMessageAPI(user_id, text, sendingFiles) {
     const timeZone = new Date().getTimezoneOffset();
     if (!sendingFiles) sendingFiles = files
     const formData = new FormData();
@@ -92,7 +92,7 @@ export const WebSocketProvider = ({ children }) => {
     });
     // console.log(files)
     // console.log(formData.get('files'), formData.get('text'), formData.get('user_id'))
-    const response = await apiPost('/chat/new_message', formData);
+    const response = await sendMessageAPI(formData).unwrap();
     const result = response.data;
     if (result.status_code == 201) {
       setFiles([])
@@ -145,7 +145,7 @@ export const WebSocketProvider = ({ children }) => {
   };
 
   return (
-    <WebSocketContext.Provider value={{ messages, isNewMessage, setIsNewMessage, sendMessage, sendMessageAPI, sendTranscript, sendEditedRecord, files, setFiles }}>
+    <WebSocketContext.Provider value={{ messages, isNewMessage, setIsNewMessage, sendMessage, sendMessageAPI: handleSendMessageAPI, sendTranscript, sendEditedRecord, files, setFiles }}>
       {children}
     </WebSocketContext.Provider>
   );

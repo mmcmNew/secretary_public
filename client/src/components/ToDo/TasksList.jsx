@@ -1,28 +1,19 @@
-import React, { useEffect, useState, useContext, memo, useCallback, useMemo } from "react";
+import { useEffect, useState, memo, useCallback,} from "react";
 import {
     List,
-    ListItem,
     ListItemButton,
-    ListItemIcon,
     ListItemText,
     Collapse,
-    Checkbox,
-    IconButton,
-    Paper,
     Menu,
     MenuItem,
     Divider,
 } from "@mui/material";
-import { ExpandLess, ExpandMore, MoreVert as MoreVertIcon } from "@mui/icons-material";
-import StarBorderIcon from "@mui/icons-material/StarBorder";
-import StarIcon from "@mui/icons-material/Star";
-import dayjs from "dayjs";
+import { ExpandLess, ExpandMore, } from "@mui/icons-material";
 import PropTypes from "prop-types";
 import { Draggable } from "@fullcalendar/interaction";
 import useContextMenu from "./hooks/useContextMenu";
 import { useTasks } from "./hooks/useTasks.js";
 import { useTasksLogic } from "./hooks/useTasksLogic.js";
-import { AudioContext } from "../../contexts/AudioContext.jsx";
 import TaskItem from "./TaskItem.jsx";
 
 function TasksList({
@@ -44,7 +35,6 @@ function TasksList({
     onError = null,
     calendarRange = null, 
 }) {
-    const { playAudio } = useContext(AudioContext);
     const { anchorEl, openMenu, closeMenu } = useContextMenu();
     const { fetchCalendarEvents, getSubtasksByParentId } = useTasks({
         onError: (error) => {
@@ -114,11 +104,8 @@ function TasksList({
     // Мемоизированные обработчики
     const handleToggle = useCallback(async (task_id, checked) => {
         const status_id = checked ? 2 : 1;
-        if (status_id === 2) {
-            playAudio("/sounds/isComplited.wav", { queued: false });
-        }
         await handleTaskToggle(task_id, checked);
-    }, [playAudio, handleTaskToggle]);
+    }, [handleTaskToggle]);
 
     const handleAdditionalButtonClick = useCallback((task) => {
         if (typeof additionalButtonClick === "function") additionalButtonClick(task);

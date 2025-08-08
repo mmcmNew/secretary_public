@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import api from '../../../utils/api';
+// import api from '../../../utils/api';
 
 dayjs.extend(utc);
 
@@ -15,8 +15,8 @@ export const useMyDay = () => {
       const start = dayjs().startOf('day').utc().toISOString();
       const end = dayjs().endOf('day').utc().toISOString();
       const params = new URLSearchParams({ list_id: 'my_day', start, end });
-      const { data } = await api.get(`/tasks/get_tasks?${params}`);
-      setMyDayTasks({ data: data.tasks || [], loading: false, error: null });
+      // const { data } = await api.get(`/tasks/get_tasks?${params}`);
+      // setMyDayTasks({ data: data.tasks || [], loading: false, error: null });
     } catch (err) {
       setMyDayTasks(prev => ({ ...prev, loading: false, error: err }));
     }

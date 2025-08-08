@@ -34,19 +34,19 @@ def validate_password(password: str):
 def api_login():
     data = request.get_json() or {}
     current_app.logger.warning(f"api/login. Data: {data}")
-    username = data.get("username")
+    user_email = data.get("email")
     password = data.get("password")
 
-    if not username or not password:
+    if not user_email or not password:
         current_app.logger.warning(
             f"LOGIN: missing username or password. Data: {data}"
         )
         return jsonify({"error": "Username and password are required"}), 400
 
-    user = User.query.filter_by(user_name=username).first()
+    user = User.query.filter_by(email=user_email).first()
     if not user or not user.check_password(password):
         current_app.logger.warning(
-            f"LOGIN: authentication failed for username: {username}"
+            f"LOGIN: authentication failed for username: {user_email}"
         )
         return jsonify({"error": "Invalid username or password"}), 401
 
@@ -62,7 +62,7 @@ def api_login():
 
     access_token = create_access_token(identity=str(user.user_id))
     refresh_token = create_refresh_token(identity=str(user.user_id))
-    current_app.logger.info(f"LOGIN: success for user: {username}")
+    current_app.logger.info(f"LOGIN: success for user: {user_email}")
     response = make_response(
         jsonify(
             {
@@ -99,11 +99,6 @@ def api_register():
     if not is_valid:
         current_app.logger.warning(f"REGISTER: invalid password: {message}")
         return jsonify({"error": message}), 400
-
-    existing_username = User.query.filter_by(user_name=username).first()
-    if existing_username:
-        current_app.logger.warning(f"REGISTER: username already taken: {username}")
-        return jsonify({"error": "Username already taken"}), 400
 
     existing_email = User.query.filter_by(email=email).first()
     if existing_email:

@@ -17,3 +17,8 @@ server/user_data/user_3/settings/**
 node_modules/
 client/playwright-report/
 client/test-results/
+client/e2e-tests/.auth/user.json
+client/e2e-tests/.auth/user.json
+client/.storybook/*
+client/src/stories/*
+client/e2e-tests/.auth/user.json

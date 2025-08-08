@@ -1,6 +1,7 @@
-import React, { createContext, useState, useCallback } from 'react';
+import { createContext, useState, useCallback } from 'react';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import PropTypes from 'prop-types';
 
 export const ErrorContext = createContext({
   setError: () => {},
@@ -46,3 +47,7 @@ export function ErrorProvider({ children }) {
     </ErrorContext.Provider>
   );
 }
+
+ErrorProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};

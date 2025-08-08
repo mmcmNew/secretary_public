@@ -1,15 +1,17 @@
-import useContainer from './useContainer';
 import { Box, Button } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { updateContainer } from '../../store/dashboardSlice';
 
 function MinimizedContainers() {
-  const {minimizedContainers,
-      handleMinimizeToggle} = useContainer();
+  const dispatch = useDispatch();
+  const minimizedContainers = useSelector(state => state.dashboard.containers.filter(c => c.isMinimized));
+
   return (
     <Box sx={{ display: 'flex', overflowX: 'auto', padding: 1 }}>
       {minimizedContainers.map((container, index) => (
         <Button
           key={index}
-          onClick={() => handleMinimizeToggle(container.id)}
+          onClick={() => dispatch(updateContainer({ id: container.id, data: { isMinimized: !container.isMinimized } }))}
           sx={{ margin: 0.5 }}
         >
           {container.name}

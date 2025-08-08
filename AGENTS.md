@@ -23,16 +23,17 @@ Backend: Flask
 
 ## Архитектура и основные контексты (агенты) клиента
 
-В клиентской части приложения используются следующие ключевые контексты (агенты), реализованные через React Context API:
+В клиентской части приложения используются следующие ключевые контексты (агенты), реализованные через React Context API и Redux:
 
 ### 1. ErrorProvider (`contexts/ErrorContext.jsx`)
 - Глобальный обработчик ошибок и уведомлений.
 - Позволяет показывать сообщения об ошибках и успехах через Material-UI Snackbar/Alert.
 - Используется как самый внешний провайдер.
 
-### 2. AuthProvider (`react-auth-kit`)
+### 2. Auth (authSlice в Redux)
 - Управляет состоянием аутентификации пользователя, хранит токены, обеспечивает автоматическое обновление access token.
 - Используется для защиты маршрутов и передачи информации о пользователе.
+- Интегрирован с axios для автоматического добавления токена авторизации к запросам.
 
 ### 3. UpdateWebSocketProvider (`components/DraggableComponents/UpdateWebSocketContext.jsx`)
 - Подключается к WebSocket `/updates` для получения обновлений данных (например, изменения задач).
@@ -70,21 +71,19 @@ Backend: Flask
 
 ```jsx
 <ErrorProvider>
-  <AuthProvider store={store}>
-    <UpdateWebSocketProvider>
-      <AudioProvider>
-        <ContainerProvider>
-          <TasksProvider>
-            <AntiScheduleProvider>
-              <Router>
-                <AppRoutes />
-              </Router>
-            </AntiScheduleProvider>
-          </TasksProvider>
-        </ContainerProvider>
-      </AudioProvider>
-    </UpdateWebSocketProvider>
-  </AuthProvider>
+  <UpdateWebSocketProvider>
+    <AudioProvider>
+      <ContainerProvider>
+        <TasksProvider>
+          <AntiScheduleProvider>
+            <Router>
+              <AppRoutes />
+            </Router>
+          </AntiScheduleProvider>
+        </TasksProvider>
+      </ContainerProvider>
+    </AudioProvider>
+  </UpdateWebSocketProvider>
 </ErrorProvider>
 ```
 
@@ -101,7 +100,7 @@ Backend: Flask
 
 ## Кратко
 
-- **Контексты (агенты)** — это глобальные провайдеры состояния, которые обеспечивают работу ключевых функций приложения: аутентификация, обработка ошибок, WebSocket, аудио, задачи, контейнеры, антирасписание (для отдыха), FocusMode (для трекинга времени) и чат.
+- **Контексты (агенты)** — это глобальные провайдеры состояния, которые обеспечивают работу ключевых функций приложения: аутентификация (через Redux), обработка ошибок, WebSocket, аудио, задачи, контейнеры, антирасписание (для отдыха), FocusMode (для трекинга времени) и чат.
 - **Backend** использует Blueprints и контекст запроса для разграничения и управления логикой.
 
 ---

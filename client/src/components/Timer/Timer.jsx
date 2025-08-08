@@ -1,6 +1,5 @@
 import { PropTypes } from 'prop-types';
 import { useState, useEffect, useContext } from 'react';
-import { useMutation } from '@tanstack/react-query';
 import { useTimer } from 'react-timer-hook';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
@@ -9,12 +8,12 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import CloseIcon from '@mui/icons-material/Close';
-import { AudioContext } from '../../contexts/AudioContext.jsx';
-import axios from 'axios';
+import { useAudio } from '../../store/useAudio';
+import { useGetTtsAudioMutation } from '../../store/timerApi';
 
 
 export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resultText, isRunningProp=false, onExpireFunc=null, handleCloseTimer=null, handleUpdateTimers=null,  playSoundProp=true, soundUrl='/sounds/endTimer.mp3', currentActionId=null }) {
-  const { playAudio } = useContext(AudioContext);
+  const { playAudio } = useAudio();
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [textToTts, setTextToTts] = useState(resultText || 'Таймер завершился');
   const initialTime = isRunningProp ?
@@ -29,6 +28,7 @@ export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resul
     minutes: Math.trunc((initialRemainingTime % (1000 * 60 * 60)) / (1000 * 60)),
     seconds: Math.trunc((initialRemainingTime % (1000 * 60)) / 1000),
   });
+  const [getTtsAudio] = useGetTtsAudioMutation();
 
   useEffect(() => {
     if (currentActionId === id) {
@@ -41,17 +41,7 @@ export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resul
     }
   }, [currentActionId]);
 
-  const ttsMutation = useMutation(async (text) => {
-    const response = await apiPost('/get_tts_audio', new URLSearchParams({ text }), {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      responseType: 'blob'
-    });
-    const blob = response.data;
-    const audioUrl = URL.createObjectURL(blob);
-    await playAudio(audioUrl, { queued: true });
-  });
-
-  function onExpire() {
+  async function onExpire() {
     let playAudioPromise = Promise.resolve();
 
     if (playSoundProp && soundUrl) {
@@ -59,7 +49,11 @@ export default function MyTimer({ id, initialTimeProp, initialEndTimeProp, resul
     }
 
     playAudioPromise
-      .then(() => ttsMutation.mutateAsync(textToTts))
+      .then(async () => {
+        const blob = await getTtsAudio(textToTts).unwrap();
+        const audioUrl = URL.createObjectURL(blob);
+        await playAudio(audioUrl, { queued: true });
+      })
       .then(() => {
         resetTime(); // Сбрасываем таймер
         if (onExpireFunc) {

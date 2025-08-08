@@ -1,29 +1,28 @@
-// hooks/useTaskTypes.js
-import { useQuery } from '@tanstack/react-query';
-import api from '../../../utils/api';
+// // hooks/useTaskTypes.js
+// import api from '../../../utils/api';
 
-export const useTaskTypes = () => {
-  const getTaskTypes = async () => {
-    const { data } = await api.get('/tasks/task_types');
-    return data;
-  };
+// export const useTaskTypes = () => {
+//   const getTaskTypes = async () => {
+//     const { data } = await api.get('/tasks/task_types');
+//     return data;
+//   };
 
-  const getTaskTypeGroups = async () => {
-    const { data } = await api.get('/tasks/task_type_groups');
-    return data;
-  };
+//   const getTaskTypeGroups = async () => {
+//     const { data } = await api.get('/tasks/task_type_groups');
+//     return data;
+//   };
 
-  const addTaskType = async (params) => {
-    const { data } = await api.post('/tasks/task_types', params);
-    return data;
-  };
+//   const addTaskType = async (params) => {
+//     const { data } = await api.post('/tasks/task_types', params);
+//     return data;
+//   };
 
-  // ... другие мутации
+//   // ... другие мутации
 
-  return {
-    getTaskTypes,
-    getTaskTypeGroups,
-    addTaskType,
-    // ...
-  };
-};
+//   return {
+//     getTaskTypes,
+//     getTaskTypeGroups,
+//     addTaskType,
+//     // ...
+//   };
+// };

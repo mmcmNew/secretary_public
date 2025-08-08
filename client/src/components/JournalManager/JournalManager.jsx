@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Card,
@@ -29,7 +29,7 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiDelete, apiGet, apiPost, apiPut } from '../../utils/api';
+// import { apiDelete, apiGet, apiPost, apiPut } from '../../utils/api';
 
 // Функция транслитерации
 const transliterate = (text) => {
@@ -74,8 +74,8 @@ const FIELD_TYPES = [
 export default function JournalManager() {
   const queryClient = useQueryClient();
   const { data: schemas = [], isLoading } = useQuery(['schemas'], async () => {
-    const { data } = await apiGet('/api/journals/schemas');
-    return data;
+    // const { data } = await apiGet('/api/journals/schemas');
+    // return data;
   });
   const [error, setError] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -87,17 +87,17 @@ export default function JournalManager() {
   });
 
   const deleteSchemaMutation = useMutation(
-    (id) => apiDelete(`/api/journals/schemas/${id}`),
-    { onSuccess: () => queryClient.invalidateQueries(['schemas']) }
+    // (id) => apiDelete(`/api/journals/schemas/${id}`),
+    // { onSuccess: () => queryClient.invalidateQueries(['schemas']) }
   );
 
   const saveSchemaMutation = useMutation(
     async ({ id, data }) => {
-      if (id) {
-        await apiPut(`/api/journals/schemas/${id}`, data);
-      } else {
-        await apiPost('/api/journals/schemas', data);
-      }
+      // if (id) {
+      //   await apiPut(`/api/journals/schemas/${id}`, data);
+      // } else {
+      //   await apiPost('/api/journals/schemas', data);
+      // }
     },
     { onSuccess: () => queryClient.invalidateQueries(['schemas']) }
   );

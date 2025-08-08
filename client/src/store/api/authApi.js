@@ -1,5 +1,5 @@
 import { apiSlice } from './apiSlice';
-import { setCredentials } from '../authSlice';
+import { setCredentials, logout } from '../authSlice';
 
 export const authApiSlice = apiSlice.injectEndpoints({
   endpoints: builder => ({
@@ -37,7 +37,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
     }),
     refreshAccessToken: builder.mutation({
       query: () => ({
-        url: '/refresh',
+        url: '/auth/refresh',
         method: 'POST',
       }),
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
@@ -53,7 +53,27 @@ export const authApiSlice = apiSlice.injectEndpoints({
     getMe: builder.query({
       query: () => '/user', // На сервере это /api/user
     }),
+    getDemoToken: builder.mutation({
+      query: () => '/demo/auth',
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(setCredentials({
+            user: data.data.user,
+            accessToken: data.data.token
+          }));
+        } catch (err) {
+          // Handle error if needed
+        }
+      }
+    }),
   }),
 });
 
-export const { useLoginMutation, useRegisterMutation, useRefreshAccessTokenMutation, useGetMeQuery } = authApiSlice;
+export const {
+  useLoginMutation,
+  useRegisterMutation,
+  useRefreshAccessTokenMutation,
+  useGetMeQuery,
+  useGetDemoTokenMutation
+} = authApiSlice;

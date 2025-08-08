@@ -1,11 +1,12 @@
 
+
 import { useRef, useState } from 'react';
 import { Box, Button, ButtonGroup, IconButton, Slider, Switch, TextField, Typography, Accordion, AccordionSummary, AccordionDetails, Alert, CircularProgress } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import { ExpandMore, PlayArrow, Pause, Replay, VolumeUp, VolumeOff, TextFields } from '@mui/icons-material';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation } from 'swiper/modules';
-import axios from 'axios';
+import { useSendNewRecordMutation } from '../../store/memoryApi';
 
 // Import Swiper styles
 import 'swiper/css';
@@ -15,27 +16,6 @@ import 'swiper/css/navigation';
 import './Memory.css';
 
 import PropTypes from 'prop-types';
-import { apiPost } from '../../utils/api';
-
-
-async function sendNewRecord(table_name, record_info) {
-    const timeZone = new Date().getTimezoneOffset();
-    let sendResult = null;
-    const url = '/post_new_record';
-    const formData = new FormData();
-    formData.append('table_name', table_name);
-    formData.append('time_zone', timeZone);
-    formData.append('record_info', JSON.stringify(record_info));
-    try {
-        const response = await apiPost(url, formData);
-        sendResult = response.data;
-        console.log('Запись добавлена успешно');
-    } catch (error) {
-        console.error('Ошибка при создании записи:', error);
-    }
-    return sendResult;
-}
-
 
 const MemoryComponent = ({ initInterval = 6000, initItems = [] }) => {
   const [paused, setPaused] = useState(true);
@@ -53,6 +33,7 @@ const MemoryComponent = ({ initInterval = 6000, initItems = [] }) => {
   const [isSending, setIsSending] = useState(false);
   const [isUpdateSuccess, setIsUpdateSuccess] = useState(false);
   const swiperRef = useRef(null);
+  const [sendNewRecord] = useSendNewRecordMutation();
 
   const progressCircle = useRef(null);
   const progressContent = useRef(null);
@@ -200,7 +181,7 @@ function handleNewSet(type) {
 
     try {
       setIsSending(true)
-      result = await sendNewRecord('diary', { reason: 'Memory', comment: `Результат: ${correctCount} из ${words.length} (${percentage}%)` });
+      result = await sendNewRecord({ table_name: 'diary', record_info: { reason: 'Memory', comment: `Результат: ${correctCount} из ${words.length} (${percentage}%)` } }).unwrap();
       setIsSending(false)
       if (!result) {
           throw new Error('Ошибка при отправке');
@@ -385,3 +366,4 @@ MemoryComponent.propTypes = {
 };
 
 export default MemoryComponent;
+

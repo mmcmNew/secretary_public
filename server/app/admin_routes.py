@@ -5,7 +5,7 @@ import re
 from .main.models import User, db
 from .subscription_models import AccessLevel, SubscriptionPlan, UserSubscription
 from datetime import datetime, timedelta
-from .command_utils import modules as available_modules
+from .command_utils import get_modules
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -96,7 +96,8 @@ def update_user_modules(user_id):
     modules = list(dict.fromkeys(modules))
 
     name_pattern = re.compile(r'^[A-Za-z0-9_-]+$')
-    allowed_names = set(available_modules.keys())
+    all_modules = get_modules()
+    allowed_names = set(all_modules.keys())
 
     for name in modules:
         if name not in allowed_names and not name_pattern.match(name):
@@ -110,7 +111,8 @@ def update_user_modules(user_id):
 @admin_bp.route('/available-modules', methods=['GET'])
 @check_access('admin')
 def get_available_modules():
-    return jsonify(list(available_modules.keys()))
+    all_modules = get_modules()
+    return jsonify(list(all_modules.keys()))
 
 @admin_bp.route('/access-levels', methods=['GET'])
 @check_access('admin')

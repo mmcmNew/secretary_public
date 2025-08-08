@@ -2,17 +2,20 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import { Box, Button, Paper } from '@mui/material';
 import Collapse from '@mui/material/Collapse';
-import useContainer from '../DraggableComponents/useContainer';
 import { IconButton, Icon } from '@mui/material';
 import { useState, useEffect } from 'react';
 import TimersToolbar from './TimersToolbar';
+import { useDispatch, useSelector } from 'react-redux';
+import { addContainer } from '../../store/dashboardSlice';
 
 export default function MiniTimers(props) {
-  const { timers, addContainer } = useContainer();
+  const dispatch = useDispatch();
+  const timers = useSelector(state => state?.timers?.timers);
   const [expanded, setExpanded] = useState(false);
   const [currentTimers, setCurrentTimers] = useState(timers);
 
   useEffect(() => {
+    if (!timers || timers.length === 0) return;
     const interval = setInterval(() => {
       setCurrentTimers([...timers]); // Обновляем состояние таймеров каждую секунду
     }, 1000);

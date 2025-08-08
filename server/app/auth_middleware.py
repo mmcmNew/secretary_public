@@ -7,6 +7,12 @@ from datetime import datetime
 def load_user_permissions():
     """Загружает права пользователя в контекст запроса"""
     try:
+        # Проверяем demo режим
+        if request.path.startswith('/api/demo/'):
+            g.user_access_level = 1
+            g.user_is_admin = False
+            return
+            
         verify_jwt_in_request(optional=True)
         user_id = get_jwt_identity()
         

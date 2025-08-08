@@ -1,8 +1,44 @@
-# React + Vite
+# Secretary React Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Описание
 
-Currently, two official plugins are available:
+Клиентская часть приложения Secretary, реализованная на React с использованием Redux Toolkit для управления состоянием.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Архитектура
+
+### Управление состоянием
+
+Приложение использует Redux Toolkit для управления глобальным состоянием, включая:
+
+- Авторизацию (authSlice)
+- Задачи (tasksSlice)
+- Списки задач (listsSlice)
+- Календарь (calendarSlice)
+- Антирасписание (antiScheduleSlice)
+- Аудио (audioSlice)
+- Интерфейс пользователя (uiSlice)
+
+### Авторизация
+
+Авторизация реализована через authSlice, который управляет состоянием аутентификации пользователя, включая токены доступа и обновления. Для автоматического обновления токенов используется middleware в store.
+
+### API
+
+Для работы с API используется axios с перехватчиками для автоматического добавления токена авторизации к запросам.
+
+## Установка и запуск
+
+1. Установите зависимости:
+   ```bash
+   npm install
+   ```
+
+2. Запустите приложение в режиме разработки:
+   ```bash
+   npm run dev
+   ```
+
+3. Для сборки приложения используйте:
+   ```bash
+   npm run build
+   ```

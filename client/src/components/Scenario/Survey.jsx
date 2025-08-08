@@ -6,17 +6,16 @@ import { useEffect, useRef, useState } from "react";
 import TTSText from './TTSText';
 import get_tts_audio_filename from '../Tools/getTTSText';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
-import FilesListComponent from '../Chat/FilesList';
-import { apiGet, apiPost, apiPut } from '../../utils/api';
+// import { apiGet, apiPost, apiPut } from '../../utils/api';
 
 
 async function sendNewRecord(table_name, record_info) {
     const url = `/api/journals/${table_name}`;
     try {
-        const { data } = await apiPost(url, record_info, {
-            headers: { 'Content-Type': 'application/json' }
-        });
-        return data;
+        // const { data } = await apiPost(url, record_info, {
+        //     headers: { 'Content-Type': 'application/json' }
+        // });
+        // return data;
     } catch (error) {
         console.error('Ошибка при создании записи:', error);
         return null;
@@ -26,8 +25,8 @@ async function sendNewRecord(table_name, record_info) {
 async function sendNewRecordWithFiles(table_name, formData) {
     const url = `/api/journals/${table_name}`;
     try {
-        const { data } = await apiPost(url, formData);
-        return data;
+        // const { data } = await apiPost(url, formData);
+        // return data;
     } catch (error) {
         console.error('Ошибка при создании записи с файлами:', error);
         return null;
@@ -37,10 +36,10 @@ async function sendNewRecordWithFiles(table_name, formData) {
 async function updateRecord(table_name, record_info) {
     const url = `/api/journals/${table_name}/${record_info.id}`;
     try {
-        const { data } = await apiPut(url, record_info, {
-            headers: { 'Content-Type': 'application/json' }
-        });
-        return data;
+        // const { data } = await apiPut(url, record_info, {
+        //     headers: { 'Content-Type': 'application/json' }
+        // });
+        // return data;
     } catch (error) {
         console.error('Ошибка при обновлении записи:', error);
         return null;
@@ -50,8 +49,8 @@ async function updateRecord(table_name, record_info) {
 async function updateRecordWithFiles(table_name, record_id, formData) {
     const url = `/api/journals/${table_name}/${record_id}`;
     try {
-        const { data } = await apiPut(url, formData);
-        return data;
+        // const { data } = await apiPut(url, formData);
+        // return data;
     } catch (error) {
         console.error('Ошибка при обновлении записи с файлами:', error);
         return null;
@@ -93,8 +92,8 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
     useEffect(() => {
         const loadFieldOptions = async () => {
             try {
-                const { data } = await apiGet(`/get_tables_filters/${survey.table_name}`);
-                setFieldOptions(data);
+                // const { data } = await apiGet(`/get_tables_filters/${survey.table_name}`);
+                // setFieldOptions(data);
             } catch (error) {
                 console.error('Error loading field options:', error);
             }

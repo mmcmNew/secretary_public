@@ -5,9 +5,8 @@ const authSlice = createSlice({
   initialState: {
     user: null,
     accessToken: localStorage.getItem('accessToken') || null,
-    isAuthenticated: false, // По умолчанию пользователь не аутентифицирован
-    isLoading: true, // Добавляем состояние для начальной загрузки
-    isAuthModalOpen: false,
+    isAuthenticated: !!localStorage.getItem('accessToken'), // Если есть токен, считаем аутентифицированным
+    isLoading: !!localStorage.getItem('accessToken'), // Загружаем только если есть токен
   },
   reducers: {
     setCredentials: (state, action) => {
@@ -31,22 +30,14 @@ const authSlice = createSlice({
     },
     authLoadingDone: (state) => {
       state.isLoading = false;
-    },
-    openAuthModal: (state) => {
-      state.isAuthModalOpen = true;
-    },
-    closeAuthModal: (state) => {
-      state.isAuthModalOpen = false;
-    },
+    }
   },
 });
 
 export const {
   setCredentials,
   logout,
-  authLoadingDone,
-  openAuthModal,
-  closeAuthModal,
+  authLoadingDone
 } = authSlice.actions;
 
 export default authSlice.reducer;

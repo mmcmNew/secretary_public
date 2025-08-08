@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { PropTypes } from 'prop-types';
 import Button from '@mui/material/Button';
@@ -10,69 +11,39 @@ import Survey from '../Scenario/Survey';
 import { Autocomplete, TextField } from '@mui/material';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import axios from 'axios';
-import { apiGet } from '../../utils/api';
+import { useGetTablesListQuery, useGetDatesListQuery } from '../../store/chatApi';
 
 dayjs.extend(utc);
-
-async function fetchTablesList() {
-    try {
-      const data = await apiGet('/get_tables');
-      return data.tables;
-    } catch (error) {
-      console.error('There was a problem with the fetch operation:', error);
-    }
-}
-
-async function fetchDatesList(tableName, month, year, timezone) {
-//   console.log(`Fetching dates with tableName: ${tableName}, month: ${month}, year: ${year}`);
-
-  // Добавление ведущего нуля к месяцу, если он меньше 10
-  const formattedMonth = month < 10 ? `0${month}` : `${month}`;
-
-  try {
-    const { data } = await apiGet(`/get_days?table_name=${tableName}&month=${formattedMonth}&year=${year}&timezone=${timezone}`);
-
-    if (data) {
-      // console.log('Days:', data.days);
-      return data;
-    } else {
-      console.warn('No days found in response data:', data);
-      return []; // Возвращаем пустой массив, если данных нет
-    }
-  } catch (error) {
-    console.error('There was a problem with the fetch operation:', error);
-  }
-}
-
 
 export default function NewRecordDialog({ open, handleClose, taskId =null, tableSurvey=null, tablesList=null, onTableChange }) {
   const [tempTablesList, setTempTablesList] = useState(tablesList || []);
   const [tempTableSurvey, setTempTableSurvay] = useState(tableSurvey || null);
+  const { data: tablesListData } = useGetTablesListQuery(null, { skip: !!tablesList });
+  const [triggerDatesList, { data: datesListData }] = useLazyGetDatesListQuery();
 
   useEffect(() => {
-    const fetchTables = async () => {
-      const data = await fetchTablesList();
-      // console.log(data);
-      setTempTablesList(data);
-    };
-    if (!tablesList) {
-      // console.log('fetching tables');
-      fetchTables();
+    if (tablesListData) {
+      setTempTablesList(tablesListData.tables);
     }
-  }, []);
+  }, [tablesListData]);
 
   useEffect(() => {
-    // console.log(tablesList);
-    if (tablesList)
+    if (tablesList) {
       setTempTablesList(tablesList);
+    }
   }, [tablesList]);
 
   useEffect(() => {
-    // console.log(tableSurvey);
-    if (tableSurvey)
+    if (tableSurvey) {
       setTempTableSurvay(tableSurvey);
-  }, [tableSurvey])
+    }
+  }, [tableSurvey]);
+
+  useEffect(() => {
+    if (datesListData) {
+      setTempTableSurvay(datesListData.survey);
+    }
+  }, [datesListData]);
 
   function handleCloseClick() {
     if (handleClose) handleClose();
@@ -86,15 +57,9 @@ export default function NewRecordDialog({ open, handleClose, taskId =null, table
       const month = utcDate.month() + 1;
       const year = utcDate.year();
       if (!timezone) timezone = new Date().getTimezoneOffset();
-    // console.log(`Fetching dates with tableName: ${tableName}, month: ${month}, year: ${year}, timezone: ${timezone}`)
-      const data = await fetchDatesList(newValue, month, year, timezone);
-      const survey = data.survey;
-      // console.log(newValue, utcDate, data);
-      setTempTableSurvay(survey);
+      triggerDatesList({ tableName: newValue, month, year, timezone });
     }
   }
-
-  // console.log('tempTableSurvey', tempTableSurvey)
 
   return (
     <Dialog
@@ -136,3 +101,4 @@ NewRecordDialog.propTypes = {
   onTableChange: PropTypes.func,
   taskId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 };
+

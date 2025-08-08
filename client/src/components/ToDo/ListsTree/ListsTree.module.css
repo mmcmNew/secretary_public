@@ -1,0 +1,27 @@
+.listsTreeRoot {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.listsTreeRoot ul {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.listsTreeRoot li {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.listsTreeRoot li::marker {
+  display: none !important;
+}
+
+.listsTreeItem {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}

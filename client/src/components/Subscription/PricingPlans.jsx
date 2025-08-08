@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { apiGet, apiPost } from '../../utils/api';
+// import { apiGet, apiPost } from '../../utils/api';
 
 export default function PricingPlans() {
     const [plans, setPlans] = useState([]);
@@ -19,8 +19,8 @@ export default function PricingPlans() {
 
     const fetchPlans = async () => {
         try {
-            const response = await apiGet('/api/subscription-plans');
-            setPlans(response.data);
+            // const response = await apiGet('/api/subscription-plans');
+            // setPlans(response.data);
         } catch (error) {
             console.error('Failed to fetch plans:', error);
         } finally {
@@ -30,7 +30,7 @@ export default function PricingPlans() {
 
     const subscribeToPlan = async (planId) => {
         try {
-            await apiPost(`/api/subscribe/${planId}`);
+            // await apiPost(`/api/subscribe/${planId}`);
             alert('Подписка оформлена!');
             navigate('/account');
         } catch (error) {

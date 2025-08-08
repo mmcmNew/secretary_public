@@ -142,7 +142,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
             'childes_order': task_ids
         })
     current_app.logger.info(f"PERF (user:{user_id}): Default lists processing took {time.perf_counter() - step_start_time:.4f}s.")
-    current_app.logger.info(f"PERF (user:{user_id}): Default lists: {default_lists}")
+    # current_app.logger.info(f"PERF (user:{user_id}): Default lists: {default_lists}")
     step_start_time = time.perf_counter()
     # Преобразуем объекты в словари с подсчитанными значениями
     groups_dict = [
@@ -172,6 +172,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
 
     total_time = time.perf_counter() - start_time
     current_app.logger.info(f"PERF (user:{user_id}): get_lists_and_groups_data finished. Total time: {total_time:.4f}s.")
+    # current_app.logger.info(f'Sorted combined lists: {sorted_combined}')
     return {
         'lists': sorted_combined,
         'projects': sorted_projects,
@@ -244,95 +245,90 @@ def edit_list(data, user_id=None):
 
 
 def get_lists_tree_data(client_timezone='UTC', user_id=None):
-    """
-    Получение данных списков в формате, подходящем для react-complex-tree.
-    Возвращает данные в порядке: default_lists, projects, общий список групп и списков.
-    
-    Возвращает структуру:
-    {
-        'default_lists': [...],
-        'projects': [...],
-        'lists': [...]  // общий список групп и списков
-    }
-    """
-    # Получаем исходные данные
     original_data = get_lists_and_groups_data(client_timezone, user_id)
-    
+
     if isinstance(original_data, dict) and 'error' in original_data:
         return original_data
-    
-    # Добавляем параметры для контекстного меню в default_lists
+
+    def create_tree_node(item_id, parent_id, text, item_type, unfinished_count=0):
+        return {
+            'id': item_id,
+            'parent': parent_id,
+            'droppable': item_type in ['group', 'project'],
+            'text': text,
+            'data': {
+                'type': item_type,
+                'unfinished_tasks_count': unfinished_count
+            }
+        }
+
+    # Стандартные списки
     default_lists = []
     for item in original_data.get('default_lists', []):
-        default_lists.append({
-            **item,
-            'hasContextMenu': False,  # Default lists don't have context menu
-            'contextMenuType': 'default_lists',
-            'itemType': 'default_list'
-        })
-    
-    # Добавляем параметры для контекстного меню в projects
-    projects = []
-    for item in original_data.get('projects', []):
-        projects.append({
-            **item,
-            'hasContextMenu': True,  # Projects have context menu
-            'contextMenuType': 'project',
-            'itemType': 'project'
-        })
-    
-    # Общий список групп и списков с параметрами для контекстного меню
-    lists = []
+        default_lists.append(create_tree_node(
+            item['id'], 0, item['title'], 'standard', item.get('unfinished_tasks_count', 0)
+        ))
+
+    # Проекты с вложенными элементами (с сортировкой)
+    projects_tree = []
+    for proj in original_data.get('projects', []):
+        proj_id = proj['id']  # ID уже содержит префикс из to_dict()
+        projects_tree.append(create_tree_node(
+            proj_id, 0, proj['title'], 'project', proj.get('unfinished_tasks_count', 0)
+        ))
+        
+        # Сортируем элементы в проекте по childes_order
+        childes_order = proj.get('childes_order', [])
+        all_elements = {str(lst['id']): lst for lst in proj.get('lists', [])} | {grp['id']: grp for grp in proj.get('groups', [])}
+        
+        for element_id in childes_order:
+            if element_id in all_elements:
+                element = all_elements[element_id]
+                if element_id.startswith('group_'):
+                    projects_tree.append(create_tree_node(
+                        element_id, proj_id, element['title'], 'group', element.get('unfinished_tasks_count', 0)
+                    ))
+                    
+                    # Сортируем элементы в группе по childes_order
+                    group_childes_order = element.get('childes_order', [])
+                    group_lists = {str(lst['id']): lst for lst in element.get('lists', [])}
+                    
+                    for list_id in group_childes_order:
+                        if list_id in group_lists:
+                            lst = group_lists[list_id]
+                            projects_tree.append(create_tree_node(
+                                str(lst['id']), element_id, lst['title'], 'list', lst.get('unfinished_tasks_count', 0)
+                            ))
+                else:
+                    projects_tree.append(create_tree_node(
+                        str(element['id']), proj_id, element['title'], 'list', element.get('unfinished_tasks_count', 0)
+                    ))
+
+    # Отдельные списки и группы (уже отсортированы в get_lists_and_groups_data)
+    lists_tree = []
     for item in original_data.get('lists', []):
-        if item.get('type') == 'group':
-            lists.append({
-                **item,
-                'hasContextMenu': True,  # Groups have context menu
-                'contextMenuType': 'group',
-                'itemType': 'group'
-            })
-        else:
-            lists.append({
-                **item,
-                'hasContextMenu': True,  # Lists have context menu
-                'contextMenuType': 'list',
-                'itemType': 'list'
-            })
-    
-    # Преобразуем данные в формат react-complex-tree
-    def convert_to_tree_format(items, parent_id=None):
-        tree_items = {}
-        for item in items:
-            # Создаем элемент дерева
-            tree_items[str(item['id'])] = {
-                'index': str(item['id']),
-                'data': {
-                    'title': item['title'],
-                    'type': item.get('type', 'list'),
-                    'unfinished_tasks_count': item.get('unfinished_tasks_count', 0),
-                    'hasContextMenu': item.get('hasContextMenu', False),
-                    'contextMenuType': item.get('contextMenuType', ''),
-                    'itemType': item.get('itemType', 'list')
-                },
-                'canMove': True,
-                'canRename': True,
-                'children': [str(child_id) for child_id in item.get('childes_order', [])] if item.get('childes_order') else []
-            }
+        if item.get('project_id'):
+            continue  # Уже обработано в проектах
             
-            # Рекурсивно обрабатываем детей, если они есть
-            if item.get('childes_order'):
-                # Находим детей по их id
-                children = [child for child in items if child['id'] in item['childes_order']]
-                child_tree_items = convert_to_tree_format(children, str(item['id']))
-                tree_items.update(child_tree_items)
-                
-        return tree_items
-    
-    # Преобразуем каждый тип данных
-    tree_data = {
-        'default_lists': convert_to_tree_format(default_lists),
-        'projects': convert_to_tree_format(projects),
-        'lists': convert_to_tree_format(lists)
-    }
-    
-    return tree_data
+        if item.get('type') == 'group' and not item.get('group_id'):
+            group_id = item['id']  # ID уже содержит префикс из to_dict()
+            lists_tree.append(create_tree_node(
+                group_id, 0, item['title'], 'group', item.get('unfinished_tasks_count', 0)
+            ))
+            
+            # Сортируем элементы в группе по childes_order
+            group_childes_order = item.get('childes_order', [])
+            group_lists = {str(lst['id']): lst for lst in item.get('lists', [])}
+            
+            for list_id in group_childes_order:
+                if list_id in group_lists:
+                    lst = group_lists[list_id]
+                    lists_tree.append(create_tree_node(
+                        str(lst['id']), group_id, lst['title'], 'list', lst.get('unfinished_tasks_count', 0)
+                    ))
+        elif item.get('type') == 'list' and not item.get('group_id'):
+            lists_tree.append(create_tree_node(
+                str(item['id']), 0, item['title'], 'list', item.get('unfinished_tasks_count', 0)
+            ))
+
+    return [default_lists, projects_tree, lists_tree]

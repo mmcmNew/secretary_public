@@ -43,6 +43,7 @@ export default function AuthModal() {
   const dispatch = useDispatch();
   const { isAuthModalOpen } = useSelector((state) => state.auth);
   const [tabValue, setTabValue] = useState(0);
+  const [getDemoToken] = useGetDemoTokenMutation();
 
   const handleClose = () => {
     dispatch(closeAuthModal());
@@ -75,6 +76,16 @@ export default function AuthModal() {
         </Paper>
         <TabPanel value={tabValue} index={0}>
           <SignInPage isModal={true} onAuthSuccess={handleClose} />
+        </TabPanel>
+        <TabPanel value={tabValue} index={1}>
+          <RegisterPage isModal={true} onAuthSuccess={handleClose} />
+        </TabPanel>
+      </Box>
+    </Modal>
+  );
+              Попробовать демо-режим
+            </Button>
+          </Box>
         </TabPanel>
         <TabPanel value={tabValue} index={1}>
           <RegisterPage isModal={true} onAuthSuccess={handleClose} />

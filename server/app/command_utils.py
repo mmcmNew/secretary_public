@@ -7,20 +7,28 @@ from flask_jwt_extended import current_user
 
 
 def load_json(filename):
-    filename = os.path.join(
-        current_app.static_folder,
-        'default_settings',
-        'settings',
-        filename,
-    )
-    with open(filename, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    with current_app.app_context():
+        filename = os.path.join(
+            current_app.static_folder,
+            'default_settings',
+            'settings',
+            filename,
+        )
+        with open(filename, 'r', encoding='utf-8') as f:
+            return json.load(f)
 
 
-modules = load_json('modules.json')
-commands_list = load_json('commands_list.json')
-command_information = load_json('command_information.json')
-command_num_information = load_json('command_num_information.json')
+def get_modules():
+    return load_json('modules.json')
+
+def get_commands_list():
+    return load_json('commands_list.json')
+
+def get_command_information():
+    return load_json('command_information.json')
+
+def get_command_num_information():
+    return load_json('command_num_information.json')
 
 columns_names = {
     'reason': 'Причина',
@@ -94,6 +102,7 @@ def parse_time(text: str):
 def find_command_type(message: str):
     command_type = None
     first_word = message.split()[0].lower().replace(',', '')
+    commands_list = get_commands_list()
 
     for commands_types, commands in commands_list.items():
         if first_word in commands:
@@ -107,6 +116,8 @@ def find_info(target_module, module_info, text):
     replacements_made = False
 
     result = {}
+    command_information = get_command_information()
+    command_num_information = get_command_num_information()
     command_info_dict = command_information | command_num_information
     comment_start = len(text)
     if 'comment' in module_info:
@@ -154,12 +165,13 @@ def find_info(target_module, module_info, text):
 
 
 def find_target_module(command):
-    if command is None or modules is None:
+    modules_data = get_modules()
+    if command is None or modules_data is None:
         return None, None
 
     target_module = None
     earliest_occurrence = len(command) + 1
-    for key, values in modules.items():
+    for key, values in modules_data.items():
         for module_command in values['words']:
             position = command.lower().find(module_command)
             if position != -1 and position < earliest_occurrence:
@@ -167,7 +179,7 @@ def find_target_module(command):
                 target_module = key
     if target_module is None:
         return None, None
-    return target_module, modules[target_module]
+    return target_module, modules_data[target_module]
 
 
 def get_tables():
@@ -204,7 +216,7 @@ def get_modules():
         user_modules = None
         user_id = None
 
-    result_modules = modules.copy()
+    result_modules = load_json('modules.json').copy()
 
     if user_id:
         try:

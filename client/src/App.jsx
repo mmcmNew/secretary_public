@@ -1,111 +1,76 @@
 // App.js
 import { BrowserRouter as Router, Route, Routes, Outlet } from 'react-router-dom';
 import { memo } from 'react';
-import axios from 'axios';
+import { Provider } from 'react-redux';
 import HomePage from './HomePage.jsx';
 import SecondPage from './SecondPage.jsx';
-import { ContainerProvider } from './components/DraggableComponents/ContainerContext';
-import { TasksProvider } from './components/ToDo/hooks/TasksContext';
-import { AntiScheduleProvider } from './components/ToDo/hooks/AntiScheduleContext';
-import UpdateWebSocketProvider from './components/DraggableComponents/UpdateWebSocketContext';
+
+// import UpdateWebSocketProvider from './components/DraggableComponents/UpdateWebSocketContext';
 // import TestPage from './TestPage.jsx';
 import MainContainerMobile from './components/MobileMain.jsx';
 import { ErrorProvider } from './contexts/ErrorContext';
 import AdminPanel from './components/Admin/AdminPanel.jsx';
 import PricingPlans from './components/Subscription/PricingPlans.jsx';
-import { AudioProvider } from './contexts/AudioContext.jsx';
 import SignInPage from './SignInPage.jsx';
 import RegisterPage from './RegisterPage.jsx';
 import AccountPage from './AccountPage.jsx';
-import AuthProvider from 'react-auth-kit';
-import createStore from 'react-auth-kit/createStore';
-import createRefresh from 'react-auth-kit/createRefresh';
 import RequireAuth from './components/RequireAuth.jsx';
+import AccountButton from './components/AccountButton.jsx';
+import { Box } from '@mui/material';
+import Container from '@mui/material/Container';
+import { useEffect, useState } from 'react';
+import AuthInitializer from './components/Auth/AuthInitializer.jsx';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { store } from './store/store';
 // import ReactGridLayout from "./components/GridLayout";
 
 const queryClient = new QueryClient();
 
-const store = createStore({
-  authName: '_auth',
-  authType: 'localstorage',
-  cookieDomain: window.location.hostname,
-  cookieSecure: window.location.protocol === 'https:',
-  refresh: createRefresh({
-    interval: 600,
-    refreshApiCallback: async ({ refreshToken }) => {
-      try {
-        const response = await axios.post('/api/refresh', null, {
-          headers: { Authorization: `Bearer ${refreshToken}` },
-        });
-        if (response.status === 200) {
-          const data = response.data;
-          return { isSuccess: true, newAuthToken: data.access_token };
-        }
-      } catch (e) {
-        console.error('Refresh token failed', e);
-      }
-      return { isSuccess: false };
-    },
-  }),
-});
-
 // 2. Создаем компонент-обертку для провайдеров, которые требуют аутентификации
 const AuthenticatedAppProviders = memo(() => (
-  <UpdateWebSocketProvider>
-    <AudioProvider>
-      <ContainerProvider>
-        <TasksProvider>
-          <AntiScheduleProvider>
-            <Outlet /> {/* 1. Outlet будет рендерить вложенные защищенные маршруты */}
-          </AntiScheduleProvider>
-        </TasksProvider>
-      </ContainerProvider>
-    </AudioProvider>
-  </UpdateWebSocketProvider>
+    <Outlet />
 ));
 
 // Memoize routes to prevent unnecessary re-renders
 const AppRoutes = memo(() => (
   <Routes>
+    {/* Публичные маршруты, доступные всем */}
     <Route path="/login" element={<SignInPage />} />
     <Route path="/register" element={<RegisterPage />} />
-    {/* 3. Оборачиваем защищенные маршруты в AuthenticatedAppProviders */}
-    <Route element={<RequireAuth loginPath="/login" />}>
+    <Route path="/pricing" element={<PricingPlans />} />
+    {/* Приватные маршруты, требующие аутентификации */}
+    <Route element={<RequireAuth />}>
       <Route element={<AuthenticatedAppProviders />}>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/second" element={<SecondPage />} />
-      {/* <Route path="/test" element={<TestPage />} /> */}
-      <Route path="/mobile" element={<MainContainerMobile />} />
-      <Route path="/admin" element={<AdminPanel />} />
-      <Route path="/pricing" element={<PricingPlans />} />
-      <Route path="/account" element={<AccountPage />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/mobile" element={<MainContainerMobile />} />
+        <Route path="/second" element={<SecondPage />} />
+        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/account" element={<AccountPage />} />
       </Route>
     </Route>
   </Routes>
 ));
 
+// Add display names for better debugging in React DevTools
+AuthenticatedAppProviders.displayName = 'AuthenticatedAppProviders';
+AppRoutes.displayName = 'AppRoutes';
+
 function App() {
   return (
     <div className="App">
-      <QueryClientProvider client={queryClient}>
-        <ErrorProvider>
-          <AuthProvider store={store}>
-            <Router future={{
-                      v7_fetcherPersist: true,
-                      v7_normalizeFormMethod: true,
-                      v7_partialHydration: true,
-                      v7_relativeSplatPath: true,
-                      v7_skipActionErrorRevalidation: true,
-                      v7_startTransition: true,
-                    }}>
-              <AppRoutes />
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <ErrorProvider>
+            <Router>
+              <AuthInitializer>
+                <AppRoutes />
+              </AuthInitializer>
             </Router>
-          </AuthProvider>
-        </ErrorProvider>
-        <ReactQueryDevtools initialIsOpen={false} />
-      </QueryClientProvider>
+          </ErrorProvider>
+          <ReactQueryDevtools initialIsOpen={false} />
+        </QueryClientProvider>
+      </Provider>
     </div>
   );
 }

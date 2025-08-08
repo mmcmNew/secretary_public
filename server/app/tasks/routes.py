@@ -23,6 +23,10 @@ from .entity_handlers import (
     link_group_list,
     delete_from_childes,
     link_task,
+    sort_items,
+    sort_items_in_container,
+    link_items,
+    move_items,
 )
 from .models import DataVersion, TaskTypeGroup, TaskType
 from app import db, cache
@@ -296,6 +300,85 @@ def link_task_route():
     return response, status_code
 
 
+
+
+@to_do_app.route('/tasks/sort_items', methods=['PUT'])
+@jwt_required()
+def sort_items_route():
+    data = request.get_json()
+    user_id = current_user.id
+    result, status_code = sort_items(data, user_id=user_id)
+    response = jsonify(result)
+    if status_code == 200:
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
+        response.set_etag(new_version)
+    return response, status_code
+
+@to_do_app.route('/tasks/sort_items_in_container', methods=['PUT'])
+@jwt_required()
+def sort_items_in_container_route():
+    data = request.get_json()
+    user_id = current_user.id
+    result, status_code = sort_items_in_container(data, user_id=user_id)
+    response = jsonify(result)
+    if status_code == 200:
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
+        response.set_etag(new_version)
+    return response, status_code
+
+@to_do_app.route('/tasks/link_items', methods=['PUT'])
+@jwt_required()
+def link_items_route():
+    data = request.get_json()
+    user_id = current_user.id
+    result, status_code = link_items(data, user_id=user_id)
+    response = jsonify(result)
+    if status_code == 200:
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
+        response.set_etag(new_version)
+    return response, status_code
+
+@to_do_app.route('/tasks/move_items', methods=['PUT'])
+@jwt_required()
+def move_items_route():
+    data = request.get_json()
+    user_id = current_user.id
+    result, status_code = move_items(data, user_id=user_id)
+    response = jsonify(result)
+    if status_code == 200:
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
+        response.set_etag(new_version)
+    return response, status_code
+
+@to_do_app.route('/tasks/move_list_or_group', methods=['PUT'])
+@jwt_required()
+def move_list_or_group_route():
+    """Legacy route for backward compatibility"""
+    data = request.get_json()
+    user_id = current_user.id
+    action = data.get('action', 'move')
+    
+    if action == 'sort':
+        # Определяем тип сортировки
+        if 'container_id' in data:
+            result, status_code = sort_items_in_container(data, user_id=user_id)
+        else:
+            result, status_code = sort_items(data, user_id=user_id)
+    elif action == 'link':
+        result, status_code = link_items(data, user_id=user_id)
+    else:
+        result, status_code = move_items(data, user_id=user_id)
+    
+    response = jsonify(result)
+    if status_code == 200:
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
+        response.set_etag(new_version)
+    return response, status_code
 
 
 @to_do_app.route('/tasks/fields_config', methods=['GET'])

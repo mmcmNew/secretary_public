@@ -3,29 +3,29 @@ import PropTypes from 'prop-types';
 import { Button, CircularProgress } from '@mui/material';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import MDNotionEditor from './JournalEditor/MDNotionEditor';
-import { apiGet } from '../utils/api';
+// import { apiGet } from '../utils/api';
 
 export default function FileRenderer({ url }) {
   const extension = url.split('.').pop().toLowerCase();
   const [content, setContent] = useState(null);
   const [blobUrl, setBlobUrl] = useState(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    if (['md', 'txt'].includes(extension)) {
-      apiGet(url, { responseType: 'text' })
-        .then(r => { if (isMounted) setContent(r.data); })
-        .catch(() => { if (isMounted) setContent(''); });
-    } else {
-      apiGet(url, { responseType: 'blob' })
-        .then(r => { if (isMounted) setBlobUrl(URL.createObjectURL(r.data)); })
-        .catch(() => { if (isMounted) setBlobUrl(''); });
-    }
-    return () => {
-      isMounted = false;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-    };
-  }, [url, extension]);
+  // useEffect(() => {
+  //   let isMounted = true;
+  //   if (['md', 'txt'].includes(extension)) {
+  //     apiGet(url, { responseType: 'text' })
+  //       .then(r => { if (isMounted) setContent(r.data); })
+  //       .catch(() => { if (isMounted) setContent(''); });
+  //   } else {
+  //     apiGet(url, { responseType: 'blob' })
+  //       .then(r => { if (isMounted) setBlobUrl(URL.createObjectURL(r.data)); })
+  //       .catch(() => { if (isMounted) setBlobUrl(''); });
+  //   }
+  //   return () => {
+  //     isMounted = false;
+  //     if (blobUrl) URL.revokeObjectURL(blobUrl);
+  //   };
+  // }, [url, extension]);
 
   if (['md', 'txt'].includes(extension)) {
     if (content === null) return <CircularProgress size={20} />;

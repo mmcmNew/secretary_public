@@ -8,6 +8,7 @@ import dashboardReducer from './dashboardSlice';
 import timersReducer from './timersSlice';
 import uiReducer from './uiSlice';
 import authReducer from './authSlice';
+import todoLayoutReducer from './todoLayoutSlice';
 import { apiSlice } from './api/apiSlice';
 import { tasksApi } from './tasksSlice';
 import { listsApi } from './listsSlice';
@@ -24,15 +25,10 @@ export const store = configureStore({
     timers: timersReducer,
     ui: uiReducer,
     auth: authReducer,
+    todoLayout: todoLayoutReducer,
     [apiSlice.reducerPath]: apiSlice.reducer,
-    [tasksApi.reducerPath]: tasksApi.reducer,
-    [listsApi.reducerPath]: listsApi.reducer,
-    [calendarApi.reducerPath]: calendarApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
-      .concat(apiSlice.middleware)
-      .concat(tasksApi.middleware)
-      .concat(listsApi.middleware)
-      .concat(calendarApi.middleware),
+      .concat(apiSlice.middleware),
 });

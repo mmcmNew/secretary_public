@@ -1,29 +1,28 @@
-import React, { useState } from 'react';
-import useSignOut from 'react-auth-kit/hooks/useSignOut';
-import useAuthUser from 'react-auth-kit/hooks/useAuthUser';
+import { useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from './store/authSlice';
 import { Button, Container, Typography, Box, Card, CardContent, Chip, Tabs, Tab } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import JournalManager from './components/JournalManager/JournalManager.jsx';
 import TaskTypeManager from './components/TaskTypeManager/TaskTypeManager.jsx';
-import { apiGet } from './utils/api.js';
+// import { apiGet } from './utils/api.js';
 
 export default function AccountPage() {
-  const auth = useAuthUser();
-  const signOut = useSignOut();
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
   const { data: subscription } = useQuery(['subscription'], async () => {
-    const { data } = await apiGet('/api/user/subscription');
-    return data;
+    // const { data } = await apiGet('/api/user/subscription');
+    // return data;
   });
-  const user = auth();
+  const { user } = useSelector(state => state.auth);
 
   if (!user) return null;
 
   const handleLogout = () => {
-    signOut();
+    dispatch(logout());
     navigate('/login');
   };
 

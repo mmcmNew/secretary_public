@@ -1,9 +1,8 @@
-import React from 'react';
 import { PropTypes } from 'prop-types';
 import { Box, Typography, List, ListItem, ListItemText, IconButton } from '@mui/material';
 import { Download, Delete } from '@mui/icons-material';
 import FileRenderer from '../FileRenderer';
-import { apiDelete, apiGet } from '../../utils/api';
+// import { apiDelete, apiGet } from '../../utils/api';
 
 export default function JournalFilesList({ files, journalType, entryId, onFileDelete }) {
     if (!files || files.length === 0) {
@@ -17,15 +16,15 @@ export default function JournalFilesList({ files, journalType, entryId, onFileDe
 
     const handleDownload = async (file) => {
         try {
-            const response = await apiGet(fileUrl(file, false), { responseType: 'blob' });
-            const url = window.URL.createObjectURL(response.data);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = file.original_filename;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            // // const response = await apiGet(fileUrl(file, false), { responseType: 'blob' });
+            // const url = window.URL.createObjectURL(response.data);
+            // const a = document.createElement('a');
+            // a.href = url;
+            // a.download = file.original_filename;
+            // document.body.appendChild(a);
+            // a.click();
+            // window.URL.revokeObjectURL(url);
+            // document.body.removeChild(a);
         } catch (error) {
             console.error('Ошибка при скачивании файла:', error);
         }
@@ -34,10 +33,10 @@ export default function JournalFilesList({ files, journalType, entryId, onFileDe
     const handleDelete = async (file) => {
         if (window.confirm(`Удалить файл "${file.original_filename}"?`)) {
             try {
-                await apiDelete(`/api/journals/${journalType}/${entryId}/files/${file.id}`);
-                if (onFileDelete) {
-                    onFileDelete(file.id);
-                }
+                // await apiDelete(`/api/journals/${journalType}/${entryId}/files/${file.id}`);
+                // if (onFileDelete) {
+                //     onFileDelete(file.id);
+                // }
             } catch (error) {
                 console.error('Ошибка при удалении файла:', error);
             }

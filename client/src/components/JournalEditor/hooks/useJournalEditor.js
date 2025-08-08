@@ -2,17 +2,17 @@ import { useState, useEffect, useReducer, useCallback, useRef } from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
-  aiPostGenerate,
-  sendMessageToAI,
-  post_record_to_socials,
-  fetchAllFilters,
-  fetchFilteredData,
-  fetchTableData,
-  fetchDatesList,
-  fetchTablesList,
-  updateRecordFromBlocks,
-  generateImageForRecord,
-} from '../../Chat/API/apiHandlers';
+  useSendMessageToAIMutation,
+  useAiPostGenerateMutation,
+  usePostRecordToSocialsMutation,
+  useGetAllFiltersQuery,
+  useGetFilteredDataMutation,
+  useGetTableDataQuery,
+  useGetDatesListQuery,
+  useGetTablesListQuery,
+  useUpdateRecordFromBlocksMutation,
+  useGenerateImageForRecordMutation,
+} from '../../../store/chatApi';
 
 dayjs.extend(utc);
 
@@ -77,17 +77,23 @@ export default function useJournalEditor() {
   const editorRefs = useRef([]);
   const [editors, dispatchEditors] = useReducer(editorsReducer, []);
 
+  const { data: tablesListData } = useGetTablesListQuery();
+  const [sendMessageToAI] = useSendMessageToAIMutation();
+  const [aiPostGenerate] = useAiPostGenerateMutation();
+  const [postRecordToSocials] = usePostRecordToSocialsMutation();
+  const { data: allFiltersData } = useGetAllFiltersQuery(tableName, { skip: !tableName });
+  const [getFilteredData] = useGetFilteredDataMutation();
+  const { data: tableData } = useGetTableDataQuery({ tableName, date: calendarDate.toISOString() }, { skip: !tableName });
+  const { data: datesListData } = useGetDatesListQuery({ tableName, month: calendarDate.month() + 1, year: calendarDate.year(), timezone: new Date().getTimezoneOffset() }, { skip: !tableName });
+  const [updateRecordFromBlocks] = useUpdateRecordFromBlocksMutation();
+  const [generateImageForRecord] = useGenerateImageForRecordMutation();
+
+
   useEffect(() => {
-    let ignore = false;
-    const fetchTables = async () => {
-      const data = await fetchTablesList();
-      if (!ignore) setTablesList(data);
-    };
-    fetchTables();
-    return () => {
-      ignore = true;
-    };
-  }, []);
+    if (tablesListData) {
+      setTablesList(tablesListData.tables);
+    }
+  }, [tablesListData]);
 
   useEffect(() => {
     const order = tableSurvey?.fields?.map((f) => f.field_id) || [];
@@ -130,8 +136,9 @@ export default function useJournalEditor() {
 
       if (!tableName) return;
 
-      const data = await fetchTableData(tableName, utcDate.toISOString());
-      setRecords(data.records || []);
+      if (tableData) {
+        setRecords(tableData.records || []);
+      }
 
       const formattedDate = utcDate.format('YYYY-MM-DD');
       const pageIndex = allRecordDates.findIndex(
@@ -142,7 +149,7 @@ export default function useJournalEditor() {
         setCurrentPage(pageIndex + 1);
       }
     },
-    [tableName, allRecordDates]
+    [tableName, allRecordDates, tableData]
   );
 
   const resetFilters = useCallback(() => {
@@ -165,7 +172,7 @@ export default function useJournalEditor() {
 
     setLoadingFilteredRecords(true);
     try {
-      const data = await fetchFilteredData(tableName, filters);
+      const data = await getFilteredData({ tableName, filters }).unwrap();
       setRecords(data.records || []);
     } finally {
       setLoadingFilteredRecords(false);
@@ -176,14 +183,16 @@ export default function useJournalEditor() {
     if (!timezone) {
       timezone = new Date().getTimezoneOffset();
     }
-    const data = await fetchDatesList(name, month, year, timezone);
-    const dates = data.days || [];
-    const survey = data.survey;
-    setTableSurvey(survey);
-    const newAllRecoredsDates = data.unique_dates || [];
-    setAllRecordsDates(newAllRecoredsDates);
-    const formattedDates = dates.map((date) => dayjs(date).format('YYYY-MM-DD'));
-    return formattedDates;
+    if (datesListData) {
+      const dates = datesListData.days || [];
+      const survey = datesListData.survey;
+      setTableSurvey(survey);
+      const newAllRecoredsDates = datesListData.unique_dates || [];
+      setAllRecordsDates(newAllRecoredsDates);
+      const formattedDates = dates.map((date) => dayjs(date).format('YYYY-MM-DD'));
+      return formattedDates;
+    }
+    return [];
   }
 
   const handlePaginationDateChange = useCallback(
@@ -198,10 +207,11 @@ export default function useJournalEditor() {
 
       if (!tableName) return;
 
-      const data = await fetchTableData(tableName, newDate);
-      setRecords(data.records || []);
+      if (tableData) {
+        setRecords(tableData.records || []);
+      }
     },
-    [allRecordDates, tableName]
+    [allRecordDates, tableName, tableData]
   );
 
   const handleTableChange = useCallback(
@@ -217,10 +227,11 @@ export default function useJournalEditor() {
       const formattedDates = await fetchMarkedDates(newValue, month, year);
       setMarkedDates(formattedDates);
 
-      const allOptions = await fetchAllFilters(newValue);
-      setDropdownValues(allOptions);
+      if (allFiltersData) {
+        setDropdownValues(allFiltersData);
+      }
     },
-    [calendarDate]
+    [calendarDate, allFiltersData]
   );
 
   const handleMonthChange = useCallback(
@@ -249,7 +260,7 @@ export default function useJournalEditor() {
         }
       }
 
-      await updateRecordFromBlocks(tableName, [record]);
+      await updateRecordFromBlocks({ tableName, records: [record] }).unwrap();
 
       dispatchEditors({ type: 'SET_STATUS', index, key: 'saveStatus', value: 'success' });
       dispatchEditors({ type: 'CLEAR_UNSAVED', index });
@@ -258,7 +269,7 @@ export default function useJournalEditor() {
         dispatchEditors({ type: 'SET_STATUS', index, key: 'saveStatus', value: 'idle' });
       }, 3000);
     },
-    [tableSurvey, tableName, editors]
+    [tableSurvey, tableName, editors, updateRecordFromBlocks]
   );
 
   const shouldDisableDate = useCallback(
@@ -291,7 +302,7 @@ export default function useJournalEditor() {
     if (!records_ids.length) return;
     setIsPostGenerate('loading');
     try {
-      const result = await aiPostGenerate({ records_ids, table_name: tableName, type: 'post' });
+      const result = await aiPostGenerate({ records_ids, table_name: tableName, type: 'post' }).unwrap();
       if (!result) {
         console.error('Ошибка при генерации поста:', 'Нет ответа от ИИ');
         setIsPostGenerate('error');
@@ -311,7 +322,7 @@ export default function useJournalEditor() {
         setIsPostGenerate('wait');
       }, 5000);
     }
-  }, [editors, tableName]);
+  }, [editors, tableName, aiPostGenerate]);
 
   const handlePostRecordToSocials = useCallback(
     async (index, type = 'post') => {
@@ -327,7 +338,7 @@ export default function useJournalEditor() {
       try {
         dispatchEditors({ type: 'SET_STATUS', index, key: 'sendToSocialsStatus', value: 'loading' });
 
-        await post_record_to_socials({ records_ids: [recordId], table_name: tableName, type });
+        await postRecordToSocials({ records_ids: [recordId], table_name: tableName, type }).unwrap();
 
         dispatchEditors({ type: 'SET_STATUS', index, key: 'sendToSocialsStatus', value: 'success' });
         setTimeout(() => {
@@ -340,7 +351,7 @@ export default function useJournalEditor() {
         }, 8000);
       }
     },
-    [editors, tableName]
+    [editors, tableName, postRecordToSocials]
   );
 
   const handleAIEnhance = useCallback(
@@ -365,7 +376,7 @@ export default function useJournalEditor() {
 
       try {
         dispatchEditors({ type: 'SET_STATUS', index, key: 'aiResponseStatus', value: 'loading' });
-        const result = await sendMessageToAI({ record: mdRecord, table_name: tableName, type });
+        const result = await sendMessageToAI({ record: mdRecord, table_name: tableName, type }).unwrap();
 
         dispatchEditors({ type: 'SET_AI_RESPONSE', index, value: result || 'Нет ответа' });
         dispatchEditors({ type: 'SET_STATUS', index, key: 'aiResponseStatus', value: 'idle' });
@@ -374,7 +385,7 @@ export default function useJournalEditor() {
         dispatchEditors({ type: 'SET_STATUS', index, key: 'aiResponseStatus', value: 'idle' });
       }
     },
-    [editors, tableName]
+    [editors, tableName, sendMessageToAI]
   );
 
   const handleGenerateImage = useCallback(
@@ -394,14 +405,14 @@ export default function useJournalEditor() {
           table_name: tableName,
           record_id: recordId,
           text,
-        });
+        }).unwrap();
         dispatchEditors({ type: 'SET_STATUS', index, key: 'imageGenerateStatus', value: 'idle' });
       } catch (e) {
         alert('Ошибка генерации изображения: ' + (e?.message || e));
         dispatchEditors({ type: 'SET_STATUS', index, key: 'imageGenerateStatus', value: 'idle' });
       }
     },
-    [tableName, editors]
+    [tableName, editors, generateImageForRecord]
   );
 
   return {

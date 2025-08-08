@@ -1,6 +1,6 @@
 import { PropTypes } from 'prop-types';
 import { useEffect, useMemo, useContext } from "react";
-import useContainer from "../DraggableComponents/useContainer";
+import { useUI } from '../../store/useUI';
 import useCalendar from './hooks/useCalendar';
 import CalendarComponent from "./CalendarComponent";
 import { ErrorContext } from '../../contexts/ErrorContext';
@@ -15,7 +15,7 @@ export default function CalendarLayout({
   calendarSettingsProp = null,
 }) {
   const { setError, setSuccess } = useContext(ErrorContext);
-  const { handleUpdateContent } = useContainer();
+  const { handleUpdateContent } = useUI();
 
   // Use the hook to get all calendar-related state and functions
   const calendarProps = useCalendar({ onSuccess: setSuccess, onError: setError });

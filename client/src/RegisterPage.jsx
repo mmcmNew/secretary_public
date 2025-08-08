@@ -1,95 +1,158 @@
-import React, { useState } from 'react';
-import { Avatar, Button, TextField, Box, Typography, Container } from '@mui/material';
+import { useState } from 'react';
+import PropTypes from 'prop-types';
+import { Avatar, Button, TextField, Box, Typography, Container, CircularProgress, Divider } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import { useNavigate } from 'react-router-dom';
-import useSignIn from 'react-auth-kit/hooks/useSignIn';
-import { apiPost } from './utils/api.js';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useRegisterMutation, useGetDemoTokenMutation } from './store/api/authApi';
 
-export default function RegisterPage() {
-  const signIn = useSignIn();
+export default function RegisterPage({ isModal = false, onAuthSuccess }) {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+
+  const [register, { isLoading, error }] = useRegisterMutation();
+  const [getDemoToken, { isLoading: isDemoLoading }] = useGetDemoTokenMutation();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-      const { data } = await apiPost('/api/register', { username, email, password });
-      const success = signIn({
-        auth: {
-          token: data.access_token,
-          type: 'Bearer',
-        },
-        refresh: data.refresh_token,
-        userState: data.user,
-      });
-      if (success) {
-        navigate('/');
+      await register({ username, email, password }).unwrap();
+      if (onAuthSuccess) {
+        onAuthSuccess();
       } else {
-        setError('Registration failed');
+        // Navigate to the page they tried to visit when they were redirected to register
+        const from = location.state?.from?.pathname || '/';
+        navigate(from, { replace: true });
       }
     } catch (err) {
-      if (err.response && err.response.data && err.response.data.error) {
-        setError(err.response.data.error);
-      } else {
-        setError(err.message || 'Registration failed');
-      }
+      // Ошибки обрабатываются состоянием error из useRegisterMutation
+      console.error('Failed to register: ', err);
     }
   };
 
-  return (
-    <Container component="main" maxWidth="xs">
-      <Box sx={{
-        marginTop: 8,
+  const renderContent = () => (
+    <Box
+      sx={{
+        marginTop: isModal ? 2 : 8,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-      }}>
+      }}
+    >
+      {!isModal && (
         <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
           <LockOutlinedIcon />
         </Avatar>
-        <Typography component="h1" variant="h5">
-          Register
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-          <TextField
-            margin="normal"
-            required
+      )}
+      <Typography component="h1" variant="h5">
+        Register
+      </Typography>
+      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+        <TextField
+          margin="normal"
+          required
+          fullWidth
+          id="username"
+          label="Username"
+          name="username"
+          autoComplete="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          error={!!error?.data?.error?.includes('Username')}
+        />
+        <TextField
+          margin="normal"
+          required
+          fullWidth
+          id="email"
+          label="Email Address"
+          name="email"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          error={!!error?.data?.error?.includes('Email')}
+        />
+        <TextField
+          margin="normal"
+          required
+          fullWidth
+          name="password"
+          label="Password"
+          type="password"
+          id="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          error={!!error?.data?.error?.includes('Password')}
+        />
+        {error && (
+          <Typography color="error" variant="body2" sx={{ mt: 2 }}>
+            {error.data?.error || 'An unexpected error occurred.'}
+          </Typography>
+        )}
+        <Button
+          type="submit"
+          fullWidth
+          variant="contained"
+          sx={{ mt: 3, mb: 2 }}
+          disabled={isLoading}
+        >
+          {isLoading ? <CircularProgress size={24} /> : 'Register'}
+        </Button>
+        {!isModal && (
+          <Button
             fullWidth
-            label="Username"
-            autoFocus
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            label="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          {error && (
-            <Typography color="error" variant="body2" sx={{ mt: 1 }}>
-              {error}
-            </Typography>
-          )}
-          <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
-            Register
+            variant="outlined"
+            onClick={() => navigate('/login')}
+            sx={{ mb: 2 }}
+          >
+            Sign In
           </Button>
-        </Box>
+        )}
+        <Divider sx={{ my: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            или
+          </Typography>
+        </Divider>
+        <Button
+          fullWidth
+          variant="outlined"
+          color="primary"
+          onClick={async () => {
+            try {
+              await getDemoToken().unwrap();
+              if (onAuthSuccess) {
+                onAuthSuccess();
+              } else {
+                // Navigate to the page they tried to visit when they were redirected to register
+                const from = location.state?.from?.pathname || '/';
+                navigate(from, { replace: true });
+              }
+            } catch (err) {
+              console.error('Failed to get demo access:', err);
+            }
+          }}
+          disabled={isDemoLoading}
+        >
+          {isDemoLoading ? <CircularProgress size={24} /> : 'Попробовать демо-режим'}
+        </Button>
       </Box>
+    </Box>
+  );
+
+  if (isModal) {
+    return renderContent();
+  }
+
+  return (
+    <Container component="main" maxWidth="xs">
+      {renderContent()}
     </Container>
   );
 }
+
+RegisterPage.propTypes = {
+  isModal: PropTypes.bool,
+  onAuthSuccess: PropTypes.func,
+};

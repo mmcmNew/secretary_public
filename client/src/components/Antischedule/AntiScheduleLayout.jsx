@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { Box } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import AntischeduleComponent from "./AntischeduleComponent";
-import useContainer from "../DraggableComponents/useContainer";
+import { useUI } from "../../store/useUI";
 import { useTasks } from "../ToDo/hooks/useTasks";
 import useAntiSchedule from "../ToDo/hooks/useAntiSchedule";
 import PropTypes from "prop-types";
@@ -132,7 +132,7 @@ export default function AntiScheduleLayout({
       setFocusSettings(focusSettingsProp);
     }
   }, [focusSettingsProp]);
-  const { handleContainerResize, handleUpdateContent } = useContainer();
+  const { handleContainerResize, handleUpdateContent } = useUI();
 
   const handleSaveSettings = (settings) => {
     try {

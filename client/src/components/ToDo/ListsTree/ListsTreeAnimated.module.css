@@ -1,0 +1,272 @@
+/* Корневой контейнер дерева */
+.treeRoot {
+  height: 100%;
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.treeRoot ul {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.treeRoot li {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.treeRoot li::marker {
+  display: none !important;
+}
+
+/* Узел дерева */
+.root {
+  align-items: center;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  height: 36px;
+  padding-inline-end: 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 1px 4px;
+  transition: all 0.2s ease;
+}
+
+.root:hover {
+  background-color: #f5f5f5;
+}
+
+.root.selected {
+  background-color: #e3f2fd;
+}
+
+.root.selected:hover {
+  background-color: #e3f2fd;
+}
+
+/* Иконка разворачивания */
+.expandIconWrapper {
+  align-items: center;
+  font-size: 0;
+  cursor: pointer;
+  display: flex;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+  transition: transform ease 0.2s;
+  transform: rotate(0deg);
+}
+
+.expandIconWrapper.isOpen {
+  transform: rotate(90deg);
+}
+
+.expandIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.expandIcon:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* Иконка типа */
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+/* Текст */
+.labelWrapper {
+  padding-inline-start: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editField {
+  width: 100% !important;
+}
+
+.editField .MuiInput-root {
+  font-size: 0.875rem;
+}
+
+.editField .MuiInput-input {
+  padding: 2px 0;
+}
+
+/* Бейдж */
+.badgeWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+}
+
+/* Состояния перетаскивания */
+.draggingSource {
+  opacity: 0.3;
+}
+
+.dropTarget {
+  background-color: #e8f0fe !important;
+  border: 2px dashed #1976d2;
+  border-radius: 6px;
+}
+
+/* Превью при перетаскивании */
+.dragPreview {
+  align-items: center;
+  background-color: #1976d2;
+  border-radius: 8px;
+  box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  color: #fff;
+  display: inline-grid;
+  font-size: 14px;
+  gap: 8px;
+  grid-template-columns: auto 1fr auto;
+  padding: 8px 12px;
+  pointer-events: none;
+  max-width: 250px;
+}
+
+.dragPreviewIcon,
+.dragPreviewLabel,
+.dragPreviewBadge {
+  align-items: center;
+  display: flex;
+}
+
+.dragPreviewLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.dragPreviewBadge {
+  margin-left: 4px;
+}
+
+/* Placeholder для показа места вставки */
+.placeholder {
+  height: 2px;
+  margin: 2px 0;
+  position: relative;
+}
+
+.placeholderLine {
+  height: 2px;
+  background-color: #1976d2;
+  border-radius: 1px;
+  position: relative;
+  animation: placeholderPulse 1.5s ease-in-out infinite;
+}
+
+.placeholderLine::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -2px;
+  width: 6px;
+  height: 6px;
+  background-color: #1976d2;
+  border-radius: 50%;
+}
+
+.placeholderLine::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: -2px;
+  width: 6px;
+  height: 6px;
+  background-color: #1976d2;
+  border-radius: 50%;
+}
+
+.placeholderText {
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  transform: translateX(-50%);
+  background-color: #1976d2;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+@keyframes placeholderPulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Drop зоны */
+.withDropZones {
+  position: relative;
+}
+
+.dropZoneLeft,
+.dropZoneRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.dropZoneLeft {
+  left: 0;
+  background: linear-gradient(90deg, rgba(25, 118, 210, 0.1) 0%, transparent 100%);
+  border-left: 3px solid #1976d2;
+}
+
+.dropZoneRight {
+  right: 0;
+  background: linear-gradient(270deg, rgba(255, 152, 0, 0.1) 0%, transparent 100%);
+  border-right: 3px solid #ff9800;
+}
+
+.withDropZones:hover .dropZoneLeft,
+.withDropZones:hover .dropZoneRight {
+  opacity: 1;
+}
+
+.dropZoneLeft svg {
+  color: #1976d2;
+}
+
+.dropZoneRight svg {
+  color: #ff9800;
+}

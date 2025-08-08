@@ -6,62 +6,42 @@ import CloseIcon from '@mui/icons-material/Close';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import useContainer from './useContainer';
-import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { removeContainer, updateContainer } from '../../store/dashboardSlice';
+import { setActiveId, setDraggingContainer } from '../../store/uiSlice';
 
-// Shallow comparison helper used for memoization
-const shallowEqual = (objA, objB) => {
-  if (objA === objB) return true;
-  if (!objA || !objB) return false;
-  const keysA = Object.keys(objA);
-  const keysB = Object.keys(objB);
-  if (keysA.length !== keysB.length) return false;
-  for (const key of keysA) {
-    if (objA[key] !== objB[key]) return false;
-  }
-  return true;
-};
-
-const DraggableContent = React.memo(
-  ({ Component, componentProps, content }) =>
-    Component ? <Component {...componentProps} /> : content,
-  (prev, next) => shallowEqual(prev.componentProps, next.componentProps)
-);
+import ComponentLoader from './ComponentLoader';
 
 function DraggableContainer({ containerData }) {
-  const {
-    handleActive,
-    handleClose,
-    handleMinimizeToggle,
-    handleLock,
-    handleContainerResize,
-    handleContainerPosition,
-    themeMode,
-    windowOrder,
-    setDraggingContainer,
-  } = useContainer();
+  const dispatch = useDispatch();
+  const { themeMode, windowOrder } = useSelector(state => state.ui);
 
   const {
     id, size, position, isLocked, isResizable,
     isDisableDragging, isMinimized, maxSize, minSize,
-    name, content, isLockAspectRatio,
-    componentType: Component, componentProps
+    name, isLockAspectRatio,
+    componentProps, type
   } = containerData;
 
-  useEffect(() => () => setDraggingContainer((prev) => (prev === id ? null : prev)), [id, setDraggingContainer]);
+  const handleActive = () => dispatch(setActiveId(id));
+  const handleClose = () => dispatch(removeContainer(id));
+  const handleMinimizeToggle = () => dispatch(updateContainer({ id, data: { isMinimized: !isMinimized } }));
+  const handleLock = () => dispatch(updateContainer({ id, data: { isLocked: !isLocked } }));
+  const handleContainerResize = (newSize, newPosition) => dispatch(updateContainer({ id, data: { size: newSize, position: newPosition } }));
+  const handleContainerPosition = (newPosition) => dispatch(updateContainer({ id, data: { position: newPosition } }));
 
   return (
     <Rnd
       id={id} // добавляем ID для контейнера
       size={{ width: size.width, height: size.height }}
       position={{ x: position.x, y: position.y }}
-      onDragStart={() => setDraggingContainer(id)}
+      onDragStart={() => dispatch(setDraggingContainer(id))}
       onDragStop={(e, d) => {
-        handleContainerPosition(id, { x: d.x, y: d.y });
-        setDraggingContainer(null);
+        handleContainerPosition({ x: d.x, y: d.y });
+        dispatch(setDraggingContainer(null));
       }}
       onResizeStop={(e, direction, ref, delta, position) => {
-        handleContainerResize(id, { width: ref.offsetWidth, height: ref.offsetHeight }, position);
+        handleContainerResize({ width: ref.offsetWidth, height: ref.offsetHeight }, position);
       }}
       enableResizing={!isLocked && isResizable}
       disableDragging={isLocked || isDisableDragging}
@@ -69,7 +49,7 @@ function DraggableContainer({ containerData }) {
               zIndex: windowOrder.indexOf(id) + 1,
               borderRadius: 8, border: '1px solid' }}
       bounds="parent"
-      onMouseDown={() => handleActive(id)}
+      onMouseDown={handleActive}
       lockAspectRatio={isLockAspectRatio}
       dragHandleClassName="drag-handle"
       maxWidth={maxSize?.width}
@@ -109,13 +89,13 @@ function DraggableContainer({ containerData }) {
             <Typography variant="body2">{name}</Typography>
           </Box>
           <Box sx={{ display: 'flex' }}>
-            <IconButton size="small" onClick={() => handleMinimizeToggle(id)}>
+            <IconButton size="small" onClick={handleMinimizeToggle}>
               <ExpandLessIcon />
             </IconButton>
-            <IconButton size="small" onClick={() => handleLock(id)}>
+            <IconButton size="small" onClick={handleLock}>
               {isLocked ? <LockIcon /> : <LockOpenIcon />}
             </IconButton>
-            <IconButton size="small" onClick={() => handleClose(id)}>
+            <IconButton size="small" onClick={handleClose}>
               <CloseIcon />
             </IconButton>
           </Box>
@@ -128,11 +108,7 @@ function DraggableContainer({ containerData }) {
             borderBottomRightRadius: 8,
           }}
         >
-          <DraggableContent
-            Component={Component}
-            componentProps={componentProps}
-            content={content}
-          />
+          <ComponentLoader type={type} {...componentProps} />
         </Box>
       </Paper>
     </Rnd>
@@ -163,10 +139,9 @@ DraggableContainer.propTypes = {
       height: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     }),
     name: PropTypes.string,
-    content: PropTypes.node,
     isLockAspectRatio: PropTypes.bool,
-    componentType: PropTypes.elementType,
     componentProps: PropTypes.object,
+    type: PropTypes.string.isRequired,
   }).isRequired,
 };
 
