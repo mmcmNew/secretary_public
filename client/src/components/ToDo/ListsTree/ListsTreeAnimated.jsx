@@ -1,17 +1,15 @@
-import React, { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Tree } from '@minoru/react-dnd-treeview';
-import { Badge, Box, Typography, TextField } from '@mui/material';
+import { Badge, Typography, TextField } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import FolderIcon from '@mui/icons-material/Folder';
 import ListIcon from '@mui/icons-material/List';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import ArrowRightIcon from '@mui/icons-material/ArrowRight';
-import LinkIcon from '@mui/icons-material/Link';
-import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import PropTypes from 'prop-types';
 import styles from './ListsTreeAnimated.module.css';
-import DropActionMenu from './DropActionMenu';
+import ErrorBoundary from '../../ErrorBoundary';
 
 const getNodeIcon = (type) => {
   switch (type) {
@@ -66,31 +64,19 @@ const CustomNode = ({ node, depth, isOpen, onToggle, selectedId, onSelect, onRen
     handleSave();
   };
 
-  const renderDropZones = () => {
-    if (dropMode !== 'zones' || !node.droppable) return null;
-    
-    return (
-      <>
-        <div className={styles.dropZoneLeft} title="Связать">
-          <LinkIcon fontSize="small" />
-        </div>
-        <div className={styles.dropZoneRight} title="Переместить">
-          <DriveFileMoveIcon fontSize="small" />
-        </div>
-      </>
-    );
-  };
-
   return (
     <div
       className={`${styles.root} ${selectedId === node.id ? styles.selected : ''} ${dropMode === 'zones' && node.droppable ? styles.withDropZones : ''}`}
       style={{ paddingInlineStart: indent }}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
+      role="button" // Added role for accessibility
+      tabIndex={0}   // Added tabIndex for accessibility
+      onKeyDown={(e) => e.key === 'Enter' && handleClick()} // Added keyboard listener
     >
       <div className={`${styles.expandIconWrapper} ${isOpen ? styles.isOpen : ''}`}>
         {node.droppable && (
-          <div onClick={handleToggle} className={styles.expandIcon}>
+          <div onClick={handleToggle} className={styles.expandIcon} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && handleToggle(e)}>
             <ArrowRightIcon fontSize="small" />
           </div>
         )}
@@ -109,6 +95,7 @@ const CustomNode = ({ node, depth, isOpen, onToggle, selectedId, onSelect, onRen
             onBlur={handleBlur}
             size="small"
             variant="standard"
+            // eslint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
             className={styles.editField}
           />
@@ -122,8 +109,8 @@ const CustomNode = ({ node, depth, isOpen, onToggle, selectedId, onSelect, onRen
       <div className={styles.badgeWrapper}>
         {node.data?.unfinished_tasks_count !== undefined && (
           node.data.unfinished_tasks_count > 0 ? (
-            <Badge 
-              badgeContent={node.data.unfinished_tasks_count} 
+            <Badge
+              badgeContent={node.data.unfinished_tasks_count}
               color="primary"
               size="small"
             />
@@ -132,10 +119,29 @@ const CustomNode = ({ node, depth, isOpen, onToggle, selectedId, onSelect, onRen
           )
         )}
       </div>
-      
-      {renderDropZones()}
     </div>
   );
+};
+
+CustomNode.displayName = 'CustomNode';
+
+CustomNode.propTypes = {
+  node: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    text: PropTypes.string.isRequired,
+    droppable: PropTypes.bool,
+    data: PropTypes.shape({
+      type: PropTypes.string,
+      unfinished_tasks_count: PropTypes.number,
+    }),
+  }).isRequired,
+  depth: PropTypes.number.isRequired,
+  isOpen: PropTypes.bool.isRequired,
+  onToggle: PropTypes.func.isRequired,
+  selectedId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  onSelect: PropTypes.func,
+  onRename: PropTypes.func,
+  dropMode: PropTypes.string,
 };
 
 const CustomDragPreview = ({ monitorProps }) => {
@@ -162,133 +168,147 @@ const CustomDragPreview = ({ monitorProps }) => {
   );
 };
 
-const ListsTreeAnimated = ({ treeData, onSelect, selectedId, onDrop, onRename, dropMode = 'menu' }) => {
-  const [menuState, setMenuState] = useState({ open: false, anchorPosition: null, pendingDrop: null });
-  const canDrag = (node) => node.data?.type !== 'standard';
+CustomDragPreview.displayName = 'CustomDragPreview';
 
-  const canDrop = (tree, { dragSource, dropTarget, dropTargetId }) => {
+CustomDragPreview.propTypes = {
+    monitorProps: PropTypes.shape({
+        item: PropTypes.shape({
+            text: PropTypes.string,
+            data: PropTypes.shape({
+                type: PropTypes.string,
+                unfinished_tasks_count: PropTypes.number
+            })
+        })
+    }).isRequired
+};
+
+const ListsTreeAnimated = ({ treeData, rootId = 0, onSelect, selectedId, onDrop, onRename, dropMode = 'menu' }) => {
+
+  // memoize treeData если родитель передаёт новый массив каждый рендер:
+  const memoTree = useMemo(() => treeData, [treeData]);
+
+  // canDrag — мемоизируем, без сайд-эффектов
+  const canDrag = useCallback((node) => node.data?.type !== 'standard', []);
+
+  // canDrop — мемоизируем. Ни в коем случае не делать здесь setState.
+  const canDrop = (currentTree, { dragSourceId, dropTargetId, dragSource, dropTarget }) => {
+    if (dragSourceId === dropTargetId) return false;
     if (!dragSource) return false;
-    const sourceType = dragSource.data?.type;
-    const targetType = dropTarget?.data?.type;
-    
-    if (sourceType === 'standard') return false;
-    
-    // Корневой уровень - разрешаем только сортировку одинаковых типов
-    if (dropTargetId === 0) {
-      // Проверяем, что в текущей секции есть элементы того же типа
-      const hasSameTypeInSection = tree.some(node => 
-        node.parent === 0 && node.data?.type === sourceType
-      );
-      return hasSameTypeInSection;
+
+    // 1. Cycle check: prevent dropping a node into its own descendants.
+    let current = dropTarget;
+    while (current) {
+      if (current.id === dragSourceId) return false;
+      current = currentTree.find(n => n.id === current.parent);
     }
     
-    // Перетаскивание в контейнеры
-    if (sourceType === 'list') return targetType === 'group' || targetType === 'project';
-    if (sourceType === 'group') return targetType === 'project';
-    
-    // Сортировка между элементами одного типа
-    return sourceType === targetType;
+    // 2. Check if the source node is a child of a group. If so, disable drop.
+    const sourceNode = currentTree.find(n => n.id === dragSourceId);
+    if (sourceNode && sourceNode.parent !== rootId && sourceNode.parent !== 0) {
+        const parentNode = currentTree.find(n => n.id === sourceNode.parent);
+        if (parentNode && parentNode.data?.type === 'group') {
+            return false;
+        }
+    }
+
+    // 3. Root-level drop logic
+    if (dropTargetId === rootId) {
+      if (rootId === 'projects') return dragSource?.data?.type === 'project';
+      if (rootId === 'default') return false;
+      return true;
+    }
+
+    if (!dropTarget) return false;
+
+    const srcType = dragSource.data?.type;
+    const tgtType = dropTarget.data?.type;
+
+    // 4. Type-based drop rules
+    if (srcType === 'project') return false;
+
+    if (srcType === 'group') {
+      return tgtType === 'project' || tgtType === 'group';
+    }
+
+    if (srcType === 'list') {
+      return tgtType === 'group' || tgtType === 'project';
+    }
+
+    return false;
   };
 
-  const handleDrop = (newTree, options) => {
-    const { dragSource, dropTarget } = options;
-    console.log('handleDrop', { newTree, options });
-    
-    // Проверяем, нужно ли показывать меню выбора действия
-    const isMovingToContainer = dragSource && dropTarget && dropTarget.droppable &&
-      ((dragSource.data?.type === 'list' && (dropTarget.data?.type === 'group' || dropTarget.data?.type === 'project')) ||
-       (dragSource.data?.type === 'group' && dropTarget.data?.type === 'project'));
-    
-    // Проверяем, происходит ли сортировка внутри того же контейнера
-    const isSortingWithinSameContainer = () => {
-      const sourceParent = treeData.find(node => node.id === dragSource.parent);
-      return sourceParent && sourceParent.id === dropTarget.id;
-    };
-    
-    const needsActionChoice = dropMode === 'menu' && 
-      isMovingToContainer && 
-      !isSortingWithinSameContainer();
-    
-    if (needsActionChoice) {
-      setMenuState({
-        open: true,
-        anchorPosition: { top: window.event?.clientY || 0, left: window.event?.clientX || 0 },
-        pendingDrop: { newTree, options }
+  // handleDrop — вызываем onDrop асинхронно, чтобы не конфликтовать с внутренними событиями библиотеки
+  const handleDrop = useCallback((newTree, options) => {
+    if (typeof onDrop === 'function') {
+      // асинхронный вызов, безопасный в контексте drag
+      queueMicrotask(() => {
+        try {
+          onDrop(rootId, newTree, options);
+        } catch (err) {
+          console.error('onDrop error:', err);
+        }
       });
-    } else {
-      if (onDrop) onDrop(newTree, options);
     }
-  };
+  }, [onDrop, rootId]);
 
-  const handleMenuAction = (action) => {
-    if (menuState.pendingDrop && onDrop) {
-      const { newTree, options } = menuState.pendingDrop;
-      onDrop(newTree, { ...options, action });
-    }
-    setMenuState({ open: false, anchorPosition: null, pendingDrop: null });
-  };
+  // мемоизируем render-функции превью и placeholder (они не должны содержать state)
+  const placeholderRender = useCallback((node, { depth }) => (
+    <div className={styles.placeholder} style={{ paddingInlineStart: depth * 24 }}>
+      <div className={styles.placeholderLine}>
+        <span className={styles.placeholderText}>Переместить сюда</span>
+      </div>
+    </div>
+  ), []);
 
-  const handleMenuClose = () => {
-    setMenuState({ open: false, anchorPosition: null, pendingDrop: null });
-  };
+  const dragPreviewRender = useCallback((monitorProps) => (
+    <CustomDragPreview monitorProps={monitorProps} />
+  ), []); // CustomDragPreview — мемоизированный
+
+  // memoize main node render
+  const nodeRender = useCallback((node, ctx) => (
+    <CustomNode
+      node={node}
+      depth={ctx.depth}
+      isOpen={ctx.isOpen}
+      onToggle={ctx.onToggle}
+      selectedId={selectedId}
+      onSelect={onSelect}
+      onRename={onRename}
+      dropMode={dropMode}
+    />
+  ), [selectedId, onSelect, onRename, dropMode]);
 
   return (
     <>
-      <Tree
-        tree={treeData}
-        rootId={0}
-        onDrop={handleDrop}
-        canDrag={canDrag}
-        canDrop={canDrop}
-        sort={true}
-        insertDroppableFirst={false}
-        enableAnimateExpand={true}
-        classes={{
-          root: styles.treeRoot,
-          draggingSource: styles.draggingSource,
-          dropTarget: styles.dropTarget,
-          placeholder: styles.placeholder
-        }}
-        placeholderRender={(node, { depth }) => (
-          <div 
-            className={styles.placeholder}
-            style={{ paddingInlineStart: depth * 24 }}
-          >
-            <div className={styles.placeholderLine}>
-              <span className={styles.placeholderText}>Переместить сюда</span>
-            </div>
-          </div>
-        )}
-        dragPreviewRender={(monitorProps) => (
-          <CustomDragPreview monitorProps={monitorProps} />
-        )}
-        render={(node, { depth, isOpen, onToggle }) => (
-          <CustomNode
-            node={node}
-            depth={depth}
-            isOpen={isOpen}
-            onToggle={onToggle}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            onRename={onRename}
-            dropMode={dropMode}
-          />
-        )}
-      />
-      <DropActionMenu
-        open={menuState.open}
-        anchorPosition={menuState.anchorPosition}
-        onClose={handleMenuClose}
-        onAction={handleMenuAction}
-        sourceType={menuState.pendingDrop?.options?.dragSource?.data?.type}
-        targetType={menuState.pendingDrop?.options?.dropTarget?.data?.type}
-      />
+      <ErrorBoundary>
+        <Tree
+          tree={memoTree}
+          rootId={rootId}
+          onDrop={handleDrop}
+          canDrag={canDrag}
+          canDrop={canDrop}
+          sort={false}
+          insertDroppableFirst={false}
+          enableAnimateExpand={true}
+          dropTargetOffset={10}
+          classes={useMemo(()=>({
+            root: styles.treeRoot,
+            draggingSource: styles.draggingSource,
+            dropTarget: styles.dropTarget,
+            placeholder: styles.placeholder
+          }), [])}
+          placeholderRender={placeholderRender}
+          dragPreviewRender={dragPreviewRender}
+          render={nodeRender}
+        />
+      </ErrorBoundary>
     </>
   );
 };
 
 ListsTreeAnimated.propTypes = {
   treeData: PropTypes.array.isRequired,
+  rootId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   onSelect: PropTypes.func,
   selectedId: PropTypes.string,
   onDrop: PropTypes.func,
