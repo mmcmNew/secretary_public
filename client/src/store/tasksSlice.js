@@ -13,9 +13,6 @@ const tasksSlice = createSlice({
     isFetching: false, // Добавляем статус загрузки
   },
   reducers: {
-    setSelectedTaskId: (state, action) => {
-      state.selectedTaskId = action.payload;
-    },
     setTasksVersion: (state, action) => { // Добавляем редьюсер для установки версии
       state.version = action.payload;
     },
@@ -31,6 +28,10 @@ export const tasksApi = apiSlice.injectEndpoints({
     getTasks: builder.query({
       query: (listId) => `/tasks/get_tasks?list_id=${listId}`,
       providesTags: (result, error, listId) => [{ type: 'Task', id: listId }],
+      transformResponse: (response) => {
+        console.log('Transforming response from getTasks:', response);
+        return response.tasks || [];
+      },
     }),
     getTasksByIds: builder.query({
       query: (ids) => `/tasks/get_tasks_by_ids?ids=${ids.join(',')}`,

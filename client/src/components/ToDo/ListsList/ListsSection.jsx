@@ -1,116 +1,123 @@
-import { List, Divider } from '@mui/material';
+import { List } from '@mui/material';
 import PropTypes from 'prop-types';
-import ListItem from './ListItem';
-import GroupItem from './GroupItem';
+import { useCallback } from 'react';
+
+import ListItem from './ListItem/ListItem';
+import GroupItem from './GroupItem/GroupItem';
 
 export default function ListsSection({
   items,
-  sectionType,
   selectedListId,
-  selectedTaskId,
-  openGroups,
   onSelect,
   onToggleGroup,
-  // Props for ListItem and GroupItem
+  openGroups,
   isNeedContextMenu,
-  editingItemId,
   onContextMenu,
-  inputRef,
-  handleKeyDown,
-  handleBlur,
-  handleTitleChange,
-  editingTitle,
-  listsList, // Needed for GroupItem to find children
-  projects, // Needed for GroupItem to find children
-  onTaskDrop,
-  onDragStart,
-  onListDrop
+  editState,
 }) {
+  const isItemSelected = useCallback(
+    (item) => {
+      if (selectedListId === item.id || selectedListId === item.realId) return true;
 
-  const renderItem = (item, parentId = null) => {
-    const commonProps = {
-      item,
-      isEditing: editingItemId === item.id,
-      onContextMenu: isNeedContextMenu ? (event) => onContextMenu(event, item, parentId) : undefined,
-      inputRef,
-      handleKeyDown,
-      handleBlur,
-      handleTitleChange,
-      editingTitle,
-      onDragStart,
-    };
-
-    if (item.type === 'group' || item.type === 'project') {
-      return (
-        <GroupItem
-          key={item.id}
-          isOpen={openGroups[item.id]}
-          onToggle={() => onToggleGroup(item.id)}
-          childrenLists={listsList.concat(projects)} // Provide all possible children
-          showProgress={sectionType === 'projects'}
-          renderListItem={(childItem) => renderItem(childItem, item.id)} // Pass renderItem recursively
-          renderGroupItem={(childItem) => renderItem(childItem, item.id)} // Pass renderItem recursively
-          isDraggable={sectionType !== 'default'}
-          onListDrop={onListDrop}
-          {
-            ...commonProps
-          }
-        />
+      return item.childes_order?.some(
+        (childId) =>
+          childId === selectedListId || childId === editState.editingItemId
       );
-    } else {
+    },
+    [selectedListId, editState.editingItemId]
+  );
+
+  const renderItem = useCallback(
+    (item, parentId = null) => {
+      if (item.type === 'group' || item.type === 'project') {
+        const isOpen = openGroups[item.realId || item.id] ?? false;
+
+        return (
+          <GroupItem
+            key={item.id}
+            group={item}
+            isSelected={isItemSelected(item)}
+            onSelect={(e) => onToggleGroup && onToggleGroup(item.realId || item.id)}
+            onContextMenu={
+              isNeedContextMenu
+                ? (e) => onContextMenu(e, item, parentId)
+                : undefined
+            }
+            isEditing={editState.editingItemId === item.id}
+            editingTitle={editState.editingTitle}
+            onTitleChange={editState.onTitleChange}
+            onKeyDown={editState.onKeyDown}
+            onBlur={editState.onBlur}
+            inputRef={editState.inputRef}
+            open={isOpen}
+            onToggle={() => onToggleGroup && onToggleGroup(item.realId || item.id)}
+          >
+            {item.childes_order?.map((childId) => {
+              const childItem = items.find((i) => i.id === childId);
+              return childItem ? renderItem(childItem, item.id) : null;
+            })}
+          </GroupItem>
+        );
+      }
+
       return (
         <ListItem
           key={item.id}
-          isSelected={selectedListId === item.id}
-          selectedTaskId={selectedTaskId}
-          onSelect={(event) => onSelect(event, item.id)}
-          showProgress={false} // Lists don't show progress in the original renderListItem
-          isDraggable={sectionType !== 'default'}
-          onTaskDrop={onTaskDrop}
-          {
-            ...commonProps
+          item={item}
+          isSelected={
+            selectedListId === item.id || selectedListId === item.realId
           }
+          onSelect={(e) => onSelect(e, item.realId || item.id)}
+          onContextMenu={
+            isNeedContextMenu
+              ? (e) => onContextMenu(e, item, parentId)
+              : undefined
+          }
+          isEditing={editState.editingItemId === item.id}
+          editingTitle={editState.editingTitle}
+          onTitleChange={editState.onTitleChange}
+          onKeyDown={editState.onKeyDown}
+          onBlur={editState.onBlur}
+          inputRef={editState.inputRef}
         />
       );
-    }
-  };
+    },
+    [
+      items,
+      selectedListId,
+      isItemSelected,
+      onSelect,
+      onToggleGroup,
+      openGroups,
+      isNeedContextMenu,
+      onContextMenu,
+      editState,
+    ]
+  );
 
   return (
-    <List sx={{ width: '100%', pt: 0 }} component="nav">
-      {items?.map(item => {
-        // Only render items that are inGeneralList and not deleted for the 'lists' section
-        if (sectionType === 'lists') {
-          if (item.inGeneralList && !item.deleted) {
-            return renderItem(item);
-          }
-          return null;
-        } else {
-          return renderItem(item);
-        }
-      })}
+    <List sx={{ width: '100%', pt: 0, pb: 0 }} component="nav">
+      {items?.map((item) => renderItem(item))}
     </List>
   );
 }
 
 ListsSection.propTypes = {
-  items: PropTypes.array,
-  sectionType: PropTypes.oneOf(['default', 'projects', 'lists']).isRequired,
+  items: PropTypes.array.isRequired,
   selectedListId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  selectedTaskId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  openGroups: PropTypes.object.isRequired,
   onSelect: PropTypes.func.isRequired,
-  onToggleGroup: PropTypes.func.isRequired,
+  onToggleGroup: PropTypes.func,
+  openGroups: PropTypes.object,
   isNeedContextMenu: PropTypes.bool,
-  editingItemId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  onContextMenu: PropTypes.func.isRequired,
-  inputRef: PropTypes.object,
-  handleKeyDown: PropTypes.func.isRequired,
-  handleBlur: PropTypes.func.isRequired,
-  handleTitleChange: PropTypes.func.isRequired,
-  editingTitle: PropTypes.string,
-  listsList: PropTypes.array.isRequired,
-  projects: PropTypes.array.isRequired,
-  onTaskDrop: PropTypes.func,
-  onDragStart: PropTypes.func,
-  onListDrop: PropTypes.func,
+  onContextMenu: PropTypes.func,
+  editState: PropTypes.shape({
+    editingItemId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    editingTitle: PropTypes.string,
+    onTitleChange: PropTypes.func,
+    onSave: PropTypes.func,
+    onCancel: PropTypes.func,
+    inputRef: PropTypes.object,
+    onKeyDown: PropTypes.func,
+    onBlur: PropTypes.func,
+  }).isRequired,
 };

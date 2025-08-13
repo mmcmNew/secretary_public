@@ -63,6 +63,14 @@ export const chatApi = apiSlice.injectEndpoints({
         body: { table_name, record_id, text },
       }),
     }),
+    getTtsAudioFilename: builder.mutation({
+      query: (text) => ({
+        url: '/get_tts_audio_filename',
+        method: 'POST',
+        body: new URLSearchParams({ text }),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      }),
+    }),
   }),
 });
 
@@ -77,4 +85,5 @@ export const {
   useGetDatesListQuery,
   useUpdateRecordFromBlocksMutation,
   useGenerateImageForRecordMutation,
+  useGetTtsAudioFilenameMutation,
 } = chatApi;

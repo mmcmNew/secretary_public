@@ -4,58 +4,12 @@ import { Box } from "@mui/system";
 import CheckIcon from '@mui/icons-material/Check';
 import { useEffect, useRef, useState } from "react";
 import TTSText from './TTSText';
-import get_tts_audio_filename from '../Tools/getTTSText';
+import { useGetTtsAudioFilename } from '../Tools/getTTSText';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
-// import { apiGet, apiPost, apiPut } from '../../utils/api';
-
-
-async function sendNewRecord(table_name, record_info) {
-    const url = `/api/journals/${table_name}`;
-    try {
-        // const { data } = await apiPost(url, record_info, {
-        //     headers: { 'Content-Type': 'application/json' }
-        // });
-        // return data;
-    } catch (error) {
-        console.error('Ошибка при создании записи:', error);
-        return null;
-    }
-}
-
-async function sendNewRecordWithFiles(table_name, formData) {
-    const url = `/api/journals/${table_name}`;
-    try {
-        // const { data } = await apiPost(url, formData);
-        // return data;
-    } catch (error) {
-        console.error('Ошибка при создании записи с файлами:', error);
-        return null;
-    }
-}
-
-async function updateRecord(table_name, record_info) {
-    const url = `/api/journals/${table_name}/${record_info.id}`;
-    try {
-        // const { data } = await apiPut(url, record_info, {
-        //     headers: { 'Content-Type': 'application/json' }
-        // });
-        // return data;
-    } catch (error) {
-        console.error('Ошибка при обновлении записи:', error);
-        return null;
-    }
-}
-
-async function updateRecordWithFiles(table_name, record_id, formData) {
-    const url = `/api/journals/${table_name}/${record_id}`;
-    try {
-        // const { data } = await apiPut(url, formData);
-        // return data;
-    } catch (error) {
-        console.error('Ошибка при обновлении записи с файлами:', error);
-        return null;
-    }
-}
+import { useGetAllFiltersQuery, 
+    // useAddRecordWithFilesMutation, 
+    // useUpdateRecordWithFilesMutation 
+} from '../../store/chatApi';
 
 
 export default function Survey({ id, survey, activeElementId=null, onExpireFunc=null, autosend=true, taskId=null }) {
@@ -87,21 +41,19 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
     const [fieldOptions, setFieldOptions] = useState({});
 
     const { finalTranscript, resetTranscript, listening } = useSpeechRecognition();
+    const get_tts_audio_filename = useGetTtsAudioFilename();
+    // const [addRecordWithFiles] = useAddRecordWithFilesMutation();
+    // const [updateRecordWithFiles] = useUpdateRecordWithFilesMutation();
+    const { data: fieldOptionsData } = useGetAllFiltersQuery(survey.table_name, {
+        skip: !survey?.table_name,
+    });
 
-    // Загружаем опции для полей при монтировании
     useEffect(() => {
-        const loadFieldOptions = async () => {
-            try {
-                // const { data } = await apiGet(`/get_tables_filters/${survey.table_name}`);
-                // setFieldOptions(data);
-            } catch (error) {
-                console.error('Error loading field options:', error);
-            }
-        };
-        if (survey?.table_name) {
-            loadFieldOptions();
+        if (fieldOptionsData) {
+            setFieldOptions(fieldOptionsData);
         }
-    }, [survey?.table_name]);
+    }, [fieldOptionsData]);
+
 
     useEffect(() => {
         if (activeElementId === id)
@@ -156,11 +108,6 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
         });
     }
 
-    function handleAddFiles(event) {
-        const selectedFiles = Array.from(event.target.files);
-        addUniqueFiles(selectedFiles);
-        fileInputRef.current.value = "";
-    }
 
     function handleFieldInputChange(fieldId, event) {
         const selectedFiles = Array.from(event.target.files);
@@ -259,9 +206,9 @@ export default function Survey({ id, survey, activeElementId=null, onExpireFunc=
             });
             
             if (isNew) {
-                result = await sendNewRecordWithFiles(survey.table_name, formData);
+                // result = await addRecordWithFiles({ tableName: survey.table_name, formData }).unwrap();
             } else {
-                result = await updateRecordWithFiles(survey.table_name, updatedParams.id, formData);
+                // result = await updateRecordWithFiles({ tableName: survey.table_name, recordId: updatedParams.id, formData }).unwrap();
             }
             if (!result) {
                 throw new Error('Ошибка при отправке');

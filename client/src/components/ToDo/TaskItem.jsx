@@ -45,6 +45,7 @@ const TaskItem = memo(({
 
     const handleTaskClick = useCallback(() => {
         onTaskSelect(task.id);
+        console.log(task.id, "TaskItem clicked")
     }, [task.id, onTaskSelect]);
 
     const handleAdditionalClick = useCallback((event) => {

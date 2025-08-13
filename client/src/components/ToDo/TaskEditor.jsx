@@ -24,7 +24,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 import { renderTimeViewClock } from "@mui/x-date-pickers";
 import ColorPicker from "../ColorPicker";
-import NewRecordDialog from "../JournalEditor/NewRecordDialog";
+// import NewRecordDialog from "../JournalEditor/NewRecordDialog";
 import TaskTypeDialog from "../TaskTypeManager/TaskTypeDialog.jsx";
 import PropTypes from "prop-types";
 import DateTimeRangePickerField from "./DateTimeRangePicker.jsx";
@@ -48,6 +48,8 @@ function TaskEditor({
     const [newTypeData, setNewTypeData] = useState({ name: '', color: '#3788D8', description: '' });
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
     const updateNewTypeData = (field, value) => setNewTypeData(prev => ({ ...prev, [field]: value }));
+
+    console.log(taskFields, task, subtasks);
 
     // Инициализация формы из пропсов
     useEffect(() => {
@@ -74,7 +76,7 @@ function TaskEditor({
         initial.title = task.title;
         initial.start = task.start ? dayjs(task.start).toISOString() : null;
         initial.end = task.end ? dayjs(task.end).toISOString() : null;
-        initial.subtasks = subtasks.map(st => ({ id: st.id, title: st.title, status_id: st.status_id }));
+        initial.subtasks = Array.isArray(subtasks) ? subtasks.map(st => ({ id: st.id, title: st.title, status_id: st.status_id })) : [];
         reset(initial);
         replace(initial.subtasks);
     }, [task, taskFields, subtasks, reset, replace]);
@@ -194,7 +196,7 @@ function TaskEditor({
                     />
                 </Box>
                 <Box sx={{ marginY: 0 }}>
-                    {subtaskFields.map((sub, idx) => (
+                    {subtaskFields?.map((sub, idx) => (
                         <Grid container alignItems="center" spacing={0.5} key={sub.id || idx} sx={{ marginY: 0.5 }}>
                             <Grid item xs width="100%">
                                 <Box component="form" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
@@ -253,6 +255,7 @@ function TaskEditor({
             <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexDirection: 'column', gap: 1.5, paddingY: 2 }}>
                 {showJournalButton && <Button variant="outlined" onClick={() => setNewRecordDialogOpen(true)}>Добавить запись в журнал проекта</Button>}
                 {Object.entries(taskFields)
+                    .slice()
                     .sort(([, a], [, b]) => (a.id || 0) - (b.id || 0))
                     .map(([key, field]) => {
                         if (!field) return null;
@@ -293,7 +296,7 @@ function TaskEditor({
                                         control={control}
                                         render={({ field: ctrl }) => (
                                             <Autocomplete
-                                                options={(key === 'type_id' ? [...field.options, { value: '__add__', label: 'Добавить тип...' }] : field.options).sort((a, b) => {
+                                                options={(key === 'type_id' ? [...field.options, { value: '__add__', label: 'Добавить тип...' }] : field.options).slice().sort((a, b) => {
                                                     const ga = a.groupLabel || '';
                                                     const gb = b.groupLabel || '';
                                                     if (ga !== gb) return ga.localeCompare(gb);
@@ -400,7 +403,7 @@ function TaskEditor({
                         );
                     })}
             </Paper>
-            <NewRecordDialog open={newRecordDialogOpen} handleClose={() => setNewRecordDialogOpen(false)} taskId={task.id} />
+            {/* <NewRecordDialog open={newRecordDialogOpen} handleClose={() => setNewRecordDialogOpen(false)} taskId={task.id} /> */}
             <TaskTypeDialog
                 open={typeDialogOpen}
                 onClose={() => setTypeDialogOpen(false)}

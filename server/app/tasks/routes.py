@@ -71,8 +71,8 @@ def etag(version_key):
 
 @to_do_app.route('/tasks/get_lists', methods=['GET'])
 @jwt_required()
-@cache.cached(timeout=60, key_prefix=make_cache_key('lists', 'tasksVersion'))
-@etag('tasksVersion')
+# @cache.cached(timeout=60, key_prefix=make_cache_key('lists', 'tasksVersion'))
+# @etag('tasksVersion')
 def get_lists_and_groups():
     client_timezone = request.args.get('time_zone', 'UTC')
     user_id = current_user.id
@@ -84,8 +84,8 @@ def get_lists_and_groups():
 
 @to_do_app.route('/tasks/get_lists_tree', methods=['GET'])
 @jwt_required()
-@cache.cached(timeout=60, key_prefix=make_cache_key('lists_tree', 'tasksVersion'))
-@etag('tasksVersion')
+# @etag('tasksVersion')
+# @cache.cached(timeout=60, key_prefix=make_cache_key('lists', 'tasksVersion'))
 def get_lists_tree():
     client_timezone = request.args.get('time_zone', 'UTC')
     user_id = current_user.id

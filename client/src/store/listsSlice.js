@@ -24,11 +24,19 @@ export default listsSlice.reducer;
 export const listsApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getLists: builder.query({
-      query: () => '/tasks/lists',
+      query: () => '/tasks/get_lists',
       providesTags: ['List'],
     }),
     getListsTree: builder.query({
       query: () => '/tasks/get_lists_tree',
+      providesTags: ['List'],
+    }),
+    getDndTreeLists: builder.query({
+      query: () => '/tasks/dnd-tree-lists',
+      providesTags: ['List'],
+    }),
+    getListsMUITree: builder.query({
+      query: () => '/tasks/get_lists_mui_tree',
       providesTags: ['List'],
     }),
     addObject: builder.mutation({
@@ -37,7 +45,22 @@ export const listsApi = apiSlice.injectEndpoints({
         method: 'POST',
         body: newObject,
       }),
-      invalidatesTags: ['List'],
+      async onQueryStarted(newObject, { dispatch, queryFulfilled }) {
+        try {
+          const { data: addedObject } = await queryFulfilled;
+          dispatch(
+            listsApi.util.updateQueryData('getLists', undefined, (draft) => {
+              if (addedObject.object_type === 'list' || addedObject.object_type === 'group') {
+                draft.lists.push(addedObject.new_object);
+              } else if (addedObject.object_type === 'project') {
+                draft.projects.push(addedObject.new_object);
+              }
+            })
+          );
+        } catch {
+          // handle error
+        }
+      },
     }),
     updateList: builder.mutation({
       query: (data) => ({
@@ -68,6 +91,8 @@ export const listsApi = apiSlice.injectEndpoints({
 export const {
   useGetListsQuery,
   useGetListsTreeQuery,
+  useGetListsMUITreeQuery,
+  useGetDndTreeListsQuery,
   useAddObjectMutation,
   useUpdateListMutation,
   useDeleteListMutation,

@@ -15,6 +15,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     current_app.logger.info(f"PERF (user:{user_id}): get_lists_and_groups_data started.")
     from collections import defaultdict
     from sqlalchemy import func, case, and_, or_
+    import uuid
 
     if user_id is None:
         raise ValueError("user_id must be provided for get_lists_and_groups_data")
@@ -136,6 +137,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
 
         default_lists.append({
             'id': list_id,
+            'realId': list_id,
             'title': title,
             'type': 'list',
             'unfinished_tasks_count': unfinished,
@@ -144,25 +146,47 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     current_app.logger.info(f"PERF (user:{user_id}): Default lists processing took {time.perf_counter() - step_start_time:.4f}s.")
     # current_app.logger.info(f"PERF (user:{user_id}): Default lists: {default_lists}")
     step_start_time = time.perf_counter()
-    # Преобразуем объекты в словари с подсчитанными значениями
-    groups_dict = [
-        {**group.to_dict(), 'unfinished_tasks_count': groups_unfinished_map.get(group.id, 0)}
-        for group in groups_list
-    ]
+    
+    # Функция для создания уникального ID с сохранением realId
+    def create_unique_item(item_dict, context_prefix=""):
+        unique_id = f"{context_prefix}_{item_dict['id']}_{str(uuid.uuid4())[:8]}" if context_prefix else f"{item_dict['id']}_{str(uuid.uuid4())[:8]}"
+        return {
+            **item_dict,
+            'id': unique_id,
+            'realId': item_dict['id']
+        }
+    
+    # Преобразуем объекты в словари с уникальными ID
+    groups_dict = []
+    for group in groups_list:
+        group_dict = {**group.to_dict(), 'unfinished_tasks_count': groups_unfinished_map.get(group.id, 0)}
+        # Создаем уникальные ID для списков внутри группы
+        if 'lists' in group_dict:
+            group_dict['lists'] = [create_unique_item(lst, f"group_{group.id}") for lst in group_dict['lists']]
+        groups_dict.append(create_unique_item(group_dict))
 
-    lists_dict = [
-        {**lst.to_dict(), 'unfinished_tasks_count': lst.unfinished_count}
-        for lst in lists_list
-    ]
+    lists_dict = []
+    for lst in lists_list:
+        lst_dict = {**lst.to_dict(), 'unfinished_tasks_count': lst.unfinished_count}
+        lists_dict.append(create_unique_item(lst_dict))
 
-    projects_dict = [
-        {**project.to_dict(), 'unfinished_tasks_count': sum(
+    projects_dict = []
+    for project in projects_list:
+        project_dict = {**project.to_dict(), 'unfinished_tasks_count': sum(
             lists_unfinished_map.get(lst.id, 0) for lst in project.lists
         ) + sum(
             groups_unfinished_map.get(group.id, 0) for group in project.groups
         )}
-        for project in projects_list
-    ]
+        # Создаем уникальные ID для списков и групп внутри проекта
+        if 'lists' in project_dict:
+            project_dict['lists'] = [create_unique_item(lst, f"project_{project.id}") for lst in project_dict['lists']]
+        if 'groups' in project_dict:
+            project_dict['groups'] = [create_unique_item(grp, f"project_{project.id}") for grp in project_dict['groups']]
+            # Также создаем уникальные ID для списков внутри групп проекта
+            for group in project_dict['groups']:
+                if 'lists' in group:
+                    group['lists'] = [create_unique_item(lst, f"project_{project.id}_group_{group['realId']}") for lst in group['lists']]
+        projects_dict.append(create_unique_item(project_dict))
 
     # --- Сортировка
     combined = groups_dict + lists_dict
@@ -250,7 +274,7 @@ def get_lists_tree_data(client_timezone='UTC', user_id=None):
     if isinstance(original_data, dict) and 'error' in original_data:
         return original_data
 
-    def create_tree_node(item_id, parent_id, text, item_type, unfinished_count=0):
+    def create_tree_node(root_id, item_id, parent_id, text, item_type, unfinished_count=0, real_id=None):
         return {
             'id': item_id,
             'parent': parent_id,
@@ -258,23 +282,37 @@ def get_lists_tree_data(client_timezone='UTC', user_id=None):
             'text': text,
             'data': {
                 'type': item_type,
-                'unfinished_tasks_count': unfinished_count
+                'unfinished_tasks_count': unfinished_count,
+                'rootId': root_id,
+                'realId': real_id or item_id,
             }
         }
 
     # Стандартные списки
-    default_lists = []
-    for item in original_data.get('default_lists', []):
-        default_lists.append(create_tree_node(
-            item['id'], 0, item['title'], 'standard', item.get('unfinished_tasks_count', 0)
-        ))
+    default_lists = {
+        'id': 'default',
+        'name': 'Стандартные',
+        'rootId': 'default',
+        'data': []
+    }
+    default_lists['data'] = [
+        create_tree_node(
+            'default', item['id'], 'default', item['title'], 'standard', item.get('unfinished_tasks_count', 0), item.get('realId')
+        ) for item in original_data.get('default_lists', [])
+    ]
 
     # Проекты с вложенными элементами (с сортировкой)
-    projects_tree = []
+    projects_tree = {
+        'id': 'projects',
+        'name': 'Проекты',
+        'rootId': 'projects',
+        'data': []
+    }
+    projects_tree_data = []
     for proj in original_data.get('projects', []):
         proj_id = proj['id']  # ID уже содержит префикс из to_dict()
-        projects_tree.append(create_tree_node(
-            proj_id, 0, proj['title'], 'project', proj.get('unfinished_tasks_count', 0)
+        projects_tree_data.append(create_tree_node(
+            'projects', proj_id, 'projects', proj['title'], 'project', proj.get('unfinished_tasks_count', 0), proj.get('realId')
         ))
         
         # Сортируем элементы в проекте по childes_order
@@ -284,9 +322,9 @@ def get_lists_tree_data(client_timezone='UTC', user_id=None):
         for element_id in childes_order:
             if element_id in all_elements:
                 element = all_elements[element_id]
-                if element_id.startswith('group_'):
-                    projects_tree.append(create_tree_node(
-                        element_id, proj_id, element['title'], 'group', element.get('unfinished_tasks_count', 0)
+                if element.get('realId', element_id).startswith('group_') or element.get('type') == 'group':
+                    projects_tree_data.append(create_tree_node(
+                        'projects', element_id, proj_id, element['title'], 'group', element.get('unfinished_tasks_count', 0), element.get('realId')
                     ))
                     
                     # Сортируем элементы в группе по childes_order
@@ -296,24 +334,32 @@ def get_lists_tree_data(client_timezone='UTC', user_id=None):
                     for list_id in group_childes_order:
                         if list_id in group_lists:
                             lst = group_lists[list_id]
-                            projects_tree.append(create_tree_node(
-                                str(lst['id']), element_id, lst['title'], 'list', lst.get('unfinished_tasks_count', 0)
+                            projects_tree_data.append(create_tree_node(
+                                'projects', str(lst['id']), element_id, lst['title'], 'list', lst.get('unfinished_tasks_count', 0), lst.get('realId')
                             ))
                 else:
-                    projects_tree.append(create_tree_node(
-                        str(element['id']), proj_id, element['title'], 'list', element.get('unfinished_tasks_count', 0)
+                    projects_tree_data.append(create_tree_node(
+                        'projects', str(element['id']), proj_id, element['title'], 'list', element.get('unfinished_tasks_count', 0), element.get('realId')
                     ))
+    projects_tree['data'] = projects_tree_data
 
     # Отдельные списки и группы (уже отсортированы в get_lists_and_groups_data)
-    lists_tree = []
+    lists_tree = {
+        'id': 'lists',
+        'name': 'Списки и группы',
+        'rootId': 'lists',
+        'data': []
+    }
+    lists_tree_data = []
+    
     for item in original_data.get('lists', []):
         if item.get('project_id'):
             continue  # Уже обработано в проектах
             
         if item.get('type') == 'group' and not item.get('group_id'):
             group_id = item['id']  # ID уже содержит префикс из to_dict()
-            lists_tree.append(create_tree_node(
-                group_id, 0, item['title'], 'group', item.get('unfinished_tasks_count', 0)
+            lists_tree_data.append(create_tree_node(
+                'lists', group_id, 'lists', item['title'], 'group', item.get('unfinished_tasks_count', 0), item.get('realId')
             ))
             
             # Сортируем элементы в группе по childes_order
@@ -323,12 +369,15 @@ def get_lists_tree_data(client_timezone='UTC', user_id=None):
             for list_id in group_childes_order:
                 if list_id in group_lists:
                     lst = group_lists[list_id]
-                    lists_tree.append(create_tree_node(
-                        str(lst['id']), group_id, lst['title'], 'list', lst.get('unfinished_tasks_count', 0)
+                    lists_tree_data.append(create_tree_node(
+                        'lists', str(lst['id']), group_id, lst['title'], 'list', lst.get('unfinished_tasks_count', 0), lst.get('realId')
                     ))
         elif item.get('type') == 'list' and not item.get('group_id'):
-            lists_tree.append(create_tree_node(
-                str(item['id']), 0, item['title'], 'list', item.get('unfinished_tasks_count', 0)
+            lists_tree_data.append(create_tree_node(
+                'lists', str(item['id']), 'lists', item['title'], 'list', item.get('unfinished_tasks_count', 0), item.get('realId')
             ))
-
-    return [default_lists, projects_tree, lists_tree]
+    lists_tree['data'] = lists_tree_data
+    
+    result = [default_lists, projects_tree, lists_tree]
+    # current_app.logger.info(f"get_lists_tree_data: Resulting tree structure: {result}")
+    return result

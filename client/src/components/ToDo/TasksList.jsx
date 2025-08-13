@@ -1,4 +1,5 @@
-import { useEffect, useState, memo, useCallback,} from "react";
+import { useEffect, useState, memo, useCallback, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
     List,
     ListItemButton,
@@ -7,14 +8,26 @@ import {
     Menu,
     MenuItem,
     Divider,
+    Typography,
 } from "@mui/material";
-import { ExpandLess, ExpandMore, } from "@mui/icons-material";
+import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import PropTypes from "prop-types";
 import { Draggable } from "@fullcalendar/interaction";
 import useContextMenu from "./hooks/useContextMenu";
-import { useTasks } from "./hooks/useTasks.js";
-import { useTasksLogic } from "./hooks/useTasksLogic.js";
 import TaskItem from "./TaskItem.jsx";
+import {
+    useChangeTaskStatusMutation,
+    useUpdateTaskMutation,
+    useDeleteFromChildesMutation,
+    useLinkTaskMutation,
+} from "../../store/tasksSlice";
+import {
+    setSelectedTaskId,
+    setSelectedTask,
+} from "../../store/todoLayoutSlice.js";
+import { useUpdateListMutation } from "../../store/listsSlice";
+import { setCompletedTasksOpen, toggleTaskExpanded } from "../../store/todoLayoutSlice";
+
 
 function TasksList({
     containerId,
@@ -22,68 +35,58 @@ function TasksList({
     projects = [],
     selectedList,
     isNeedContextMenu = false,
-    setSelectedTaskId = null,
-    linkTaskList = null,
-    deleteFromChildes = null,
     additionalButton = null,
     additionalButtonClick = null,
     tasks = [],
-    selectedTaskId = null,
-    updateTask = null,
-    changeTaskStatus = null,
     onSuccess = null,
     onError = null,
-    calendarRange = null, 
 }) {
+    const dispatch = useDispatch();
     const { anchorEl, openMenu, closeMenu } = useContextMenu();
-    const { fetchCalendarEvents, getSubtasksByParentId } = useTasks({
-        onError: (error) => {
-            console.error('Error in useTasks:', error);
-            if (onError) onError(error);
-        }
-    });
-    
-    // Используем новый хук для логики задач
-    const {
-        open,
-        completedOpen,
-        setCompletedOpen,
-        activeTasks,
-        completedTasks,
-        handleTaskToggle,
-        handleTaskClick,
-        handleTaskSelect,
-        handleAddToMyDay,
-    } = useTasksLogic({
-        tasks,
-        selectedList,
-        selectedTaskId,
-        onTaskSelect: setSelectedTaskId,
-        onTaskToggle: changeTaskStatus,
-        onTaskUpdate: updateTask,
-        onSubtasksLoad: getSubtasksByParentId,
-        onCalendarUpdate: fetchCalendarEvents,
-        onSuccess,
-        onError,
-        calendarRange,
-    });
 
+    // RTK Query Mutations
+    const [changeTaskStatusMutation] = useChangeTaskStatusMutation();
+    const [updateTaskMutation] = useUpdateTaskMutation();
+    const [deleteFromChildesMutation] = useDeleteFromChildesMutation();
+    const [linkTaskMutation] = useLinkTaskMutation();
+    const [updateListMutation] = useUpdateListMutation();
+
+    // State from Redux
+    const { expandedTasks, completedTasksOpen, selectedTaskId } = useSelector((state) => state.todoLayout);
+
+    // Local state
     const [listsMenuAnchorEl, setListsMenuAnchorEl] = useState(null);
     const [actionType, setActionType] = useState(null);
     const [targetItemId, setTargetItemId] = useState(null);
 
-    // useEffect for Draggable initialization - moved to be closer to other hooks
+    // Logic for splitting tasks into active and completed
+    const { activeTasks, completedTasks } = useMemo(() => {
+        const active = [];
+        const completed = [];
+        if (Array.isArray(tasks)) {
+            tasks.forEach(task => {
+                if (task.status_id === 2) {
+                    completed.push(task);
+                } else {
+                    active.push(task);
+                }
+            });
+        }
+        return { activeTasks: active, completedTasks: completed };
+    }, [tasks]);
+
+
+    // useEffect for Draggable initialization
     useEffect(() => {
         const draggableEl = document.getElementById(`tasksList${containerId}`);
-        if (!draggableEl) {
-            return;
-        }
+        if (!draggableEl) return;
 
         const draggable = new Draggable(draggableEl, {
             itemSelector: '.draggable-task',
             eventData: (eventEl) => {
                 const id = eventEl.getAttribute("data-id");
-                const task = tasks.find((task) => String(task.id) === id);
+                const task = tasks.find((t) => String(t.id) === id);
+                if (!task) return null;
                 return {
                     title: task.title,
                     id: task.id,
@@ -97,15 +100,22 @@ function TasksList({
         return () => draggable.destroy();
     }, [tasks, containerId]);
 
-    if (!tasks || !selectedList) {
-        return null;
-    }
+
+    const handleTaskClick = useCallback((taskId) => {
+        dispatch(toggleTaskExpanded(taskId));
+    }, [dispatch]);
 
     // Мемоизированные обработчики
     const handleToggle = useCallback(async (task_id, checked) => {
+        if (!selectedList?.id) return;
         const status_id = checked ? 2 : 1;
-        await handleTaskToggle(task_id, checked);
-    }, [handleTaskToggle]);
+        try {
+            await changeTaskStatusMutation({ taskId: task_id, status_id, completed_at: checked ? new Date().toISOString() : null, listId: selectedList.id }).unwrap();
+            if (onSuccess) onSuccess(`Task status changed`);
+        } catch (err) {
+            if (onError) onError(err);
+        }
+    }, [changeTaskStatusMutation, selectedList, onSuccess, onError]);
 
     const handleAdditionalButtonClick = useCallback((task) => {
         if (typeof additionalButtonClick === "function") additionalButtonClick(task);
@@ -116,6 +126,8 @@ function TasksList({
         setTargetItemId(item.id);
     }
 
+    console.log(selectedTaskId, "selectedTaskId from TasksList");
+
     function handleCloseMenu() {
         setListsMenuAnchorEl(null);
         closeMenu();
@@ -124,76 +136,65 @@ function TasksList({
 
     async function handleChangeChildesOrder(elementId, direction) {
         handleCloseMenu();
-        if (!selectedList) return;
+        if (!selectedList || !selectedList.childes_order) return;
 
-        const index = selectedList.childes_order.indexOf(elementId);
+        const newChildesOrder = [...selectedList.childes_order];
+        const index = newChildesOrder.indexOf(elementId);
 
-        // Проверяем, что элемент найден в childes_order
         if (index === -1) return;
 
         if (direction === "up" && index > 0) {
-            // Меняем местами с предыдущим элементом
-            [selectedList.childes_order[index - 1], selectedList.childes_order[index]] = [
-                selectedList.childes_order[index],
-                selectedList.childes_order[index - 1],
-            ];
-        } else if (direction === "down" && index < selectedList.childes_order.length - 1) {
-            // Меняем местами со следующим элементом
-            [selectedList.childes_order[index + 1], selectedList.childes_order[index]] = [
-                selectedList.childes_order[index],
-                selectedList.childes_order[index + 1],
-            ];
+            [newChildesOrder[index - 1], newChildesOrder[index]] = [newChildesOrder[index], newChildesOrder[index - 1]];
+        } else if (direction === "down" && index < newChildesOrder.length - 1) {
+            [newChildesOrder[index + 1], newChildesOrder[index]] = [newChildesOrder[index], newChildesOrder[index + 1]];
+        } else {
+            return;
         }
 
-        // Сохраняем изменения в childes_order
-        if (typeof updateList === "function") {
-            try {
-                await updateList({ listId: selectedList.id, childes_order: selectedList.childes_order });
-                if (onSuccess) onSuccess('Порядок задач изменен');
-            } catch (err) {
-                if (onError) onError(err);
-            }
+        try {
+            await updateListMutation({ listId: selectedList.id, childes_order: newChildesOrder }).unwrap();
+            if (onSuccess) onSuccess('Порядок задач изменен');
+        } catch (err) {
+            if (onError) onError(err);
         }
     }
 
     async function handleDeleteFromChildes(elementId) {
-        if (typeof deleteFromChildes === "function") {
-            try {
-                await deleteFromChildes({
-                    source_id: `task_${elementId}`,
-                    group_id: selectedList.id,
-                });
-                if (onSuccess) onSuccess('Задача удалена из списка');
-            } catch (err) {
-                if (onError) onError(err);
-            }
+        if (!selectedList?.id) return;
+        try {
+            await deleteFromChildesMutation({
+                source_id: `task_${elementId}`,
+                group_id: selectedList.id,
+            }).unwrap();
+            if (onSuccess) onSuccess('Задача удалена из списка');
+        } catch (err) {
+            if (onError) onError(err);
         }
         handleCloseMenu();
     }
 
     async function handleToListAction(targetId, actionTypeName = null) {
-        if (!actionTypeName) actionTypeName = actionType;
-        if (typeof linkTaskList === "function") {
-            const params = {
-                task_id: targetItemId,
-                list_id: targetId,
-                action: actionTypeName
-            };
-            if (actionTypeName === "move" && selectedList?.id) {
-                params.source_list_id = selectedList.id;
-            }
-            try {
-                await linkTaskList(params);
-                if (onSuccess) onSuccess('Задача перемещена');
-            } catch (err) {
-                if (onError) onError(err);
-            }
+        const finalActionType = actionTypeName || actionType;
+        const params = {
+            task_id: targetItemId,
+            list_id: targetId,
+            action: finalActionType,
+        };
+        if (finalActionType === "move" && selectedList?.id) {
+            params.source_list_id = selectedList.id;
         }
-        // Закрываем все меню после выполнения действия
+
+        try {
+            await linkTaskMutation(params).unwrap();
+            if (onSuccess) onSuccess('Задача перемещена');
+        } catch (err) {
+            if (onError) onError(err);
+        }
         handleCloseMenu();
     }
 
     function handleUpToTask() {
+        if (!selectedList?.id) return;
         handleToListAction(selectedList.id, "link");
     }
 
@@ -206,23 +207,22 @@ function TasksList({
         setListsMenuAnchorEl(null);
     }
 
-    // function handleOpenTasksMenu(event, actionType) {
-    //   setActionType(actionType);
-    //   setTasksMenuAnchorEl(event.currentTarget);
-    // }
-
-    // function handleCloseTasksMenu() {
-    //   setTasksMenuAnchorEl(null);
-    // }
-
     function handleDragStart(event, task){
         event.dataTransfer.setData("task", JSON.stringify(task));
     }
 
     const handleAddToMyDayClick = useCallback(async () => {
-        await handleAddToMyDay(targetItemId);
+        try {
+            // Assuming "My Day" is a list with a specific, known ID or alias.
+            // This logic might need adjustment based on how "My Day" is identified.
+            // For now, let's assume we need to update the task.
+            await updateTaskMutation({ taskId: targetItemId, isMyDay: true }).unwrap();
+            if (onSuccess) onSuccess('Добавлено в "Мой день"');
+        } catch (err) {
+            if (onError) onError(err);
+        }
         handleCloseMenu();
-    }, [handleAddToMyDay, targetItemId]);
+    }, [updateTaskMutation, targetItemId, onSuccess, onError]);
 
     // Мемоизированная функция рендера задачи
     const renderTask = useCallback((task) => {
@@ -233,8 +233,12 @@ function TasksList({
                 key={task.id}
                 task={task}
                 selectedTaskId={selectedTaskId}
-                open={open}
-                onTaskSelect={handleTaskSelect}
+                open={expandedTasks}
+                onTaskSelect={(taskId) => {
+                    const selectedTask = tasks.find(t => t.id === taskId);
+                    dispatch(setSelectedTaskId(taskId));
+                    dispatch(setSelectedTask(selectedTask));
+                }}
                 onTaskToggle={handleToggle}
                 onExpandToggle={handleTaskClick}
                 onAdditionalButtonClick={handleAdditionalButtonClick}
@@ -244,7 +248,7 @@ function TasksList({
                 isNeedContextMenu={isNeedContextMenu}
             >
                 {hasChildren && (
-                    <Collapse in={open[task.id]} timeout="auto" unmountOnExit>
+                    <Collapse in={expandedTasks[task.id]} timeout="auto" unmountOnExit>
                         <List disablePadding sx={{ pl: 3 }}>
                             {task.childes_order.map((childId) => {
                                 const childTask = tasks.find((t) => t.id === childId);
@@ -257,8 +261,7 @@ function TasksList({
         );
     }, [
         selectedTaskId,
-        open,
-        handleTaskSelect,
+        expandedTasks,
         handleToggle,
         handleTaskClick,
         handleAdditionalButtonClick,
@@ -269,7 +272,14 @@ function TasksList({
         tasks,
     ]);
 
-    // Задачи теперь вычисляются в useTasksLogic
+    if (!tasks || !selectedList) {
+        return (
+            <Typography variant="body2" color="textSecondary" align="center">
+                Нет задач для отображения
+            </Typography>
+        );
+    }
+
 
     return (
         <>
@@ -277,11 +287,11 @@ function TasksList({
                 {activeTasks.map((task) => renderTask(task))}
                 {completedTasks.length > 0 && (
                     <div>
-                        <ListItemButton onClick={() => setCompletedOpen(!completedOpen)}>
-                            <ListItemText primary="Completed Tasks" />
-                            {completedOpen ? <ExpandLess /> : <ExpandMore />}
+                        <ListItemButton onClick={() => dispatch(setCompletedTasksOpen(!completedTasksOpen))}>
+                            <ListItemText primary="Выполненные" />
+                            {completedTasksOpen ? <ExpandLess /> : <ExpandMore />}
                         </ListItemButton>
-                        <Collapse in={completedOpen} timeout="auto" unmountOnExit>
+                        <Collapse in={completedTasksOpen} timeout="auto" unmountOnExit>
                             <List disablePadding>{completedTasks.map((task) => renderTask(task))}</List>
                         </Collapse>
                     </div>
@@ -292,12 +302,12 @@ function TasksList({
                     <MenuItem key="addToMyDay" onClick={handleAddToMyDayClick}>
                         Добавить в Мой день
                     </MenuItem>
-                    {listsList?.filter((item) => item.type == "list") && [
+                    {(listsList || []).filter((item) => item.type == "list").length > 0 && [
                         <MenuItem key="moveToList" onClick={(event) => handleOpenListsMenu(event, "move")}>Переместить в список</MenuItem>,
                         <MenuItem key="linkToList" onClick={(event) => handleOpenListsMenu(event, "link")}>Связать со списком</MenuItem>,
                     ]}
                     {!selectedList?.childes_order?.includes(targetItemId) && [
-                        <MenuItem key="upToTask" onClick={() => handleUpToTask(selectedList.id)}>
+                        <MenuItem key="upToTask" onClick={() => handleUpToTask()}>
                             Поднять до задачи
                         </MenuItem>,
                     ]}
@@ -321,15 +331,15 @@ function TasksList({
             {isNeedContextMenu && (
                 <Menu anchorEl={listsMenuAnchorEl} open={Boolean(listsMenuAnchorEl)} onClose={handleCloseListsMenu}>
                     {(() => {
-                        const allItems = listsList.concat(projects);
+                        if (!listsList || !projects) return [];
+                        const allItems = (listsList || []).concat(projects || []);
                         const itemsMap = new Map(allItems.map(item => [item.id, item]));
-                        // Корневые проекты
-                        const rootProjects = projects.filter(item => !item.deleted);
+                        const rootProjects = (projects || []).filter(item => !item.deleted);
                         const elements = [];
                         let menuIndex = 0;
                         const visited = new Set();
                         const traverse = (item, depth = 0) => {
-                            if (visited.has(item.id) || depth > 10) return; // Предотвращаем циклы и слишком глубокую вложенность
+                            if (visited.has(item.id) || depth > 10) return;
                             visited.add(item.id);
                             
                             if (item.type === 'project' || item.type === 'group') {
@@ -354,54 +364,27 @@ function TasksList({
                             }
                         };
                         rootProjects.forEach(item => traverse(item));
-                        // Также добавим списки вне проектов (inGeneralList)
-                        const rootLists = listsList.filter(item => item.inGeneralList && !item.deleted && !item.parent_id);
+                        const rootLists = (listsList || []).filter(item => item.inGeneralList && !item.deleted && !item.parent_id);
                         rootLists.forEach(item => traverse(item));
                         return elements;
                     })()}
                 </Menu>
             )}
-
-            {/* Подменю для задач
-      <Menu
-        anchorEl={tasksMenuAnchorEl}
-        open={Boolean(tasksMenuAnchorEl)}
-        onClose={handleCloseTasksMenu}
-      >
-        {tasks.filter(item => item.status_id !== 2).filter(item => item.id !== targetItemId).map(task => (
-          <MenuItem key={task.id} onClick={() => handleToListAction(`task_${task.id}`)}>
-            {task.title}
-          </MenuItem>
-        ))}
-        {tasks.filter(item => item.status_id == 2).filter(item => item.id !== targetItemId).map(task => (
-          <MenuItem key={task.id} onClick={() => handleToListAction(`task_${task.id}`)}>
-            {task.title}
-          </MenuItem>
-        ))}
-      </Menu> */}
         </>
     );
 }
 
 TasksList.propTypes = {
     containerId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    tasks: PropTypes.array,
-    selectedTaskId: PropTypes.number,
     listsList: PropTypes.array,
     projects: PropTypes.array,
     isNeedContextMenu: PropTypes.bool,
     selectedList: PropTypes.object,
-    setSelectedTaskId: PropTypes.func,
-    updateList: PropTypes.func,
-    updateTask: PropTypes.func,
-    linkTaskList: PropTypes.func,
     additionalButtonClick: PropTypes.func,
-    changeTaskStatus: PropTypes.func,
-    deleteFromChildes: PropTypes.func,
     additionalButton: PropTypes.object,
+    tasks: PropTypes.array,
     onSuccess: PropTypes.func,
     onError: PropTypes.func,
-    calendarRange: PropTypes.object, // Добавляем пропс для диапазона календаря
 };
 
 export default memo(TasksList);

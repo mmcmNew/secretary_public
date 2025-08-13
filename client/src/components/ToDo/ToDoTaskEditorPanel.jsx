@@ -1,15 +1,35 @@
 import { useCallback, memo } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { Box, Typography, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import TaskEditor from './TaskEditor';
+import { setSelectedTaskId } from '../../store/todoLayoutSlice';
+import { useGetSubtasksQuery, useAddSubtaskMutation, useUpdateTaskMutation, useChangeTaskStatusMutation, useDeleteTaskMutation, useGetFieldsConfigQuery } from '../../store/tasksSlice';
 
-function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId, task, subtasks, taskFields, addSubTask, updateTask, changeTaskStatus, deleteTask, fetchTasks }) {
-  // onChange для TaskEditor
+function ToDoTaskEditorPanel({ mobile = false }) {
+  const dispatch = useDispatch();
+  const { selectedTask, selectedTaskId } = useSelector((state) => state.todoLayout);
+  
+  const task = selectedTask;
+  
+  const { data: subtasks = [] } = useGetSubtasksQuery(selectedTaskId, {
+    skip: !selectedTaskId
+  });
+  
+  const { data: taskFields = {} } = useGetFieldsConfigQuery();
+  
+  const [addSubtask] = useAddSubtaskMutation();
+  const [updateTask] = useUpdateTaskMutation();
+  const [changeTaskStatus] = useChangeTaskStatusMutation();
+  const [deleteTask] = useDeleteTaskMutation();
   const handleTaskEditorChange = useCallback(async (updatedTask) => {
     if (!updatedTask || !updatedTask.id) return;
     await updateTask({ taskId: updatedTask.id, ...updatedTask });
-    await fetchTasks();
-  }, [updateTask, fetchTasks]);
+  }, [updateTask]);
+  
+  const handleCloseEditor = useCallback(() => {
+    dispatch(setSelectedTaskId(null));
+  }, [dispatch]);
 
   if (!task) return null;
   return (
@@ -23,7 +43,7 @@ function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId, task, subtasks
       }}
     >
       <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
-        <IconButton onClick={() => (setSelectedTaskId ? setSelectedTaskId(null) : null)}>
+        <IconButton onClick={handleCloseEditor}>
           <CloseIcon />
         </IconButton>
       </Box>
@@ -36,7 +56,7 @@ function ToDoTaskEditorPanel({ mobile = false, setSelectedTaskId, task, subtasks
             task={task}
             subtasks={subtasks}
             taskFields={taskFields}
-            addSubTask={addSubTask}
+            addSubTask={addSubtask}
             changeTaskStatus={changeTaskStatus}
             deleteTask={deleteTask}
             onChange={handleTaskEditorChange}

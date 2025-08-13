@@ -7,14 +7,25 @@ test.describe('Функциональность задач', () => {
   test('Создание новой задачи', async ({ page }) => {
     // Переход к списку задач
     await page.goto('/');
-    await page.click('text=Задачи');
-    
-    // Открытие формы создания задачи
-    await page.click('button[aria-label="Добавить задачу"]');
-    
+    await page.getByRole('button', { name: 'Add Container' }).click();
+
+    try {
+      // Ждём до 2 секунд, что кнопка появится
+      await page.getByRole('menuitem', { name: 'tasks' }).waitFor({ timeout: 2000 });
+    } catch {
+      // Если кнопка не появилась — жмём ещё раз
+      await page.getByRole('button', { name: 'Add Container' }).click();
+      await page.getByRole('menuitem', { name: 'tasks' }).waitFor();
+    }
+
+    // Теперь кнопка точно есть, можно кликать
+    await page.getByRole('menuitem', { name: 'tasks' }).click();
+    await page.getByRole('button', { name: 'Задачи Незавершённые задачи' }).click();
+
     // Заполнение формы
-    await page.fill('input[name="title"]', 'Тестовая задача');
-    await page.click('button:has-text("Сохранить")');
+    await page.getByRole('textbox', { name: 'Добавить задачу' }).fill('Тестовая задача');
+
+    await page.getByRole('button', { name: 'add task' }).click();
     
     // Проверка успешного создания
     await expect(page.locator('text=Тестовая задача')).toBeVisible();

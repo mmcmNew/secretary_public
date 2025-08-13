@@ -1,15 +1,18 @@
+import { useGetTtsAudioFilenameMutation } from '../../store/chatApi';
 
+export const useGetTtsAudioFilename = () => {
+  const [getTtsAudioFilename] = useGetTtsAudioFilenameMutation();
 
-import axios from 'axios';
-
-export default async function get_tts_audio_filename(text) {
+  const getFilename = async (text) => {
     try {
-        const response = await apiPost('/get_tts_audio_filename', new URLSearchParams({ text }), {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        });
-        console.log('Filename:', response.data.filename);
-        return response.data.filename;
+      const response = await getTtsAudioFilename(text).unwrap();
+      console.log('Filename:', response.filename);
+      return response.filename;
     } catch (error) {
-        console.error('There has been a problem with your fetch operation:', error);
+      console.error('There has been a problem with your fetch operation:', error);
+      return null;
     }
-}
+  };
+
+  return getFilename;
+};

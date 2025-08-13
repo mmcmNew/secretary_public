@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { memo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Box, Button, Paper, InputBase, Typography, TextField, IconButton } from '@mui/material';
 import ListIcon from '@mui/icons-material/List';
@@ -6,38 +6,30 @@ import AddIcon from '@mui/icons-material/Add';
 import TasksList from './TasksList';
 import { useGetTasksQuery, useAddTaskMutation } from '../../store/tasksSlice';
 import { useGetListsQuery, useUpdateListMutation } from '../../store/listsSlice';
-import { setSelectedListId } from '../../store/todoLayoutSlice';
+import { setSelectedListId, setEditingTitle, setNewTask, resetNewTask } from '../../store/todoLayoutSlice';
 
 function ToDoTasksPanel({ mobile = false }) {
   const dispatch = useDispatch();
-  const selectedListId = useSelector((state) => state.todoLayout.selectedListId);
+  const { selectedListId, selectedList, isEditingTitle, editingTitle, newTask } = useSelector((state) => state.todoLayout);
 
   const { data: tasks = [] } = useGetTasksQuery(selectedListId, {
     skip: !selectedListId,
   });
 
-  const { selectedList, isDefaultList } = useGetListsQuery(undefined, {
-    selectFromResult: ({ data }) => {
-      const list = data?.lists.find(l => l.id === selectedListId);
-      return {
-        selectedList: list,
-        isDefaultList: data?.default_lists.some(l => l.id === selectedListId),
-      };
-    },
+  const { isDefaultList } = useGetListsQuery(undefined, {
+    selectFromResult: ({ data }) => ({
+      isDefaultList: data?.default_lists.some(l => l.id === selectedListId),
+    }),
   });
 
   const [addTask, { isLoading: isAddingTask }] = useAddTaskMutation();
   const [updateList, { isLoading: isUpdatingList }] = useUpdateListMutation();
 
-  const [editingTitle, setEditingTitle] = useState('');
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [newTask, setNewTask] = useState('');
-
   const handleAddTask = async () => {
     if (newTask.trim() === '' || !selectedListId) return;
     try {
       await addTask({ title: newTask, list_id: selectedListId }).unwrap();
-      setNewTask('');
+      dispatch(resetNewTask());
     } catch (error) {
       console.error('Failed to add task:', error);
     }
@@ -54,7 +46,7 @@ function ToDoTasksPanel({ mobile = false }) {
     if (editingTitle.trim() !== '' && selectedList) {
       try {
         await updateList({ listId: selectedList.id, title: editingTitle.trim() }).unwrap();
-        setIsEditingTitle(false);
+        dispatch(setEditingTitle({ isEditing: false, title: '' }));
       } catch (error) {
         console.error('Failed to update list title:', error);
       }
@@ -90,7 +82,7 @@ function ToDoTasksPanel({ mobile = false }) {
             {isEditingTitle ? (
               <TextField
                 value={editingTitle}
-                onChange={(e) => setEditingTitle(e.target.value)}
+                onChange={(e) => dispatch(setEditingTitle({ isEditing: true, title: e.target.value }))}
                 onBlur={handleTitleEdit}
                 onKeyDown={(e) => e.key === 'Enter' && handleTitleEdit()}
                 autoFocus
@@ -104,8 +96,7 @@ function ToDoTasksPanel({ mobile = false }) {
                 variant="h6"
                 onClick={() => {
                   if (!isDefaultList) {
-                    setEditingTitle(selectedList.title);
-                    setIsEditingTitle(true);
+                    dispatch(setEditingTitle({ isEditing: true, title: selectedList.title }));
                   }
                 }}
                 sx={{ cursor: isDefaultList ? 'default' : 'pointer', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
@@ -120,7 +111,12 @@ function ToDoTasksPanel({ mobile = false }) {
         {mobile && (
           <Button onClick={() => dispatch(setSelectedListId(null))}>Назад</Button>
         )}
-        <TasksList tasks={tasks} />
+        <TasksList 
+          tasks={tasks} 
+          selectedList={selectedList}
+          containerId={selectedListId}
+          isNeedContextMenu={true}
+        />
       </Box>
       {selectedListId && (
         <Box sx={{ position: 'sticky', bottom: 0, left: 0, width: '100%', zIndex: 2, p: 1 }}>
@@ -133,7 +129,7 @@ function ToDoTasksPanel({ mobile = false }) {
               placeholder="Добавить задачу"
               value={newTask}
               onKeyDown={handleKeyDown}
-              onChange={(e) => setNewTask(e.target.value)}
+              onChange={(e) => dispatch(setNewTask(e.target.value))}
               disabled={isAddingTask}
             />
           </Paper>

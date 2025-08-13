@@ -1,79 +1,59 @@
-import { Box, Button, Divider, IconButton } from '@mui/material';
-import ListsTreeAnimated from './ListsTree/ListsTreeAnimated';
+import { Box, Button, IconButton } from '@mui/material';
+import ListsList from './ListsList';
 import QueueIcon from '@mui/icons-material/Queue';
 import { AccountTree } from '@mui/icons-material';
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
-import { useGetListsTreeQuery, useAddObjectMutation, useMoveListObjectMutation, useUpdateListMutation } from '../../store/listsSlice';
-import { setSelectedListId } from '../../store/todoLayoutSlice';
+import { useGetListsQuery, useAddObjectMutation, useMoveListObjectMutation, useUpdateListMutation, useDeleteListMutation } from '../../store/listsSlice';
+import { setSelectedListId, setSelectedList, toggleGroup } from '../../store/todoLayoutSlice';
 
 
 function ToDoListsPanel({ mobile }) {
   const dispatch = useDispatch();
-  const { data, error, isLoading } = useGetListsTreeQuery();
+  const { data, error, isLoading } = useGetListsQuery();
   const [addObject] = useAddObjectMutation();
   const [moveListObject] = useMoveListObjectMutation();
   const [updateList] = useUpdateListMutation();
-  const selectedListId = useSelector((state) => state.todoLayout.selectedListId);
-  console.log('ToDoListsPanel data:', data);
+  const [deleteList] = useDeleteListMutation();
+  const { selectedListId, openGroups } = useSelector((state) => state.todoLayout);
 
-  const handleDrop = (sectionIndex) => (newTree, options) => {
-    const { dragSource, dropTargetId, dropTarget, action } = options;
-    if (!dragSource) return;
+  const handleToggleGroup = useCallback((groupId) => {
+    dispatch(toggleGroup(groupId));
+  }, [dispatch]);
+  
+  const handleAddList = () => addObject({ type: 'list', title: 'Новый список' });
+  const handleAddGroup = () => addObject({ type: 'group', title: 'Новая группа' });
+  const handleAddProject = () => addObject({ type: 'project', title: 'Новый проект' });
 
-    const source_id = dragSource.id;
-    const target_id = dropTargetId === 0 ? null : dropTargetId;
-    
-    // Определяем тип операции
-    const isSorting = !target_id || dropTarget?.data?.type === dragSource.data?.type;
-    const operation = action || (isSorting ? 'sort' : 'move');
-    
-    if (operation === 'sort') {
-      const targetIndex = newTree.findIndex(node => node.id === target_id);
-      const newOrder = targetIndex >= 0 ? targetIndex : newTree.length;
-      
-      // Определяем тип сортировки
-      const sourceNode = newTree.find(node => node.id === source_id);
-      const isInsideContainer = sourceNode && sourceNode.parent !== 0;
-      
-      if (isInsideContainer) {
-        // Сортировка внутри контейнера
-        moveListObject({ 
-          source_id, 
-          action: 'sort', 
-          container_id: sourceNode.parent,
-          new_position: newOrder 
-        });
-      } else {
-        // Сортировка в основном списке
-        moveListObject({ source_id, action: 'sort', new_order: newOrder });
-      }
-    } else {
-      moveListObject({ source_id, target_id, action: operation });
-    }
-  };
-
-  const handleAddList = () => {
-    addObject({ type: 'list', title: 'Новый список' });
-  };
-
-  const handleAddGroup = () => {
-    addObject({ type: 'group', title: 'Новая группа' });
-  };
-
-  const handleAddProject = () => {
-    addObject({ type: 'project', title: 'Новый проект' });
-  };
-
-  const handleSetSelectedListId = (listId) => {
+  const handleSetSelectedListId = (event, listId) => {
     dispatch(setSelectedListId(listId));
+    const list = data?.lists.find(l => l.id === listId) || data?.default_lists.find(l => l.id === listId);
+    dispatch(setSelectedList(list));
+  };
+
+  const handleUpdateList = (listId, data) => {
+    updateList({ listId, ...data });
+  };
+
+  const handleDeleteList = (listId) => {
+    deleteList({id: listId});
+  };
+
+  const handleMoveList = (listId, direction) => {
+    // Logic to calculate new order would be here
+    console.log(`Move ${listId} ${direction}`);
+    // Example of what it might look like:
+    // const list = data.lists.find(l => l.id === listId);
+    // const newOrder = direction === 'up' ? list.order - 1 : list.order + 1;
+    // moveListObject({ listId, newOrder });
   };
 
   if (isLoading) return <div>Загрузка списков...</div>;
   if (error) return <div>Ошибка: {error.message}</div>;
-  if (error) return <div>Ошибка: {error.message}</div>;
-  if (!data || data.length === 0) return <div>Нет данных для отображения.</div>;
+  if (!data) return <div>Нет данных для отображения.</div>;
+
+  console.log('ToDoListsPanel data:', data);
 
   return (
     <Box
@@ -86,20 +66,19 @@ function ToDoListsPanel({ mobile }) {
       }}
     >
       <Box sx={{ flexGrow: 1, overflowY: 'auto', height: mobile ? '90%' : '100%' }}>
-        {data.map((section, index) => (
-          <Box key={index} sx={{ mb: 2, width: '97%' }}>
-            <ListsTreeAnimated
-              treeData={section}
-              selectedId={selectedListId}
-              onSelect={handleSetSelectedListId}
-              onDrop={handleDrop(index)}
-              onRename={(id, newTitle) => {
-                updateList({ listId: id, title: newTitle });
-              }}
-            />
-            {index === data.length - 1 ? null : <Divider />}
-          </Box>
-        ))}
+        <ListsList
+          lists={data.lists}
+          defaultLists={data.default_lists}
+          projects={data.projects}
+          selectedListId={selectedListId}
+          onSelectList={handleSetSelectedListId}
+          onUpdateList={handleUpdateList}
+          onDeleteList={handleDeleteList}
+          onMoveList={handleMoveList}
+          isNeedContextMenu={true}
+          openGroups={openGroups}
+          onToggleGroup={handleToggleGroup}
+        />
       </Box>
       <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', mt: 1 }}>
         <Button variant="outlined" sx={{ width: '100%' }} onClick={handleAddList}>
