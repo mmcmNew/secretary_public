@@ -76,7 +76,7 @@ function TaskEditor({
         initial.title = task.title;
         initial.start = task.start ? dayjs(task.start).toISOString() : null;
         initial.end = task.end ? dayjs(task.end).toISOString() : null;
-        initial.subtasks = Array.isArray(subtasks) ? subtasks.map(st => ({ id: st.id, title: st.title, status_id: st.status_id })) : [];
+        initial.subtasks = Array.isArray(subtasks) ? subtasks.map(st => ({ id: st.id, title: st.title, is_completed: st.is_completed })) : [];
         reset(initial);
         replace(initial.subtasks);
     }, [task, taskFields, subtasks, reset, replace]);
@@ -174,7 +174,7 @@ function TaskEditor({
             <Paper variant="outlined" sx={{ p: 1, my: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Checkbox
-                        checked={task.status_id === 2}
+                        checked={task.is_completed}
                         sx={{ mr: 1, p: 0 }}
                         onChange={(e) => handleToggle(task.id, e.target.checked)}
                     />
@@ -201,7 +201,7 @@ function TaskEditor({
                             <Grid item xs width="100%">
                                 <Box component="form" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                                     <Checkbox
-                                        checked={sub.status_id === 2}
+                                        checked={sub.is_completed}
                                         sx={{ m: 0, p: 0 }}
                                         onChange={(e) => sub.id && handleToggle(sub.id, e.target.checked, idx)}
                                     />
@@ -210,7 +210,7 @@ function TaskEditor({
                                         control={control}
                                         render={({ field }) => (
                                             <InputBase
-                                                sx={{ ml: 1, flex: 1, textDecoration: sub.status_id === 2 ? 'line-through' : 'none', width: '100%' }}
+                                                sx={{ ml: 1, flex: 1, textDecoration: sub.is_completed ? 'line-through' : 'none', width: '100%' }}
                                                 placeholder="Подзадача"
                                                 {...field}
                                                 onBlur={() => handleSubBlur(idx)}
@@ -247,7 +247,7 @@ function TaskEditor({
                     </Grid>
                 }
             </Paper>
-            {task.status_id === 2 && (
+            {task.is_completed && (
                 <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
                     Завершено: {task.completed_at ? dayjs(task.completed_at).format('DD/MM/YYYY HH:mm') : ''}
                 </Typography>

@@ -15,40 +15,37 @@ from app import db
 print("Определяем task_subtasks_relations")
 # Вспомогательные таблицы для связи между задачами и подзадачами
 task_subtasks_relations = db.Table('task_subtasks_relations',
-                                   db.Column('TaskID', db.Integer, db.ForeignKey('productivity.tasks.TaskID'), primary_key=True),
-                                   db.Column('SubtaskID', db.Integer, db.ForeignKey('productivity.tasks.TaskID'), primary_key=True),
+                                   db.Column('TaskID', db.String(36), db.ForeignKey('productivity.tasks.TaskID'), primary_key=True),
+                                   db.Column('SubtaskID', db.String(36), db.ForeignKey('productivity.tasks.TaskID'), primary_key=True),
                                    schema='productivity')
 
 # Вспомогательные таблицы для связи между задачами и проектами
 task_project_relations = db.Table('task_project_relations',
-                                  db.Column('TaskID', db.Integer, db.ForeignKey('productivity.tasks.TaskID'), primary_key=True),
-                                  db.Column('ProjectID', db.Integer, db.ForeignKey('productivity.projects.ProjectID'),
-                                            primary_key=True),
+                                  db.Column('TaskID', db.String(36), db.ForeignKey('productivity.tasks.TaskID'), primary_key=True),
+                                  db.Column('ProjectID', db.String(36), db.ForeignKey('productivity.projects.ProjectID'), primary_key=True),
                                   schema='productivity')
 
 # Вспомогательные таблицы для связи между списками и проектами
 list_project_relations = db.Table('list_project_relations',
-                                  db.Column('ListID', db.Integer, db.ForeignKey('productivity.lists.ListID'), primary_key=True),
-                                  db.Column('ProjectID', db.Integer, db.ForeignKey('productivity.projects.ProjectID'),
-                                            primary_key=True),
+                                  db.Column('ListID', db.String(36), db.ForeignKey('productivity.lists.ListID'), primary_key=True),
+                                  db.Column('ProjectID', db.String(36), db.ForeignKey('productivity.projects.ProjectID'), primary_key=True),
                                   schema='productivity')
 
 group_project_relations = db.Table('group_project_relations',
-                                   db.Column('GroupID', db.Integer, db.ForeignKey('productivity.groups.GroupID'), primary_key=True),
-                                   db.Column('ProjectID', db.Integer, db.ForeignKey('productivity.projects.ProjectID'),
-                                             primary_key=True),
+                                   db.Column('GroupID', db.String(36), db.ForeignKey('productivity.groups.GroupID'), primary_key=True),
+                                   db.Column('ProjectID', db.String(36), db.ForeignKey('productivity.projects.ProjectID'), primary_key=True),
                                    schema='productivity')
 
 # Вспомогательные таблицы для связи между задачами и списками
 task_list_relations = db.Table('task_list_relations',
-                               db.Column('TaskID', db.Integer, db.ForeignKey('productivity.tasks.TaskID'), primary_key=True),
-                               db.Column('ListID', db.Integer, db.ForeignKey('productivity.lists.ListID'), primary_key=True),
+                               db.Column('TaskID', db.String(36), db.ForeignKey('productivity.tasks.TaskID'), primary_key=True),
+                               db.Column('ListID', db.String(36), db.ForeignKey('productivity.lists.ListID'), primary_key=True),
                                schema='productivity')
 
 # Вспомогательные таблицы для связи между списками и группами
 list_group_relations = db.Table('list_group_relations',
-                                db.Column('ListID', db.Integer, db.ForeignKey('productivity.lists.ListID'), primary_key=True),
-                                db.Column('GroupID', db.Integer, db.ForeignKey('productivity.groups.GroupID'), primary_key=True),
+                                db.Column('ListID', db.String(36), db.ForeignKey('productivity.lists.ListID'), primary_key=True),
+                                db.Column('GroupID', db.String(36), db.ForeignKey('productivity.groups.GroupID'), primary_key=True),
                                 schema='productivity')
 
 
@@ -56,7 +53,7 @@ class DataVersion(db.Model):
     __tablename__ = 'data_versions'
     __table_args__ = {'schema': 'productivity'}
     
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     version_metadata = db.Column(db.JSON, default={})
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -121,7 +118,7 @@ class DataVersion(db.Model):
 class Priority(db.Model):
     __tablename__ = 'priorities'
     __table_args__ = {'schema': 'productivity'}
-    id = db.Column('PriorityID', db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column('PriorityID', db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column('PriorityName', db.String(255))
 
     @staticmethod
@@ -144,7 +141,7 @@ class Priority(db.Model):
 class Interval(db.Model):
     __tablename__ = 'intervals'
     __table_args__ = {'schema': 'productivity'}
-    id = db.Column('IntervalID', db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column('IntervalID', db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column('IntervalName', db.String(255))
     title = db.Column('IntervalTitle', db.String(255))
 
@@ -170,8 +167,8 @@ class Interval(db.Model):
 class TaskTypeGroup(db.Model):
     __tablename__ = 'task_type_groups'
     __table_args__ = {'schema': 'productivity'}
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, nullable=False)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), nullable=False)
     name = db.Column(db.String(255))
     color = db.Column(db.String(20))
     order = db.Column(db.Integer)
@@ -195,9 +192,9 @@ class TaskTypeGroup(db.Model):
 class TaskType(db.Model):
     __tablename__ = 'task_types'
     __table_args__ = {'schema': 'productivity'}
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, nullable=False)
-    group_id = db.Column(db.Integer, db.ForeignKey('productivity.task_type_groups.id'))
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), nullable=False)
+    group_id = db.Column(db.String(36), db.ForeignKey('productivity.task_type_groups.id'))
     name = db.Column(db.String(255))
     color = db.Column(db.String(20))
     order = db.Column(db.Integer)
@@ -220,17 +217,18 @@ class TaskType(db.Model):
 class Status(db.Model):
     __tablename__ = 'statuses'
     __table_args__ = {'schema': 'productivity'}
-    id = db.Column('StatusID', db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column('StatusID', db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column('StatusName', db.String(255))
+    is_final = db.Column('IsFinal', db.Boolean, default=False, nullable=False)
 
     @staticmethod
     def add_initial_statuses():
         # Проверяем, есть ли пользователи уже в базе данных
         if not Status.query.all():  # если база пуста
             statuses = [
-                Status(name="Not Started"),
-                Status(name="In Progress"),
-                Status(name="Completed"),
+                Status(name="Not Started", is_final=False),
+                Status(name="In Progress", is_final=False),
+                Status(name="Completed", is_final=True),
             ]
             db.session.bulk_save_objects(statuses)
             db.session.commit()
@@ -243,8 +241,8 @@ class Status(db.Model):
 class Project(db.Model):
     __tablename__ = 'projects'
     __table_args__ = {'schema': 'productivity'}
-    id = db.Column('ProjectID', db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, nullable=False)
+    id = db.Column('ProjectID', db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), nullable=False)
     title = db.Column('ProjectName', db.String(255))
     order = db.Column('Order', db.Integer, default=-1)
     childes_order = db.Column('Childes', JSONB, default=[])
@@ -259,9 +257,8 @@ class Project(db.Model):
         lists_dict = [lst.to_dict() for lst in self.lists]
         combined = groups_dict + lists_dict
         combined = sorted(combined, key=lambda x: x['order'])
-        # print(f'combined: {combined}')
         return {
-            'id': f'project_{self.id}',
+            'id': self.id,
             'type': 'project',
             'title': self.title,
             'order': self.order,
@@ -274,8 +271,8 @@ class Project(db.Model):
 class Group(db.Model):
     __tablename__ = 'groups'
     __table_args__ = {'schema': 'productivity'}
-    id = db.Column('GroupID', db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, nullable=False)
+    id = db.Column('GroupID', db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), nullable=False)
     title = db.Column('GroupName', db.String(255))
     order = db.Column('Order', db.Integer, default=-1)
     childes_order = db.Column('ChildesOrder', JSONB, default=[])
@@ -287,7 +284,7 @@ class Group(db.Model):
 
     def to_dict(self):
         return {
-            'id': f'group_{self.id}',
+            'id': self.id,
             'type': 'group',
             'title': self.title,
             'order': self.order,
@@ -300,8 +297,8 @@ class Group(db.Model):
 class List(db.Model):
     __tablename__ = 'lists'
     __table_args__ = {'schema': 'productivity'}
-    id = db.Column('ListID', db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, nullable=False)
+    id = db.Column('ListID', db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), nullable=False)
     title = db.Column('ListName', db.String(255))
     order = db.Column('Order', db.Integer, default=-1)
     childes_order = db.Column('ChildesOrder', JSONB, default=[])
@@ -333,21 +330,23 @@ class List(db.Model):
 class Task(db.Model):
     __tablename__ = 'tasks'
     __table_args__ = {'schema': 'productivity'}
-    id = db.Column('TaskID', db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, nullable=False)
+    id = db.Column('TaskID', db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), nullable=False)
     title = db.Column('Title', db.String(255))
     start = db.Column('Start', db.DateTime)
     end = db.Column('Deadline', db.DateTime)
     is_background = db.Column('IsBackground', db.Boolean, default=False)
     completed_at = db.Column('EndDate', db.DateTime)
+    is_completed = db.Column('IsCompleted', db.Boolean, default=False, nullable=False)
+    is_important = db.Column('IsImportant', db.Boolean, default=False, nullable=False)
     attachments = db.Column('Attachments', db.String(255))
     note = db.Column('Note', db.Text)
     childes_order = db.Column('ChildesOrder', JSONB, default=[])
     color = db.Column('Color', db.String(20))
-    type_id = db.Column('TaskTypeID', db.Integer, db.ForeignKey('productivity.task_types.id'))
-    status_id = db.Column('StatusID', db.Integer, db.ForeignKey('productivity.statuses.StatusID'), default=1)
-    priority_id = db.Column('PriorityID', db.Integer, db.ForeignKey('productivity.priorities.PriorityID'))
-    interval_id = db.Column('IntervalID', db.Integer, db.ForeignKey('productivity.intervals.IntervalID'))
+    type_id = db.Column('TaskTypeID', db.String(36), db.ForeignKey('productivity.task_types.id'))
+    status_id = db.Column('StatusID', db.String(36), db.ForeignKey('productivity.statuses.StatusID'))
+    priority_id = db.Column('PriorityID', db.String(36), db.ForeignKey('productivity.priorities.PriorityID'))
+    interval_id = db.Column('IntervalID', db.String(36), db.ForeignKey('productivity.intervals.IntervalID'))
     is_infinite = db.Column('IsInfinite', db.Boolean, default=False)
 
     status = db.relationship('Status', backref='tasks', foreign_keys=[status_id])
@@ -380,6 +379,8 @@ class Task(db.Model):
                 'end': self.end.isoformat() + 'Z' if self.end else None,
             },
             'completed_at': self.completed_at.isoformat() + 'Z' if self.completed_at else None,
+            'is_completed': self.is_completed,
+            'is_important': self.is_important,
             'is_background': self.is_background,
             'attachments': self.attachments,
             'note': self.note,
@@ -471,3 +472,4 @@ class Task(db.Model):
 
         # Возвращаем строковое представление rrule
         return rule_params
+

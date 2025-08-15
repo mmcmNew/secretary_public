@@ -73,23 +73,30 @@ def get_tasks(list_id, client_timezone='UTC', start=None, end=None, user_id=None
         )
         # current_app.logger.info(f'get_tasks: tasks_query: {tasks_query}')
     elif list_id == 'important':
-        tasks_query = Task.query.options(*load_options).filter(Task.priority_id == 3, Task.user_id == user_id).all()
+        tasks_query = Task.query.options(*load_options).filter(Task.is_important == True, Task.user_id == user_id).all()
     elif list_id == 'background':
         tasks_query = Task.query.options(*load_options).filter(Task.is_background, Task.user_id == user_id).all()
     else:
-        if not isinstance(list_id, int):
-            try:
-                list_id = int(list_id)
-                tasks_query = (
-                Task.query
-                    .join(task_list_relations, Task.id == task_list_relations.c.TaskID)
-                    .join(List, List.id == task_list_relations.c.ListID)
-                    .filter(List.id == list_id, Task.user_id == user_id)
-                    .options(*load_options)
-                    .all()
-                )
-            except (TypeError, ValueError):
-                return {'error': 'Invalid list_id'}, 400
+        try:
+            # Попытка преобразовать в UUID, чтобы отсечь системные имена
+            from uuid import UUID
+            UUID(list_id)
+            is_uuid = True
+        except ValueError:
+            is_uuid = False
+
+        if is_uuid:
+            tasks_query = (
+            Task.query
+                .join(task_list_relations, Task.id == task_list_relations.c.TaskID)
+                .join(List, List.id == task_list_relations.c.ListID)
+                .filter(List.id == list_id, Task.user_id == user_id)
+                .options(*load_options)
+                .all()
+            )
+        else:
+            # Если это не UUID, значит, это системное имя, которое не было обработано выше
+            return {'error': f'Invalid or unsupported list_id: {list_id}'}, 400
 
     for task in tasks_query:
         tasks_data.append(task.to_dict())
@@ -131,8 +138,8 @@ def add_task(data, user_id=None):
     start = data.get('start', None)
     end = data.get('end', None)
     list_id = data.get('listId', 'tasks')
-    priority_id = 1
     is_background = False
+    is_important = False
     updated_list_dict = {}
 
     if end:
@@ -145,21 +152,32 @@ def add_task(data, user_id=None):
             end = datetime.now(timezone.utc) + timedelta(hours=2)
             start = datetime.now(timezone.utc) + timedelta(hours=1)
         case 'important':
-            priority_id = 3
+            is_important = True
         case 'background':
             is_background = True
 
-    new_task = Task(title=task_title, end=end, start=start, priority_id=priority_id,
+    new_task = Task(title=task_title, end=end, start=start, is_important=is_important,
                     is_background=is_background, user_id=user_id)
     db.session.add(new_task)
 
-    if list_id and str(list_id).isdigit():
+    # Проверяем, является ли list_id UUID, а не системным именем
+    try:
+        from uuid import UUID
+        UUID(str(list_id))
+        is_uuid = True
+    except ValueError:
+        is_uuid = False
+
+    if list_id and is_uuid:
         from .models import List
-        updated_list = List.query.filter_by(id=int(list_id), user_id=user_id).first()
+        updated_list = List.query.filter_by(id=list_id, user_id=user_id).first()
 
         if updated_list:
+            # Сначала коммитим задачу, чтобы получить ID
+            db.session.flush()
+            
             updated_list.tasks.append(new_task)
-            updated_childes_order = updated_list.childes_order.copy() or []
+            updated_childes_order = updated_list.childes_order.copy() if updated_list.childes_order else []
             if new_task.id not in updated_childes_order:
                 updated_childes_order.insert(0, new_task.id)
             updated_list.childes_order = updated_childes_order
@@ -210,10 +228,8 @@ def edit_task(data, user_id=None):
     if user_id is None:
         raise ValueError("user_id must be provided for edit_task")
     task_id = data.get('taskId')
-    try:
-        task_id = int(task_id)
-    except (ValueError, TypeError):
-        return {'success': False, 'message': 'Invalid task id'}, 400
+    if not task_id:
+        return {'success': False, 'message': 'Task ID is required'}, 400
 
     updated_fields = {key: value for key, value in data.items() if key not in ['taskId', 'subtasks', 'current_start']}
 
@@ -241,82 +257,61 @@ def change_task_status(data, user_id=None):
     if user_id is None:
         raise ValueError("user_id must be provided for change_task_status")
     task_id = data.get('taskId')
-    status_id = data.get('status_id', 2)
+    is_completed = data.get('is_completed')
     current_start_str = data.get('current_start')
     current_start = _parse_iso_datetime(current_start_str) if current_start_str else None
 
-    task = Task.query.options(db.joinedload(Task.subtasks),
-                              db.joinedload(Task.lists)).filter_by(id=task_id, user_id=user_id).first()
-    status = db.session.get(Status, status_id)
-    if not status:
-        return {'success': False, 'message': 'Status not found'}, 400
+    if task_id is None or is_completed is None:
+        return {'success': False, 'message': 'taskId and is_completed are required'}, 400
 
+    task = Task.query.options(db.joinedload(Task.subtasks)).filter_by(id=task_id, user_id=user_id).first()
     if not task:
         return {'success': False, 'message': 'Task not found'}, 404
 
-    from .calendar.models import TaskOverride
-    from datetime import date as dt_date
+    completed_dt = datetime.now(timezone.utc) if is_completed else None
 
-    if status_id == 2:
-        completed_at = data.get('completed_at')
-        if completed_at:
-            completed_dt = _parse_iso_datetime(completed_at)
+    # Логика для повторяющихся задач
+    if task.interval_id and task.start and is_completed:
+        base_start = current_start or task.start
+        override_date = base_start.date()
+        override = TaskOverride.query.filter_by(task_id=task.id, date=override_date).first()
+        
+        override_data = {
+            'is_completed': True,
+            'completed_at': completed_dt.isoformat() + 'Z'
+        }
+
+        if not override:
+            override = TaskOverride(
+                task_id=task.id,
+                date=override_date,
+                type='modified',
+                data=override_data
+            )
+            db.session.add(override)
         else:
-            completed_dt = datetime.now(timezone.utc)
+            override.type = 'modified'
+            override.data = {**(override.data or {}), **override_data}
+        
+        db.session.commit()
+        return {'success': True, 'changed_ids': [task.id]}, 200
 
-        if task.interval_id and task.start:
-            rule = task.build_rrule()
-            base_start = current_start or task.start
-            # Создаём override для этой даты
-            override_date = base_start.date()
-            override = TaskOverride.query.filter_by(task_id=task.id, date=override_date).first()
-            if not override:
-                override = TaskOverride(
-                    task_id=task.id,
-                    date=override_date,
-                    type='modified',
-                    data={
-                        'status_id': 2,
-                        'completed_at': completed_dt.isoformat() + 'Z'
-                    }
-                )
-                db.session.add(override)
-            else:
-                override.type = 'modified'
-                override.data = {**(override.data or {}), 'status_id': 2, 'completed_at': completed_dt.isoformat() + 'Z'}
-                db.session.add(override)
-                db.session.commit()
-            # Не меняем основную задачу, только создаём override
-            changed_ids = [task.id]
-            result = {'success': True, 'task': 'all', 'changed_ids': changed_ids}
-            return result, 200
-
-        # Обычная задача (не повторяющаяся)
-        task.status_id = 2
-        task.completed_at = completed_dt
-        set_subtask_status(task, status, completed_at)
-        all_subtasks = collect_all_subtasks(task)
-        changed_ids = [task.id] + [sub.id for sub in all_subtasks]
-        result = {'success': True, 'task': 'all', 'changed_ids': changed_ids}
-    else:
-        task.status_id = status_id
-        task.completed_at = None
-        result = {'success': True, 'task': task.to_dict()}
-
-    db.session.add(task)
-    db.session.commit()
-    return result, 200
-
-
-def set_subtask_status(task, status, completed_at=None):
+    # Логика для обычных задач
+    task.is_completed = is_completed
+    task.completed_at = completed_dt
+    
+    # Обновляем все подзадачи
     all_subtasks = collect_all_subtasks(task)
     for subtask in all_subtasks:
-        subtask.status = status
-        if completed_at:
-            subtask.completed_at = _parse_iso_datetime(completed_at)
-        else:
-            subtask.completed_at = datetime.now(timezone.utc)
+        subtask.is_completed = is_completed
+        subtask.completed_at = completed_dt
+    
+    db.session.add(task)
     db.session.add_all(all_subtasks)
+    db.session.commit()
+
+    changed_ids = [task.id] + [sub.id for sub in all_subtasks]
+    return {'success': True, 'changed_ids': changed_ids}, 200
 
 
 def collect_all_subtasks(root_task):

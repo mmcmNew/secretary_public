@@ -2,6 +2,7 @@ from app import db
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Text, DECIMAL, DateTime, Boolean, ForeignKey
 from sqlalchemy.types import JSON
+import uuid
 
 class AccessLevel(db.Model):
     __tablename__ = 'access_levels'
@@ -27,8 +28,8 @@ class UserSubscription(db.Model):
     __tablename__ = 'user_subscriptions'
     __table_args__ = {'schema': 'users'}
     
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.users.user_id')) 
+    id = Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey('users.users.user_id')) 
     plan_id = Column(Integer, ForeignKey('users.subscription_plans.id'))  
     start_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     end_date = Column(DateTime)    

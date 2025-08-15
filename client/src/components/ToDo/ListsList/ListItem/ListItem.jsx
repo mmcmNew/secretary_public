@@ -36,20 +36,28 @@ export default function ListItem({
           aria-label="Незавершённые задачи"
         />
       ) : (
-        <CheckIcon fontSize="small" style={{ color: 'green' }} />
+        <CheckIcon fontSize="small" sx={{ color: 'green' }} aria-label="Все задачи завершены" />
       );
     }
     return null;
   };
 
+  const handleClick = (e) => {
+    if (!isEditing) {
+      onSelect(e);
+    }
+  };
+
   return (
     <StyledListItemButton
       selected={isSelected}
-      onClick={onSelect}
+      onClick={handleClick}
       onContextMenu={onContextMenu}
+      aria-selected={isSelected}
+      aria-label={item.title}
     >
       <ListItemIcon sx={{ minWidth: 35 }}>
-        <FormatListBulleted />
+        <FormatListBulleted aria-hidden="true" />
       </ListItemIcon>
 
       {isEditing ? (
@@ -59,7 +67,8 @@ export default function ListItem({
           onKeyDown={onKeyDown}
           onBlur={onBlur}
           inputRef={inputRef}
-          autoFocus
+          sx={{ flex: 1, border: 'none' }} // Inline стиль для seamless editing
+          aria-label="Редактировать название списка"
         />
       ) : (
         <ListItemText primary={item.title} sx={{ mr: 2 }} />
@@ -74,7 +83,7 @@ export default function ListItem({
             e.stopPropagation();
             onContextMenu(e);
           }}
-          aria-label="Контекстное меню"
+          aria-label="Открыть контекстное меню"
         >
           <MoreVertIcon />
         </IconButton>

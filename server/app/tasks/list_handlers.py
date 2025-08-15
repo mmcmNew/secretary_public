@@ -50,9 +50,9 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     # Для специальных списков используем один запрос
     special_tasks_counts = (
         db.session.query(
-            func.count(Task.id).filter(and_(~Task.lists.any(), ~Task.parent_tasks.any(), Task.status_id != 2)).label('tasks_count'),
-            func.count(Task.id).filter(and_(Task.priority_id == 3, Task.status_id != 2)).label('important_count'),
-            func.count(Task.id).filter(and_(Task.is_background, Task.status_id != 2)).label('background_count')
+            func.count(Task.id).filter(and_(~Task.lists.any(), ~Task.parent_tasks.any(), Task.is_completed == False)).label('tasks_count'),
+            func.count(Task.id).filter(and_(Task.is_important == True, Task.is_completed == False)).label('important_count'),
+            func.count(Task.id).filter(and_(Task.is_background, Task.is_completed == False)).label('background_count')
         )
         .filter(Task.user_id == user_id)
         .first()
@@ -91,7 +91,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
         r.id for r in db.session.query(Task.id)
         .filter(
             Task.user_id == user_id,
-            Task.priority_id == 3
+            Task.is_important == True
         )
         .order_by(Task.id.desc())
         .all()
@@ -133,7 +133,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
         unfinished = default_lists_unfinished_map.get(list_id, 0)
         if list_id == 'my_day':
             # Для "Мой день" по-прежнему нужны полные данные задач для подсчета незавершенных
-            unfinished = len([t for t in my_day_tasks if t.get('status_id', 0) != 2])
+            unfinished = len([t for t in my_day_tasks if not t.get('is_completed')])
 
         default_lists.append({
             'id': list_id,
@@ -147,28 +147,25 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     # current_app.logger.info(f"PERF (user:{user_id}): Default lists: {default_lists}")
     step_start_time = time.perf_counter()
     
-    # Функция для создания уникального ID с сохранением realId
-    def create_unique_item(item_dict, context_prefix=""):
-        unique_id = f"{context_prefix}_{item_dict['id']}_{str(uuid.uuid4())[:8]}" if context_prefix else f"{item_dict['id']}_{str(uuid.uuid4())[:8]}"
+    # Функция для создания элемента без префиксов
+    def create_item(item_dict):
         return {
             **item_dict,
-            'id': unique_id,
             'realId': item_dict['id']
         }
     
-    # Преобразуем объекты в словари с уникальными ID
+    # Преобразуем объекты в словари без префиксов
     groups_dict = []
     for group in groups_list:
         group_dict = {**group.to_dict(), 'unfinished_tasks_count': groups_unfinished_map.get(group.id, 0)}
-        # Создаем уникальные ID для списков внутри группы
         if 'lists' in group_dict:
-            group_dict['lists'] = [create_unique_item(lst, f"group_{group.id}") for lst in group_dict['lists']]
-        groups_dict.append(create_unique_item(group_dict))
+            group_dict['lists'] = [create_item(lst) for lst in group_dict['lists']]
+        groups_dict.append(create_item(group_dict))
 
     lists_dict = []
     for lst in lists_list:
         lst_dict = {**lst.to_dict(), 'unfinished_tasks_count': lst.unfinished_count}
-        lists_dict.append(create_unique_item(lst_dict))
+        lists_dict.append(create_item(lst_dict))
 
     projects_dict = []
     for project in projects_list:
@@ -177,16 +174,14 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
         ) + sum(
             groups_unfinished_map.get(group.id, 0) for group in project.groups
         )}
-        # Создаем уникальные ID для списков и групп внутри проекта
         if 'lists' in project_dict:
-            project_dict['lists'] = [create_unique_item(lst, f"project_{project.id}") for lst in project_dict['lists']]
+            project_dict['lists'] = [create_item(lst) for lst in project_dict['lists']]
         if 'groups' in project_dict:
-            project_dict['groups'] = [create_unique_item(grp, f"project_{project.id}") for grp in project_dict['groups']]
-            # Также создаем уникальные ID для списков внутри групп проекта
+            project_dict['groups'] = [create_item(grp) for grp in project_dict['groups']]
             for group in project_dict['groups']:
                 if 'lists' in group:
-                    group['lists'] = [create_unique_item(lst, f"project_{project.id}_group_{group['realId']}") for lst in group['lists']]
-        projects_dict.append(create_unique_item(project_dict))
+                    group['lists'] = [create_item(lst) for lst in group['lists']]
+        projects_dict.append(create_item(project_dict))
 
     # --- Сортировка
     combined = groups_dict + lists_dict
@@ -241,17 +236,25 @@ def edit_list(data, user_id=None):
     if not isinstance(data, dict):
         current_app.logger.error(f'edit_list: Expected dict, got {type(data)}: {data}')
         return {'success': False, 'message': 'Invalid data format'}, 400
-    list_id = data.get('listId', None)
-    if not list_id:
-        return {'success': False, 'message': 'Недостаточно данных для редактирования списка'}, 404
-    updated_fields = {key: value for key, value in data.items() if key != 'listId'}
+    list_id = data.get('listId')
+    list_type = data.get('type')
 
-    if str(list_id).startswith('group'):
-        updated_list = db.session.get(Group, list_id.replace('group_', ''))
-    elif str(list_id).startswith('project'):
-        updated_list = db.session.get(Project, list_id.replace('project_', ''))
-    else:
-        updated_list = db.session.get(List, list_id)
+    if not list_id or not list_type:
+        return {'success': False, 'message': 'listId and type are required'}, 400
+        
+    updated_fields = {key: value for key, value in data.items() if key not in ['listId', 'type', 'order']}
+
+    model_map = {
+        'group': Group,
+        'project': Project,
+        'list': List
+    }
+    model = model_map.get(list_type)
+    
+    if not model:
+        return {'success': False, 'message': f'Invalid type: {list_type}'}, 400
+
+    updated_list = db.session.get(model, list_id)
 
     if not updated_list:
         return {'success': False, 'message': 'List not found'}, 404

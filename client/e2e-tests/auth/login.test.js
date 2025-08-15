@@ -5,7 +5,7 @@ test.describe('Аутентификация', () => {
     await page.goto('/login');
     
     // Заполнение формы входа
-    await page.getByRole('textbox', { name: 'Email' }).fill('newuser@example.com');
+    await page.getByRole('textbox', { name: 'Email' }).fill('testuser@example.com');
     await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: 'Sign In' }).click();
     
@@ -42,7 +42,7 @@ test.describe('Аутентификация', () => {
   test('Сохранение авторизации при обновлении страницы', async ({ page }) => {
     // Входим в систему
     await page.goto('/login');
-    await page.getByRole('textbox', { name: 'Email' }).fill('newuser@example.com');
+    await page.getByRole('textbox', { name: 'Email' }).fill('testuser@example.com');
     await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page).toHaveURL('/');
@@ -65,13 +65,13 @@ test.describe('Аутентификация', () => {
   test('Успешный выход из системы', async ({ page }) => {
     // Сначала нужно войти в систему
     await page.goto('/login');
-    await page.getByRole('textbox', { name: 'Email' }).fill('newuser@example.com');
+    await page.getByRole('textbox', { name: 'Email' }).fill('testuser@example.com');
     await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page).toHaveURL('/');
 
     // Находим и нажимаем кнопку выхода
-    await page.getByRole('button', { name: 'N', exact: true }).click();
+    await page.getByRole('button', { name: 'T', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Выход' }).click();
 
     // Проверка успешного выхода

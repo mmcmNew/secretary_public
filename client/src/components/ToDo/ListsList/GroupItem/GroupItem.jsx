@@ -20,7 +20,7 @@ import { StyledListItemButton, GroupLine, GroupChildrenWrapper } from './GroupIt
 export default function GroupItem({
   group,
   isSelected,
-  onSelect,
+  // onSelect,
   onContextMenu,
   isEditing,
   editingTitle,
@@ -39,8 +39,6 @@ export default function GroupItem({
     }
   };
 
-
-
   const renderStatus = () => {
     if (group.childes_order && group.childes_order.length !== 0) {
       return group.unfinished_tasks_count !== 0 ? (
@@ -51,7 +49,7 @@ export default function GroupItem({
           aria-label="Незавершённые задачи"
         />
       ) : (
-        <CheckIcon fontSize="small" style={{ color: 'green' }} />
+        <CheckIcon fontSize="small" sx={{ color: 'green' }} aria-label="Все задачи завершены" />
       );
     }
     return null;
@@ -63,9 +61,11 @@ export default function GroupItem({
         selected={isSelected}
         onClick={handleToggle}
         onContextMenu={onContextMenu}
+        aria-expanded={open}
+        aria-label={group.title}
       >
         <ListItemIcon sx={{ minWidth: 35 }} onClick={handleToggle}>
-          {open ? <ExpandLess /> : <ExpandMore />}
+          {open ? <ExpandLess aria-hidden="true" /> : <ExpandMore aria-hidden="true" />}
         </ListItemIcon>
 
         {isEditing ? (
@@ -75,6 +75,8 @@ export default function GroupItem({
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             inputRef={inputRef}
+            sx={{ flex: 1, border: 'none' }} // Seamless editing
+            aria-label="Редактировать название группы"
           />
         ) : (
           <ListItemText primary={group.title} sx={{ mr: 2 }} />
@@ -89,7 +91,7 @@ export default function GroupItem({
               e.stopPropagation();
               onContextMenu(e);
             }}
-            aria-label="Контекстное меню"
+            aria-label="Открыть контекстное меню"
           >
             <MoreVertIcon />
           </IconButton>

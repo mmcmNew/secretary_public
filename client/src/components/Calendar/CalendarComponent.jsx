@@ -4,7 +4,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import ruLocale from "@fullcalendar/core/locales/ru";
 import interactionPlugin, { Draggable } from "@fullcalendar/interaction";
-import rrulePlugin from "@fullcalendar/rrule";
+// import rrulePlugin from "@fullcalendar/rrule";
 import listPlugin from "@fullcalendar/list";
 import {
   Button,
@@ -158,7 +158,7 @@ function CalendarComponent({
       }
 
       const color =
-        event?.status_id == 2 ? "#008000" : event?.priority_id == 3 ? "#A52A2A" : event?.color ? event.color : "#3788D8";
+        event?.is_completed ? "#008000" : event?.priority_id == 3 ? "#A52A2A" : event?.color ? event.color : "#3788D8";
       updatedEvent.color = color;
       updatedEvent.backgroundColor = color;
       updatedEvent.borderColor = color;
@@ -569,7 +569,7 @@ function CalendarComponent({
                   {tasks && tasks.length > 0 ? (
                     <>
                       {tasks
-                        .filter((task) => task.status_id !== 2)
+                        .filter((task) => !task.is_completed)
                         .map((task) => (
                           <ListItem
                             key={task.id}
@@ -582,7 +582,7 @@ function CalendarComponent({
                         ))}
 
                       {/* Список выполненных задач */}
-                      {tasks.filter((task) => task.status_id === 2).length >
+                      {tasks.filter((task) => task.is_completed).length >
                         0 && (
                         <>
                           <ListItem>
@@ -592,7 +592,7 @@ function CalendarComponent({
                             />
                           </ListItem>
                           {tasks
-                            .filter((task) => task.status_id === 2)
+                            .filter((task) => task.is_completed)
                             .map((task) => (
                               <ListItem
                                 key={task.id}

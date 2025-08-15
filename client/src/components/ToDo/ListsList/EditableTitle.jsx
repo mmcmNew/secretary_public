@@ -1,25 +1,18 @@
 import { TextField } from '@mui/material';
 import PropTypes from 'prop-types';
 
-export default function EditableTitle({
-  value,
-  onChange,
-  onKeyDown,
-  onBlur,
-  inputRef,
-  autoFocus = false
-}) {
+export default function EditableTitle({ value, onChange, onKeyDown, onBlur, inputRef, sx, ...props }) {
   return (
     <TextField
-      size="small"
-      sx={{ p: 0, m: 0, width: '100%' }}
       value={value}
       onChange={onChange}
       onKeyDown={onKeyDown}
       onBlur={onBlur}
       inputRef={inputRef}
-      // eslint-disable-next-line jsx-a11y/no-autofocus
-      autoFocus={autoFocus}
+      variant="standard"
+      size="small"
+      sx={{ ...sx, '& .MuiInputBase-input': { padding: 0 } }} // Borderless
+      {...props}
     />
   );
 }
@@ -27,6 +20,7 @@ export default function EditableTitle({
 EditableTitle.propTypes = {
   value: PropTypes.string.isRequired,
   onChange: PropTypes.func.isRequired,
+  sx: PropTypes.object,
   onKeyDown: PropTypes.func,
   onBlur: PropTypes.func,
   inputRef: PropTypes.object,

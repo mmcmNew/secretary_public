@@ -4,18 +4,19 @@ from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Text, Bool
 from sqlalchemy.types import JSON
 from flask import current_app
 from werkzeug.security import generate_password_hash, check_password_hash
+import uuid
 
 
 # Модель для таблицы users
 class User(db.Model):
     __tablename__ = 'users'
     __table_args__ = {'schema': 'users'}
-    user_id = Column(Integer, primary_key=True)
+    user_id = Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_name = Column(Text, nullable=False)
     email = Column(String(255), unique=True)
     password_hash = Column(String(255))
     avatar_src = Column(Text)
-    last_dashboard_id = Column(Integer)
+    last_dashboard_id = Column(String(36), ForeignKey('workspace.dashboard.id'))
     modules = Column(JSON, default=lambda: ['diary'])
     access_level_id = Column(Integer, default=1)
     is_admin = Column(Boolean, default=False)
@@ -40,9 +41,9 @@ class User(db.Model):
 
         # Проверяем, есть ли пользователи уже в базе данных
         if not User.query.all():  # если база пуста
-            admin = User(user_name="admin", email="admin@example.com", avatar_src="me.png", last_dashboard_id=0, modules=[], access_level_id=3, is_admin=True)
+            admin = User(user_name="admin", email="admin@example.com", avatar_src="me.png", last_dashboard_id=None, modules=[], access_level_id=3, is_admin=True)
             admin.set_password("password")
-            secretary = User(user_name="Secretary", avatar_src="secretary.png", last_dashboard_id=0, modules=[], access_level_id=3)
+            secretary = User(user_name="Secretary", avatar_src="secretary.png", last_dashboard_id=None, modules=[], access_level_id=3)
             secretary.set_password("password")
             db.session.add(admin)
             db.session.add(secretary)
@@ -106,7 +107,7 @@ class ChatHistory(db.Model):
     __tablename__ = 'chat_history'
     __table_args__ = {'schema': 'communication'}
     message_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer)
+    user_id = Column(String(36), ForeignKey('users.users.user_id'), nullable=False)
     datetime = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     text = Column(Text)
     files = Column(Text)
@@ -122,13 +123,4 @@ class ChatHistory(db.Model):
             'datetime': self.datetime.isoformat() + 'Z',
             'files': self.files,
         }
-
-
-# Модель для таблицы quotes
-class Quote(db.Model):
-    __tablename__ = 'quotes'
-    __table_args__ = {'schema': 'communication'}
-    quote_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, nullable=False)
-    quote = Column(String(255))  # Использование String вместо Text для коротких строковых полей
 

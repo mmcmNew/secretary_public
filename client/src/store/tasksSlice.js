@@ -70,10 +70,10 @@ export const tasksApi = apiSlice.injectEndpoints({
       invalidatesTags: (result, error, { listId }) => [{ type: 'Task', id: listId }],
     }),
     changeTaskStatus: builder.mutation({
-      query: ({ taskId, status_id, completed_at }) => ({
+      query: ({ taskId, is_completed, completed_at }) => ({
         url: '/tasks/change_status',
         method: 'PUT',
-        body: { taskId, status_id, completed_at },
+        body: { taskId, is_completed, completed_at },
       }),
       invalidatesTags: (result, error, { listId }) => [{ type: 'Task', id: listId }],
     }),

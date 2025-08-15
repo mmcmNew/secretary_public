@@ -4,101 +4,92 @@ from .models import db, Task, List, Group, Project, Status
 from .utils import _parse_iso_datetime
 
 
-def parse_entity(entity_id, user_id, entity_type):
-    """Общая функция для извлечения сущности по ID и типу"""
-    try:
-        entity_id_int = int(str(entity_id).split('_')[1])
-    except (ValueError, IndexError):
-        raise ValueError(f"Invalid {entity_type} ID format")
-
+def get_entity_by_type_and_id(entity_type, entity_id, user_id):
+    """Получает сущность по типу и ID, используя новую схему UUID."""
+    current_app.logger.info(f'🔍 get_entity_by_type_and_id called: type={entity_type}, id={entity_id}, user_id={user_id}')
+    
     model_map = {
+        'list': List,
         'group': Group,
         'project': Project,
-        'list': List,
+        'task': Task,
     }
-
+    
     model = model_map.get(entity_type)
     if not model:
-        raise ValueError(f"Unsupported entity type: {entity_type}")
-
-    instance = model.query.filter_by(id=entity_id_int, user_id=user_id).first()
-    if not instance:
-        raise ValueError(f"{entity_type.capitalize()} not found")
-    return instance
-
-
-def get_entity_by_id(raw_id, user_id):
-    if isinstance(raw_id, int):
-        obj = List.query.filter_by(id=raw_id, user_id=user_id).first()
-        current_app.logger.debug(f"Resolved int ID {raw_id} → {obj}")
-        return obj
-
-    raw_id = str(raw_id)
+        current_app.logger.error(f"❌ Invalid entity type: {entity_type}")
+        return None
+        
     try:
-        if raw_id.startswith('group_'):
-            obj = Group.query.filter_by(id=int(raw_id.split('_')[1]), user_id=user_id).first()
-            current_app.logger.debug(f"Resolved group ID {raw_id} -> {obj}")
-            return obj
-        elif raw_id.startswith('project_'):
-            obj = Project.query.filter_by(id=int(raw_id.split('_')[1]), user_id=user_id).first()
-            current_app.logger.debug(f"Resolved project ID {raw_id} -> {obj}")
-            return obj
-        else:
-            obj = List.query.filter_by(id=int(raw_id), user_id=user_id).first()
-            current_app.logger.debug(f"Resolved list ID {raw_id} -> {obj}")
-            return obj
+        obj = model.query.filter_by(id=entity_id, user_id=user_id).first()
+        current_app.logger.info(f"✅ Resolved {entity_type} ID {entity_id} -> {obj}")
+        return obj
     except Exception as e:
-        current_app.logger.error(f"get_entity_by_id failed for {raw_id}: {e}")
-        raise ValueError(f"Invalid ID format: {raw_id}")
+        current_app.logger.error(f"❌ get_entity_by_type_and_id failed for {entity_type}:{entity_id}: {e}")
+        return None
+
+
+def get_entity_by_id(raw_id, user_id, entity_type=None):
+    """
+    Получает сущность по ID. Если тип не указан, пытается определить его.
+    Эта функция оставлена для обратной совместимости, но рекомендуется использовать get_entity_by_type_and_id.
+    """
+    current_app.logger.info(f'🔍 get_entity_by_id called: raw_id={raw_id}, user_id={user_id}, entity_type={entity_type}')
+    
+    if entity_type:
+        return get_entity_by_type_and_id(entity_type, raw_id, user_id)
+
+    models_to_check = [Task, List, Group, Project]
+    for model in models_to_check:
+        instance = model.query.filter_by(id=raw_id, user_id=user_id).first()
+        if instance:
+            current_app.logger.info(f"✅ Resolved ID {raw_id} to {type(instance).__name__} -> {instance}")
+            return instance
+            
+    current_app.logger.warning(f"⚠️ get_entity_by_id failed to find entity for ID {raw_id}")
+    return None
 
 
 def link_group_list(data, user_id=None):
     if user_id is None:
         raise ValueError("user_id must be provided for link_group_list")
 
-    source = None
-    target = None
-
     try:
         source_id = data.get('source_id')
         target_id = data.get('target_id')
+        source_type = data.get('source_type')
+        target_type = data.get('target_type')
 
-        if not source_id or not target_id:
-            return {"error": "source_id and target_id must be provided"}, 400
+        if not all([source_id, target_id, source_type, target_type]):
+            return {"error": "source_id, target_id, source_type, and target_type must be provided"}, 400
 
-        source = get_entity_by_id(source_id, user_id)
+        source = get_entity_by_type_and_id(source_type, source_id, user_id)
         if not source:
             return {"error": "Source entity not found"}, 404
 
-        target = get_entity_by_id(target_id, user_id)
+        target = get_entity_by_type_and_id(target_type, target_id, user_id)
         if not target:
             return {"error": "Target entity not found"}, 404
 
         current_app.logger.debug(f"source: {source}, type: {type(source)}")
         current_app.logger.debug(f"target: {target}, type: {type(target)}")
 
-        # Обработка связей
-        if str(target_id).startswith('group_'):
+        if isinstance(target, Group):
             if isinstance(source, List) and target not in source.groups:
                 source.groups.append(target)
-            elif isinstance(source, Group) and target not in source.projects:
-                source.projects.append(target)
-
-        elif str(target_id).startswith('project_'):
+        elif isinstance(target, Project):
             if isinstance(source, List) and target not in source.projects:
                 source.projects.append(target)
             elif isinstance(source, Group) and target not in source.projects:
                 source.projects.append(target)
-
-        elif isinstance(target_id, int) or str(target_id).isdigit():
-            if not isinstance(source, Task):
-                return {"error": "Only tasks can be linked to list"}, 400
-            if source_id not in target.childes_order:
-                updated = target.childes_order.copy()
-                updated.append(source_id)
-                target.childes_order = updated
-
-        # Сохраняем
+        elif isinstance(target, List):
+             if isinstance(source, Task) and source not in target.tasks:
+                source.lists.append(target)
+                if source.id not in (target.childes_order or []):
+                    updated = target.childes_order.copy() if target.childes_order else []
+                    updated.append(source.id)
+                    target.childes_order = updated
+        
         db.session.add(source)
         db.session.add(target)
         db.session.commit()
@@ -114,104 +105,56 @@ def link_group_list(data, user_id=None):
 def delete_from_childes(data, user_id=None):
     if user_id is None:
         raise ValueError("user_id must be provided for delete_from_childes")
-    # print(f'delete_from_childes: data: {data}')
+    
     try:
-        source_id = data['source_id']
-        group_id = data.get('group_id', None)
+        source_id = data.get('source_id')
+        source_type = data.get('source_type')
+        parent_id = data.get('parent_id')
+        parent_type = data.get('parent_type')
 
-        # print(f'delete_from_childes: source_id: {source_id}, target_id: {group_id}')
+        if not all([source_id, source_type]):
+            return {"error": "source_id and source_type are required"}, 400
 
-        if group_id in ['my_day', 'tasks', 'important', 'all', 'events']:
+        source = get_entity_by_type_and_id(source_type, source_id, user_id)
+        if not source:
+            return {"error": "Source entity not found"}, 404
+
+        if not parent_id or not parent_type:
+            if hasattr(source, 'in_general_list'):
+                source.in_general_list = False
+                db.session.add(source)
+                db.session.commit()
+            return {"success": True, "message": "Removed from general list"}, 200
+        
+        if parent_id in ['my_day', 'tasks', 'important', 'all', 'events']:
             return {"success": True}, 200
 
-        # Обработка source_id
-        # Если source_id уже является целым числом, используем его напрямую
-        if isinstance(source_id, int):
-            source_id_int = source_id
-            source = List.query.filter_by(id=source_id_int, user_id=user_id).first()
-        elif str(source_id).startswith('task_'):
-            try:
-                source_id_int = int(source_id.split('_')[1])
-                source = Task.query.filter_by(id=source_id_int, user_id=user_id).first()
-            except (ValueError, IndexError):
-                return {"error": "Invalid source_id format for task"}, 400
-        elif str(source_id).startswith('group_'):
-            try:
-                source_id_int = int(source_id.split('_')[1])
-                source = Group.query.filter_by(id=source_id_int, user_id=user_id).first()
-            except (ValueError, IndexError):
-                return {"error": "Invalid source_id format for group"}, 400
-        else:
-            # Предполагаем, что это ID списка
-            try:
-                source_id_int = int(source_id)
-                source = List.query.filter_by(id=source_id_int, user_id=user_id).first()
-            except ValueError:
-                return {"error": "Invalid source_id format for list"}, 400
+        parent = get_entity_by_type_and_id(parent_type, parent_id, user_id)
+        if not parent:
+            return {"error": "Parent entity not found"}, 404
 
-        if (isinstance(source, List) or isinstance(source, Group) or isinstance(source, Project)) and group_id is None:
-            source.in_general_list = False
-            db.session.add(source)
-            db.session.commit()
-            return {"success": True}, 200
+        if hasattr(parent, 'childes_order') and parent.childes_order and source_id in parent.childes_order:
+            updated_childes_order = parent.childes_order.copy()
+            updated_childes_order.remove(source_id)
+            parent.childes_order = updated_childes_order
+            db.session.add(parent)
 
-        # Обработка group_id
-        if group_id is not None:
-            # Если group_id уже является целым числом, используем его напрямую
-            if isinstance(group_id, int):
-                group_id_int = group_id
-                group = List.query.filter_by(id=group_id_int, user_id=user_id).first()
-            elif str(group_id).startswith('task_'):
-                try:
-                    group_id_int = int(group_id.split('_')[1])
-                    group = Task.query.filter_by(id=group_id_int, user_id=user_id).first()
-                except (ValueError, IndexError):
-                    return {"error": "Invalid group_id format for task"}, 400
-            elif str(group_id).startswith('group_'):
-                try:
-                    group_id_int = int(group_id.split('_')[1])
-                    group = Group.query.filter_by(id=group_id_int, user_id=user_id).first()
-                except (ValueError, IndexError):
-                    return {"error": "Invalid group_id format for group"}, 400
-            elif str(group_id).startswith('project_'):
-                try:
-                    group_id_int = int(group_id.split('_')[1])
-                    group = Project.query.filter_by(id=group_id_int, user_id=user_id).first()
-                except (ValueError, IndexError):
-                    return {"error": "Invalid group_id format for project"}, 400
-            else:
-                # Предполагаем, что это ID списка
-                try:
-                    group_id_int = int(group_id)
-                    group = List.query.filter_by(id=group_id_int, user_id=user_id).first()
-                except ValueError:
-                    return {"error": "Invalid group_id format for list"}, 400
+        if isinstance(source, Task):
+            if parent in source.lists:
+                source.lists.remove(parent)
+            if parent in source.parent_tasks:
+                source.parent_tasks.remove(parent)
+        elif isinstance(source, List):
+            if parent in source.groups:
+                source.groups.remove(parent)
+            if parent in source.projects:
+                source.projects.remove(parent)
+        elif isinstance(source, Group):
+            if parent in source.projects:
+                source.projects.remove(parent)
 
-        if source and group_id is not None and group:
-            # Удаление элемента из списка детей
-            if source_id_int in group.childes_order:
-                updated_childes_order = group.childes_order.copy()
-                updated_childes_order.remove(source_id_int)
-                group.childes_order = updated_childes_order
-
-            # Разрыв связи между source и group
-            if isinstance(source, Task):
-                if group in source.lists:
-                    source.lists.remove(group)
-                elif group in source.parent_tasks:
-                    source.parent_tasks.remove(group)
-            elif isinstance(source, List):
-                if group in source.groups:
-                    source.groups.remove(group)
-                elif group in source.projects:
-                    source.projects.remove(group)
-            elif isinstance(source, Group):
-                if group in source.projects:
-                    source.projects.remove(group)
-
-            db.session.add(group)
-            db.session.add(source)
-            db.session.commit()
+        db.session.add(source)
+        db.session.commit()
 
         return {"success": True}, 200
 
@@ -225,42 +168,46 @@ def link_task(data, user_id=None):
     if user_id is None:
         raise ValueError("user_id must be provided for link_task")
     try:
-        task_id = data['task_id']
-        target_id = data['list_id']
+        task_id = data.get('task_id')
+        target_id = data.get('target_id')
+        target_type = data.get('target_type')
         action = data.get('action', 'link')
         source_list_id = data.get('source_list_id')
 
-        task = Task.query.filter_by(id=task_id, user_id=user_id).first()
-        if str(target_id).startswith('task_'):
-            try:
-                target_id_int = int(target_id.split('_')[1])
-            except (ValueError, IndexError):
-                return {"error": "Invalid target_id format for task"}, 400
-            
-            if task_id == target_id_int or task in task.parent_tasks or task in task.subtasks:
-                return {"error": "Task cannot be linked to itself"}, 400
-            target = Task.query.filter_by(id=target_id_int, user_id=user_id).first()
-            if task and target and task_id not in [t.id for t in target.subtasks]:
-                task.parent_tasks.append(target)
-        else:
-            try:
-                target_id_int = int(target_id)
-            except ValueError:
-                return {"error": "Invalid target_id format for list"}, 400
-            target = List.query.filter_by(id=target_id_int, user_id=user_id).first()
-            if task and target and task_id not in [t.id for t in target.tasks]:
-                task.lists.append(target)
-        if target and task and task_id not in target.childes_order:
-            updated_childes_order = target.childes_order.copy() or []
-            updated_childes_order.append(task_id)
-            target.childes_order = updated_childes_order
+        if not all([task_id, target_id, target_type]):
+            return {"error": "task_id, target_id, and target_type are required"}, 400
 
+        task = get_entity_by_type_and_id('task', task_id, user_id)
+        if not task:
+            return {"error": "Task not found"}, 404
+
+        target = get_entity_by_type_and_id(target_type, target_id, user_id)
+        if not target:
+            return {"error": "Target entity not found"}, 404
+
+        if isinstance(target, Task):
+            if task.id == target.id or task in target.parent_tasks or task in target.subtasks:
+                return {"error": "Task cannot be linked to itself"}, 400
+            if task not in target.subtasks:
+                task.parent_tasks.append(target)
+        elif isinstance(target, List):
+            if task not in target.tasks:
+                task.lists.append(target)
+        else:
+            return {"error": f"Tasks cannot be linked to entities of type {target_type}"}, 400
+
+        if hasattr(target, 'childes_order'):
+            childes_order = target.childes_order.copy() if target.childes_order else []
+            if task.id not in childes_order:
+                childes_order.append(task.id)
+                target.childes_order = childes_order
+        
         db.session.add(target)
         db.session.add(task)
         db.session.commit()
 
         if action == 'move' and source_list_id:
-            delete_from_childes({'source_id': f'task_{task_id}', 'group_id': source_list_id}, user_id=user_id)
+            delete_from_childes({'source_id': task_id, 'source_type': 'task', 'parent_id': source_list_id, 'parent_type': 'list'}, user_id=user_id)
 
         return {"success": True}, 200
 
@@ -275,24 +222,23 @@ def sort_items(data, user_id=None):
         raise ValueError("user_id must be provided")
     
     source_id = data.get('source_id')
+    source_type = data.get('source_type')
     new_order = data.get('new_order')
     
-    if not source_id:
-        return {"error": "source_id is required"}, 400
+    if not source_id or not source_type:
+        return {"error": "source_id and source_type are required"}, 400
     
     try:
-        source_entity = get_entity_by_id(source_id, user_id)
+        source_entity = get_entity_by_type_and_id(source_type, source_id, user_id)
         if not source_entity:
             return {"error": "Source entity not found"}, 404
         
-        # Сортировка в основном списке через order
-        if new_order is not None:
+        if new_order is not None and hasattr(source_entity, 'order'):
             source_entity.order = new_order
         
         db.session.add(source_entity)
         db.session.commit()
         
-        # Нормализуем order для siblings того же типа
         _normalize_orders_by_type(type(source_entity), user_id)
         
         return {"success": True}, 200
@@ -308,29 +254,27 @@ def sort_items_in_container(data, user_id=None):
         raise ValueError("user_id must be provided")
     
     container_id = data.get('container_id')
+    container_type = data.get('container_type')
     source_id = data.get('source_id')
     new_position = data.get('new_position')
     
-    if not container_id or not source_id or new_position is None:
-        return {"error": "container_id, source_id, and new_position are required"}, 400
+    if not all([container_id, container_type, source_id, new_position is not None]):
+        return {"error": "container_id, container_type, source_id, and new_position are required"}, 400
     
     try:
-        container_entity = get_entity_by_id(container_id, user_id)
+        container_entity = get_entity_by_type_and_id(container_type, container_id, user_id)
         if not container_entity:
             return {"error": "Container entity not found"}, 404
         
-        # Обновляем childes_order
-        childes_order = container_entity.childes_order or []
+        if not hasattr(container_entity, 'childes_order'):
+            return {"error": "Container entity does not support child ordering"}, 400
+
+        childes_order = container_entity.childes_order.copy() if container_entity.childes_order else []
         
-        # Удаляем элемент если он уже есть
         if source_id in childes_order:
             childes_order.remove(source_id)
         
-        # Вставляем на новую позицию
-        if new_position < len(childes_order):
-            childes_order.insert(new_position, source_id)
-        else:
-            childes_order.append(source_id)
+        childes_order.insert(new_position, source_id)
         
         container_entity.childes_order = childes_order
         db.session.add(container_entity)
@@ -348,35 +292,48 @@ def link_items(data, user_id=None):
     if user_id is None:
         raise ValueError("user_id must be provided")
     
+    source_type = data.get('source_type')
     source_id = data.get('source_id')
+    target_type = data.get('target_type')
     target_id = data.get('target_id')
     
-    if not source_id or not target_id:
-        return {"error": "source_id and target_id are required"}, 400
+    current_app.logger.info(f'🔗 link_items called: source_type={source_type}, source_id={source_id}, target_type={target_type}, target_id={target_id}, user_id={user_id}')
+    
+    if not source_id or not target_id or not source_type or not target_type:
+        current_app.logger.error('❌ link_items: Missing required parameters')
+        return {"error": "source_type, source_id, target_type and target_id are required"}, 400
     
     try:
-        source_entity = get_entity_by_id(source_id, user_id)
-        target_entity = get_entity_by_id(target_id, user_id)
+        source_entity = get_entity_by_type_and_id(source_type, source_id, user_id)
+        target_entity = get_entity_by_type_and_id(target_type, target_id, user_id)
+        
+        current_app.logger.info(f'📋 link_items: source_entity={source_entity}, target_entity={target_entity}')
         
         if not source_entity or not target_entity:
+            current_app.logger.error('❌ link_items: Source or target entity not found')
             return {"error": "Source or target entity not found"}, 404
         
-        # Создаем связь через childes_order
-        if isinstance(source_entity, List) and isinstance(target_entity, (Group, Project)):
+        if source_type == 'list' and target_type in ['group', 'project']:
+            current_app.logger.info(f'🔗 link_items: Linking List to {target_type}')
             childes_order = target_entity.childes_order or []
-            if source_id not in childes_order:
-                childes_order.append(source_id)
+            if source_entity.id not in childes_order:
+                childes_order.append(source_entity.id)
                 target_entity.childes_order = childes_order
-        elif isinstance(source_entity, Group) and isinstance(target_entity, Project):
+                current_app.logger.info(f'✅ link_items: Updated childes_order: {childes_order}')
+        elif source_type == 'group' and target_type == 'project':
+            current_app.logger.info(f'🔗 link_items: Linking Group to Project')
             childes_order = target_entity.childes_order or []
-            if source_id not in childes_order:
-                childes_order.append(source_id)
+            if source_entity.id not in childes_order:
+                childes_order.append(source_entity.id)
                 target_entity.childes_order = childes_order
+                current_app.logger.info(f'✅ link_items: Updated childes_order: {childes_order}')
         else:
+            current_app.logger.error(f'❌ link_items: Invalid link combination - source: {source_type}, target: {target_type}')
             return {"error": "Invalid link combination"}, 400
         
         db.session.add(target_entity)
         db.session.commit()
+        current_app.logger.info('✅ link_items: Successfully linked items')
         
         return {"success": True}, 200
     
@@ -390,45 +347,58 @@ def move_items(data, user_id=None):
     if user_id is None:
         raise ValueError("user_id must be provided")
     
+    source_type = data.get('source_type')
     source_id = data.get('source_id')
+    target_type = data.get('target_type')
     target_id = data.get('target_id')
     
-    if not source_id or not target_id:
-        return {"error": "source_id and target_id are required"}, 400
+    current_app.logger.info(f'📦 move_items called: source_type={source_type}, source_id={source_id}, target_type={target_type}, target_id={target_id}, user_id={user_id}')
+    
+    if not source_id or not target_id or not source_type or not target_type:
+        current_app.logger.error('❌ move_items: Missing required parameters')
+        return {"error": "source_type, source_id, target_type and target_id are required"}, 400
     
     try:
-        source_entity = get_entity_by_id(source_id, user_id)
-        target_entity = get_entity_by_id(target_id, user_id)
+        source_entity = get_entity_by_type_and_id(source_type, source_id, user_id)
+        target_entity = get_entity_by_type_and_id(target_type, target_id, user_id)
+        
+        current_app.logger.info(f'📋 move_items: source_entity={source_entity}, target_entity={target_entity}')
         
         if not source_entity or not target_entity:
+            current_app.logger.error('❌ move_items: Source or target entity not found')
             return {"error": "Source or target entity not found"}, 404
         
-        # Remove from old parent
         if hasattr(source_entity, 'project_id') and source_entity.project_id:
+            current_app.logger.info(f'📦 move_items: Removing project_id {source_entity.project_id}')
             source_entity.project_id = None
         if hasattr(source_entity, 'group_id') and source_entity.group_id:
+            current_app.logger.info(f'📦 move_items: Removing group_id {source_entity.group_id}')
             source_entity.group_id = None
         
-        # Move to new parent
-        if isinstance(target_entity, Group) and isinstance(source_entity, List):
+        if target_type == 'group' and source_type == 'list':
+            current_app.logger.info(f'📦 move_items: Moving List to Group {target_entity.id}')
             source_entity.group_id = target_entity.id
-        elif isinstance(target_entity, Project):
-            if isinstance(source_entity, (List, Group)):
+        elif target_type == 'project':
+            if source_type in ['list', 'group']:
+                current_app.logger.info(f'📦 move_items: Moving {source_type} to Project {target_entity.id}')
                 source_entity.project_id = target_entity.id
             else:
+                current_app.logger.error(f'❌ move_items: Invalid move combination - source: {source_type}')
                 return {"error": "Invalid move combination"}, 400
         else:
+            current_app.logger.error(f'❌ move_items: Invalid target for move - target: {target_type}')
             return {"error": "Invalid target for move"}, 400
         
-        # Добавляем в childes_order контейнера
         childes_order = target_entity.childes_order or []
-        if source_id not in childes_order:
-            childes_order.append(source_id)
+        if source_entity.id not in childes_order:
+            childes_order.append(source_entity.id)
             target_entity.childes_order = childes_order
+            current_app.logger.info(f'✅ move_items: Updated childes_order: {childes_order}')
             db.session.add(target_entity)
         
         db.session.add(source_entity)
         db.session.commit()
+        current_app.logger.info('✅ move_items: Successfully moved items')
         
         return {"success": True}, 200
     

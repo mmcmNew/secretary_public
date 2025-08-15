@@ -18,7 +18,7 @@ test.describe('Demo Mode and Auth Modal', () => {
 
   test('should switch between sign in and register tabs', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Войти' }).click();
+    await page.getByRole('button', { name: 'Sign In' }).click();
     
     await expect(page.getByLabel('Email Address')).toBeVisible();
     
@@ -28,7 +28,7 @@ test.describe('Demo Mode and Auth Modal', () => {
 
   test('should show error on failed login', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Войти' }).click();
+    await page.getByRole('button', { name: 'Sign In' }).click();
     
     await page.getByLabel('Email Address').fill('wrong@test.com');
     await page.getByLabel('Password').fill('wrongpassword');
@@ -39,7 +39,7 @@ test.describe('Demo Mode and Auth Modal', () => {
 
   test('should show error on failed registration', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Войти' }).click();
+    await page.getByRole('button', { name: 'Sign In' }).click();
     await page.getByRole('tab', { name: 'Register' }).click();
 
     // Используем существующего пользователя для проверки ошибки

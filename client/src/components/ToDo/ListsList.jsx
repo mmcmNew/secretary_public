@@ -33,6 +33,7 @@ function ListsList({
   const [menuActionType, setMenuActionType] = useState(null);
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [editingItem, setEditingItem] = useState(null); // Новое состояние для сохранения редактируемого элемента
   const inputRef = useRef(null);
 
   const handleContextMenu = useCallback((event, item) => {
@@ -51,10 +52,15 @@ function ListsList({
   };
 
   const handleSubMenuAction = (targetListId) => {
+    const sourceType = targetItem.type;
+    const sourceId = targetItem.realId || targetItem.id;
+    const targetType = menuActionType;
+    const targetId = targetListId;
+    
     if (menuActionType === 'move') {
-      onMoveToList(targetItem.id, targetListId);
+      onMoveToList(sourceType, sourceId, targetType, targetId);
     } else if (menuActionType === 'link') {
-      onLinkToList(targetItem.id, targetListId);
+      onLinkToList(sourceType, sourceId, targetType, targetId);
     }
     handleCloseSubMenu();
     handleCloseMenu();
@@ -63,30 +69,34 @@ function ListsList({
   const handleCloseMenu = useCallback(() => {
     closeMenu();
     setTargetItem(null);
-    setEditingItemId(null);
-    setEditingTitle('');
+    // Не сбрасываем editingItem здесь — оно независимо от меню
   }, [closeMenu]);
 
   const handleEditStart = useCallback(() => {
     if (targetItem) {
       setEditingItemId(targetItem.id);
       setEditingTitle(targetItem.title);
-      closeMenu();
+      setEditingItem(targetItem); // Сохраняем копию targetItem для редактирования
+      handleCloseMenu(); // Закрываем меню, но editingItem остаётся
     }
-  }, [targetItem, closeMenu, onSelectList]);
+  }, [targetItem, handleCloseMenu]);
 
   const handleEditSave = useCallback(() => {
-    console.log('handleEditSave called', { editingItemId, targetItem, editingTitle });
-    if (editingItemId && targetItem) {
-      console.log('Updating list', { targetItem, editingTitle });
-      onUpdateList(targetItem.realId || targetItem.id, { title: editingTitle });
-    } else {
-      console.log('Not updating list - missing editingItemId or targetItem', { editingItemId, targetItem });
+    if (editingItemId && editingItem && editingTitle.trim() !== '') {
+      onUpdateList(editingItem.realId || editingItem.id, { 
+        title: editingTitle,
+        type: editingItem.type 
+      });
     }
-    console.log('Resetting edit state');
+    // Сбрасываем состояния редактирования
     setEditingItemId(null);
     setEditingTitle('');
-  }, [editingItemId, editingTitle, onUpdateList, targetItem]);
+    setEditingItem(null);
+  }, [editingItemId, editingTitle, onUpdateList, editingItem]);
+
+  const handleBlur = useCallback(() => {
+    handleEditSave(); // Сохраняем на blur
+  }, [handleEditSave]);
 
   const handleKeyDown = useCallback((event) => {
     if (event.key === 'Enter') {
@@ -95,12 +105,8 @@ function ListsList({
     } else if (event.key === 'Escape') {
       setEditingItemId(null);
       setEditingTitle('');
+      setEditingItem(null);
     }
-  }, [handleEditSave]);
-
-  const handleBlur = useCallback(() => {
-    console.log('handleBlur called');
-    handleEditSave();
   }, [handleEditSave]);
 
   const editState = {
@@ -108,7 +114,7 @@ function ListsList({
     editingTitle,
     onTitleChange: (e) => setEditingTitle(e.target.value),
     onSave: handleEditSave,
-    onCancel: handleBlur, // Using handleBlur to save on exit
+    onCancel: handleBlur,
     inputRef,
     onKeyDown: handleKeyDown,
     onBlur: handleBlur,
@@ -167,22 +173,24 @@ function ListsList({
         onClose={handleCloseMenu}
         onEditClick={handleEditStart}
         onDeleteClick={() => {
-          if (targetItem) onDeleteList(targetItem);
+          if (targetItem) onDeleteList(targetItem.id);
           handleCloseMenu();
         }}
         onMoveUp={() => {
-            if (targetItem) onChangeChildesOrder(targetItem.id, 'up');
-            handleCloseMenu();
+          if (targetItem) onChangeChildesOrder(targetItem.id, 'up');
+          handleCloseMenu();
         }}
         onMoveDown={() => {
-            if (targetItem) onChangeChildesOrder(targetItem.id, 'down');
-            handleCloseMenu();
+          if (targetItem) onChangeChildesOrder(targetItem.id, 'down');
+          handleCloseMenu();
         }}
         onOpenGroupMenu={(e) => handleOpenSubMenu(e, 'group')}
         onOpenProjectMenu={(e) => handleOpenSubMenu(e, 'project')}
         onDeleteFromChildes={onDeleteFromChildes}
         onChangeChildesOrder={onChangeChildesOrder}
         onAddToGeneralList={onAddToGeneralList}
+        onLinkToList={onLinkToList}
+        onMoveToList={onMoveToList}
         listsList={lists}
         projects={projects}
       />
@@ -192,7 +200,7 @@ function ListsList({
         onClose={handleCloseSubMenu}
       >
         {(menuActionType === 'group' ? lists : projects).map((list) => (
-          <MenuItem key={list.id} onClick={() => handleSubMenuAction(list.id)}>
+          <MenuItem key={list.id} onClick={() => handleSubMenuAction(list.realId || list.id)}>
             {list.title}
           </MenuItem>
         ))}

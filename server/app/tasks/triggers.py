@@ -15,45 +15,41 @@ def create_list_counter_triggers():
     RETURNS TRIGGER AS $$
     BEGIN
         IF TG_OP = 'UPDATE' THEN
-            -- Обновляем счетчики при изменении статуса
-            IF NEW."StatusID" = 2 AND OLD."StatusID" != 2 THEN
+            -- Обновляем счетчики при изменении статуса завершения
+            IF NEW."IsCompleted" = true AND OLD."IsCompleted" = false THEN
                 UPDATE productivity.lists l SET
                     unfinished_count = unfinished_count - 1,
-                    important_count = CASE WHEN OLD."PriorityID" = 3 THEN important_count - 1 ELSE important_count END,
+                    important_count = CASE WHEN OLD."IsImportant" = true THEN important_count - 1 ELSE important_count END,
                     background_count = CASE WHEN OLD."IsBackground" = true THEN background_count - 1 ELSE background_count END
                 FROM productivity.task_list_relations tlr
                 WHERE tlr."ListID" = l."ListID" AND tlr."TaskID" = NEW."TaskID";
-            ELSIF NEW."StatusID" != 2 AND OLD."StatusID" = 2 THEN
+            ELSIF NEW."IsCompleted" = false AND OLD."IsCompleted" = true THEN
                 UPDATE productivity.lists l SET
                     unfinished_count = unfinished_count + 1,
-                    important_count = CASE WHEN NEW."PriorityID" = 3 THEN important_count + 1 ELSE important_count END,
+                    important_count = CASE WHEN NEW."IsImportant" = true THEN important_count + 1 ELSE important_count END,
                     background_count = CASE WHEN NEW."IsBackground" = true THEN background_count + 1 ELSE background_count END
                 FROM productivity.task_list_relations tlr
                 WHERE tlr."ListID" = l."ListID" AND tlr."TaskID" = NEW."TaskID";
             END IF;
 
-            -- Обновляем счетчики при изменении важности
-            IF NEW."PriorityID" = 3 AND OLD."PriorityID" != 3 AND NEW."StatusID" != 2 THEN
-                UPDATE productivity.lists l SET
-                    important_count = important_count + 1
+            -- Обновляем счетчики при изменении важности (только для незавершенных задач)
+            IF NEW."IsImportant" = true AND OLD."IsImportant" = false AND NEW."IsCompleted" = false THEN
+                UPDATE productivity.lists l SET important_count = important_count + 1
                 FROM productivity.task_list_relations tlr
                 WHERE tlr."ListID" = l."ListID" AND tlr."TaskID" = NEW."TaskID";
-            ELSIF NEW."PriorityID" != 3 AND OLD."PriorityID" = 3 AND NEW."StatusID" != 2 THEN
-                UPDATE productivity.lists l SET
-                    important_count = important_count - 1
+            ELSIF NEW."IsImportant" = false AND OLD."IsImportant" = true AND NEW."IsCompleted" = false THEN
+                UPDATE productivity.lists l SET important_count = important_count - 1
                 FROM productivity.task_list_relations tlr
                 WHERE tlr."ListID" = l."ListID" AND tlr."TaskID" = NEW."TaskID";
             END IF;
 
-            -- Обновляем счетчики при изменении фонового режима
-            IF NEW."IsBackground" = true AND OLD."IsBackground" = false AND NEW."StatusID" != 2 THEN
-                UPDATE productivity.lists l SET
-                    background_count = background_count + 1
+            -- Обновляем счетчики при изменении фонового режима (только для незавершенных задач)
+            IF NEW."IsBackground" = true AND OLD."IsBackground" = false AND NEW."IsCompleted" = false THEN
+                UPDATE productivity.lists l SET background_count = background_count + 1
                 FROM productivity.task_list_relations tlr
                 WHERE tlr."ListID" = l."ListID" AND tlr."TaskID" = NEW."TaskID";
-            ELSIF NEW."IsBackground" = false AND OLD."IsBackground" = true AND NEW."StatusID" != 2 THEN
-                UPDATE productivity.lists l SET
-                    background_count = background_count - 1
+            ELSIF NEW."IsBackground" = false AND OLD."IsBackground" = true AND NEW."IsCompleted" = false THEN
+                UPDATE productivity.lists l SET background_count = background_count - 1
                 FROM productivity.task_list_relations tlr
                 WHERE tlr."ListID" = l."ListID" AND tlr."TaskID" = NEW."TaskID";
             END IF;
@@ -74,17 +70,17 @@ def create_list_counter_triggers():
                 unfinished_count = unfinished_count + CASE 
                     WHEN EXISTS (
                         SELECT 1 FROM productivity.tasks t 
-                        WHERE t."TaskID" = NEW."TaskID" AND t."StatusID" != 2
+                        WHERE t."TaskID" = NEW."TaskID" AND t."IsCompleted" = false
                     ) THEN 1 ELSE 0 END,
-                important_count = important_count + CASE 
+                important_count = important_count + CASE
                     WHEN EXISTS (
-                        SELECT 1 FROM productivity.tasks t 
-                        WHERE t."TaskID" = NEW."TaskID" AND t."StatusID" != 2 AND t."PriorityID" = 3
+                        SELECT 1 FROM productivity.tasks t
+                        WHERE t."TaskID" = NEW."TaskID" AND t."IsCompleted" = false AND t."IsImportant" = true
                     ) THEN 1 ELSE 0 END,
-                background_count = background_count + CASE 
+                background_count = background_count + CASE
                     WHEN EXISTS (
-                        SELECT 1 FROM productivity.tasks t 
-                        WHERE t."TaskID" = NEW."TaskID" AND t."StatusID" != 2 AND t."IsBackground" = true
+                        SELECT 1 FROM productivity.tasks t
+                        WHERE t."TaskID" = NEW."TaskID" AND t."IsCompleted" = false AND t."IsBackground" = true
                     ) THEN 1 ELSE 0 END
             WHERE l."ListID" = NEW."ListID";
         ELSIF TG_OP = 'DELETE' THEN
@@ -93,17 +89,17 @@ def create_list_counter_triggers():
                 unfinished_count = unfinished_count - CASE 
                     WHEN EXISTS (
                         SELECT 1 FROM productivity.tasks t 
-                        WHERE t."TaskID" = OLD."TaskID" AND t."StatusID" != 2
+                        WHERE t."TaskID" = OLD."TaskID" AND t."IsCompleted" = false
                     ) THEN 1 ELSE 0 END,
-                important_count = important_count - CASE 
+                important_count = important_count - CASE
                     WHEN EXISTS (
-                        SELECT 1 FROM productivity.tasks t 
-                        WHERE t."TaskID" = OLD."TaskID" AND t."StatusID" != 2 AND t."PriorityID" = 3
+                        SELECT 1 FROM productivity.tasks t
+                        WHERE t."TaskID" = OLD."TaskID" AND t."IsCompleted" = false AND t."IsImportant" = true
                     ) THEN 1 ELSE 0 END,
-                background_count = background_count - CASE 
+                background_count = background_count - CASE
                     WHEN EXISTS (
-                        SELECT 1 FROM productivity.tasks t 
-                        WHERE t."TaskID" = OLD."TaskID" AND t."StatusID" != 2 AND t."IsBackground" = true
+                        SELECT 1 FROM productivity.tasks t
+                        WHERE t."TaskID" = OLD."TaskID" AND t."IsCompleted" = false AND t."IsBackground" = true
                     ) THEN 1 ELSE 0 END
             WHERE l."ListID" = OLD."ListID";
         END IF;

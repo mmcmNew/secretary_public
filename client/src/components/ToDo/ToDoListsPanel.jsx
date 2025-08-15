@@ -5,8 +5,8 @@ import { AccountTree } from '@mui/icons-material';
 import { memo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
-import { useGetListsQuery, useAddObjectMutation, useMoveListObjectMutation, useUpdateListMutation, useDeleteListMutation } from '../../store/listsSlice';
-import { setSelectedListId, setSelectedList, toggleGroup } from '../../store/todoLayoutSlice';
+import { useGetListsQuery, useAddObjectMutation, useMoveListObjectMutation, useUpdateListMutation, useDeleteListMutation, useLinkItemsMutation, useMoveItemsMutation, useDeleteFromChildesMutation, useAddToGeneralListMutation } from '../../store/listsSlice';
+import { setSelectedListId, setSelectedList, toggleGroup, addToGeneralList } from '../../store/todoLayoutSlice';
 
 
 function ToDoListsPanel({ mobile }) {
@@ -16,6 +16,10 @@ function ToDoListsPanel({ mobile }) {
   const [moveListObject] = useMoveListObjectMutation();
   const [updateList] = useUpdateListMutation();
   const [deleteList] = useDeleteListMutation();
+  const [linkItems] = useLinkItemsMutation();
+  const [moveItems] = useMoveItemsMutation();
+  const [deleteFromChildes] = useDeleteFromChildesMutation();
+  const [addToGeneralListMutation] = useAddToGeneralListMutation();
   const { selectedListId, openGroups } = useSelector((state) => state.todoLayout);
 
   const handleToggleGroup = useCallback((groupId) => {
@@ -41,12 +45,31 @@ function ToDoListsPanel({ mobile }) {
   };
 
   const handleMoveList = (listId, direction) => {
-    // Logic to calculate new order would be here
     console.log(`Move ${listId} ${direction}`);
-    // Example of what it might look like:
-    // const list = data.lists.find(l => l.id === listId);
-    // const newOrder = direction === 'up' ? list.order - 1 : list.order + 1;
-    // moveListObject({ listId, newOrder });
+  };
+
+  const handleLinkToList = (sourceType, sourceId, targetType, targetId) => {
+    console.log('🔗 ToDoListsPanel: handleLinkToList called', { sourceType, sourceId, targetType, targetId });
+    linkItems({ source_type: sourceType, source_id: sourceId, target_type: targetType, target_id: targetId });
+  };
+
+  const handleMoveToList = (sourceType, sourceId, targetType, targetId) => {
+    console.log('📦 ToDoListsPanel: handleMoveToList called', { sourceType, sourceId, targetType, targetId });
+    moveItems({ source_type: sourceType, source_id: sourceId, target_type: targetType, target_id: targetId });
+  };
+
+  const handleDeleteFromChildes = (sourceId, groupId) => {
+    console.log('🗑️ ToDoListsPanel: handleDeleteFromChildes called', { sourceId, groupId });
+    deleteFromChildes({ source_id: sourceId, group_id: groupId });
+  };
+
+  const handleChangeChildesOrder = (itemId, direction) => {
+    console.log('↕️ ToDoListsPanel: handleChangeChildesOrder called', { itemId, direction });
+  };
+
+  const handleAddToGeneralList = (itemId) => {
+    console.log('📋 ToDoListsPanel: handleAddToGeneralList called', { itemId });
+    addToGeneralListMutation({ item_id: itemId });
   };
 
   if (isLoading) return <div>Загрузка списков...</div>;
@@ -78,6 +101,11 @@ function ToDoListsPanel({ mobile }) {
           isNeedContextMenu={true}
           openGroups={openGroups}
           onToggleGroup={handleToggleGroup}
+          onDeleteFromChildes={handleDeleteFromChildes}
+          onChangeChildesOrder={handleChangeChildesOrder}
+          onLinkToList={handleLinkToList}
+          onMoveToList={handleMoveToList}
+          onAddToGeneralList={handleAddToGeneralList}
         />
       </Box>
       <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', mt: 1 }}>

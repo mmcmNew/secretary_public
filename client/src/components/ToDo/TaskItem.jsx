@@ -78,7 +78,7 @@ const TaskItem = memo(({
                         <ListItemIcon onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                                 edge="start"
-                                checked={task.status_id === 2}
+                                checked={task.is_completed}
                                 tabIndex={-1}
                                 disableRipple
                                 inputProps={{ "aria-labelledby": labelId }}

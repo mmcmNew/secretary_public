@@ -51,6 +51,10 @@ export const todoLayoutSlice = createSlice({
     setSelectedTask: (state, action) => {
       state.selectedTask = action.payload;
     },
+    addToGeneralList: (state, action) => {
+      // Логика добавления в общий список будет обрабатываться на сервере
+      console.log('Adding to general list:', action.payload);
+    },
   },
 });
 
@@ -64,7 +68,8 @@ export const {
   resetNewTask,
   toggleGroup, 
   setSelectedTaskId, 
-  setSelectedTask
+  setSelectedTask,
+  addToGeneralList
 } = todoLayoutSlice.actions;
 
 export default todoLayoutSlice.reducer;

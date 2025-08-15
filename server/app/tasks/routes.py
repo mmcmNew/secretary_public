@@ -234,7 +234,7 @@ def get_tasks_route():
 def get_tasks_by_ids_route():
     ids_param = request.args.get('ids', '')
     try:
-        ids = [int(i) for i in ids_param.split(',') if i.strip()]
+        ids = [i.strip() for i in ids_param.split(',') if i.strip()]
     except ValueError:
         return {'error': 'Invalid ids'}, 400
     user_id = current_user.id
@@ -381,6 +381,38 @@ def move_list_or_group_route():
     return response, status_code
 
 
+@to_do_app.route('/tasks/add_to_general_list', methods=['PUT'])
+@jwt_required()
+def add_to_general_list_route():
+    data = request.get_json()
+    user_id = current_user.id
+    item_id = data.get('item_id')
+    
+    if not item_id:
+        return jsonify({'error': 'item_id is required'}), 400
+    
+    try:
+        from .entity_handlers import get_entity_by_id
+        entity = get_entity_by_id(item_id, user_id)
+        if not entity:
+            return jsonify({'error': 'Entity not found'}), 404
+        
+        entity.in_general_list = True
+        db.session.add(entity)
+        db.session.commit()
+        
+        new_version = DataVersion.update_version('tasksVersion')
+        notify_data_update(tasksVersion=new_version)
+        response = jsonify({'success': True})
+        response.set_etag(new_version)
+        return response, 200
+    
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'add_to_general_list failed: {e}', exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
+
+
 @to_do_app.route('/tasks/fields_config', methods=['GET'])
 @jwt_required()
 @cache.cached(timeout=3600, key_prefix=make_cache_key('fields_config', 'taskTypesVersion'))
@@ -484,7 +516,7 @@ def add_task_type_group():
     return jsonify(group.to_dict()), 201, {'ETag': new_version}
 
 
-@to_do_app.route('/tasks/task_type_groups/<int:group_id>', methods=['PUT'])
+@to_do_app.route('/tasks/task_type_groups/<string:group_id>', methods=['PUT'])
 @jwt_required()
 def edit_task_type_group(group_id):
     group = TaskTypeGroup.query.filter_by(id=group_id, user_id=current_user.id).first()
@@ -502,7 +534,7 @@ def edit_task_type_group(group_id):
     return jsonify(group.to_dict()), 200, {'ETag': new_version}
 
 
-@to_do_app.route('/tasks/task_type_groups/<int:group_id>', methods=['DELETE'])
+@to_do_app.route('/tasks/task_type_groups/<string:group_id>', methods=['DELETE'])
 @jwt_required()
 def delete_task_type_group(group_id):
     group = TaskTypeGroup.query.filter_by(id=group_id, user_id=current_user.id).first()
@@ -552,7 +584,7 @@ def add_task_type_route():
     return jsonify(task_type.to_dict()), 201, {'ETag': new_version}
 
 
-@to_do_app.route('/tasks/task_types/<int:type_id>', methods=['PUT'])
+@to_do_app.route('/tasks/task_types/<string:type_id>', methods=['PUT'])
 @jwt_required()
 def edit_task_type_route(type_id):
     task_type = TaskType.query.filter_by(id=type_id, user_id=current_user.id).first()
@@ -576,7 +608,7 @@ def edit_task_type_route(type_id):
     return jsonify(task_type.to_dict()), 200, {'ETag': new_version}
 
 
-@to_do_app.route('/tasks/task_types/<int:type_id>', methods=['DELETE'])
+@to_do_app.route('/tasks/task_types/<string:type_id>', methods=['DELETE'])
 @jwt_required()
 def delete_task_type_route(type_id):
     task_type = TaskType.query.filter_by(id=type_id, user_id=current_user.id).first()
@@ -594,6 +626,6 @@ def delete_task_type_route(type_id):
 @cache.cached(timeout=60, key_prefix=make_cache_key('subtasks', 'tasksVersion'))
 @etag('tasksVersion')
 def get_subtasks_route():
-    parent_task_id = request.args.get('parent_task_id', type=int)
+    parent_task_id = request.args.get('parent_task_id')
     user_id = current_user.id
     return get_subtasks_by_parent_id(parent_task_id, user_id=user_id)

@@ -13,16 +13,16 @@ class AntiTask(db.Model):
         db.Index('ix_anti_schedule_start', 'Start'),
         {'schema': 'productivity'}
     )
-    id = db.Column('AntiTaskID', db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, nullable=False)
-    task_id = db.Column('TaskID', db.Integer, db.ForeignKey('productivity.tasks.TaskID'))
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), nullable=False)
+    task_id = db.Column('TaskID', db.String(36), db.ForeignKey('productivity.tasks.TaskID'))
     title = db.Column('Title', db.String(255))
     start = db.Column('Start', db.DateTime)
     end = db.Column('End', db.DateTime)
     note = db.Column('Note', db.Text)
     color = db.Column('Color', db.String(20))
-    type_id = db.Column('TaskTypeID', db.Integer, db.ForeignKey('productivity.task_types.id'))
-    status_id = db.Column('StatusID', db.Integer, db.ForeignKey('productivity.statuses.StatusID'), default=1)
+    type_id = db.Column('TaskTypeID', db.String(36), db.ForeignKey('productivity.task_types.id'))
+    status_id = db.Column('StatusID', db.String(36), db.ForeignKey('productivity.statuses.StatusID'))
     is_background = db.Column('IsBackground', db.Boolean, default=False)
     files = db.Column('Files', db.Text)
 

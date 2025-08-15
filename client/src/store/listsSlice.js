@@ -85,6 +85,38 @@ export const listsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['List'],
     }),
+    linkItems: builder.mutation({
+      query: (data) => ({
+        url: '/tasks/link_items',
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: ['List'],
+    }),
+    moveItems: builder.mutation({
+      query: (data) => ({
+        url: '/tasks/move_items',
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: ['List'],
+    }),
+    deleteFromChildes: builder.mutation({
+      query: (data) => ({
+        url: '/tasks/delete_from_childes',
+        method: 'DELETE',
+        body: data,
+      }),
+      invalidatesTags: ['List'],
+    }),
+    addToGeneralList: builder.mutation({
+      query: (data) => ({
+        url: '/tasks/add_to_general_list',
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: ['List'],
+    }),
   }),
 });
 
@@ -97,4 +129,8 @@ export const {
   useUpdateListMutation,
   useDeleteListMutation,
   useMoveListObjectMutation,
+  useLinkItemsMutation,
+  useMoveItemsMutation,
+  useDeleteFromChildesMutation,
+  useAddToGeneralListMutation,
 } = listsApi;

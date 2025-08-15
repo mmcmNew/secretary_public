@@ -45,7 +45,11 @@ function ToDoTasksPanel({ mobile = false }) {
   const handleTitleEdit = async () => {
     if (editingTitle.trim() !== '' && selectedList) {
       try {
-        await updateList({ listId: selectedList.id, title: editingTitle.trim() }).unwrap();
+        await updateList({ 
+          listId: selectedList.id, 
+          title: editingTitle.trim(),
+          type: selectedList.type 
+        }).unwrap();
         dispatch(setEditingTitle({ isEditing: false, title: '' }));
       } catch (error) {
         console.error('Failed to update list title:', error);

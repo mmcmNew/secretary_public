@@ -1,6 +1,7 @@
 import pytest
 import os
 import sys
+import uuid
 from flask import Flask
 from flask_jwt_extended import create_access_token
 import datetime
@@ -14,6 +15,10 @@ User = None
 Priority = None
 Status = None
 Interval = None
+List = None
+Group = None
+Project = None
+Task = None
 
 @pytest.fixture(scope='session')
 def app():
@@ -23,9 +28,9 @@ def app():
     
     with app.app_context():
         # Импортируем модели внутри контекста приложения
-        global User, Priority, Status, Interval
+        global User, Priority, Status, Interval, List, Group, Project, Task
         from app.main.models import User
-        from app.tasks.models import Priority, Status, Interval
+        from app.tasks.models import Priority, Status, Interval, List, Group, Project, Task
         
         # Создаем все таблицы
         db.create_all()
@@ -122,6 +127,70 @@ def add_initial_test_data():
             db.session.add(interval)
     
     db.session.commit()
+
+
+@pytest.fixture(scope='function')
+def test_list(app, test_user):
+    """Создание тестового списка"""
+    with app.app_context():
+        test_list = List(
+            title='Test List',
+            user_id=test_user.id,
+            order=0
+        )
+        db.session.add(test_list)
+        db.session.commit()
+        yield test_list
+
+
+@pytest.fixture(scope='function')
+def test_group(app, test_user):
+    """Создание тестовой группы"""
+    with app.app_context():
+        test_group = Group(
+            title='Test Group',
+            user_id=test_user.id,
+            order=0
+        )
+        db.session.add(test_group)
+        db.session.commit()
+        yield test_group
+
+
+@pytest.fixture(scope='function')
+def test_project(app, test_user):
+    """Создание тестового проекта"""
+    with app.app_context():
+        test_project = Project(
+            title='Test Project',
+            user_id=test_user.id,
+            order=0
+        )
+        db.session.add(test_project)
+        db.session.commit()
+        yield test_project
+
+
+@pytest.fixture(scope='function')
+def test_task(app, test_user):
+    """Создание тестовой задачи"""
+    with app.app_context():
+        test_task = Task(
+            title='Test Task',
+            user_id=test_user.id
+        )
+        db.session.add(test_task)
+        db.session.commit()
+        yield test_task
+
+
+def is_valid_uuid(uuid_string):
+    """Проверяет, является ли строка валидным UUID"""
+    try:
+        uuid.UUID(uuid_string)
+        return True
+    except (ValueError, TypeError):
+        return False
 
 @pytest.fixture(scope='function')
 def clean_db(app):

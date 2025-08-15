@@ -3,14 +3,15 @@ from app.main.models import User
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Text
 import json
+import uuid
 
 
 # Модель для таблицы users
 class Dashboard(db.Model):
     __tablename__ = 'dashboard'
     __table_args__ = {'schema': 'workspace'}
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, nullable=False)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), nullable=False)
     name = Column(Text)
     containers = db.Column(db.JSON)
     timers = db.Column(db.JSON)

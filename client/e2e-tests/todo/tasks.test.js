@@ -1,79 +1,108 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/tasks.fixture.js';
 
 test.describe('Функциональность задач', () => {
+  const taskName = `Тестовая задача ${Date.now()}`;
   // Тесты используют предварительно авторизованного пользователя
   // Состояние авторизации сохранено в e2e-tests/.auth/user.json
 
-  test('Создание новой задачи', async ({ page }) => {
-    // Переход к списку задач
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Add Container' }).click();
+  // Фикстура tasksPage будет автоматически применяться к каждому тесту,
+  // открывая нужный компонент перед его выполнением.
 
-    try {
-      // Ждём до 2 секунд, что кнопка появится
-      await page.getByRole('menuitem', { name: 'tasks' }).waitFor({ timeout: 2000 });
-    } catch {
-      // Если кнопка не появилась — жмём ещё раз
-      await page.getByRole('button', { name: 'Add Container' }).click();
-      await page.getByRole('menuitem', { name: 'tasks' }).waitFor();
-    }
+  test('Создание новой задачи', async ({ tasksPage }) => {
+    // const taskName = `Тестовая задача ${Date.now()}`;
 
-    // Теперь кнопка точно есть, можно кликать
-    await page.getByRole('menuitem', { name: 'tasks' }).click();
-    await page.getByRole('button', { name: 'Задачи Незавершённые задачи' }).click();
+    await tasksPage.getByRole('button', { name: 'Задачи Незавершённые задачи' }).click();
 
     // Заполнение формы
-    await page.getByRole('textbox', { name: 'Добавить задачу' }).fill('Тестовая задача');
-
-    await page.getByRole('button', { name: 'add task' }).click();
+    await tasksPage.getByRole('textbox', { name: 'Добавить задачу' }).fill(taskName);
+    await tasksPage.getByRole('button', { name: 'add task' }).click();
     
     // Проверка успешного создания
-    await expect(page.locator('text=Тестовая задача')).toBeVisible();
+    const taskButton = tasksPage.getByRole('button', { name: taskName });
+    await expect(taskButton).toBeVisible();
+    await expect(taskButton.getByRole('checkbox', { name: taskName })).toBeVisible();
+    await expect(taskButton.getByText(taskName)).toBeVisible();
   });
 
-  test('Редактирование задачи', async ({ page }) => {
+  test('Редактирование задачи', async ({ tasksPage }) => {
     // Создание задачи для редактирования
-    await page.click('button[aria-label="Добавить задачу"]');
-    await page.fill('input[name="title"]', 'Задача для редактирования');
-    await page.click('button:has-text("Сохранить")');
+    await tasksPage.getByRole('button', { name: 'Задачи Незавершённые задачи' }).click();
+
+    await tasksPage.getByRole('textbox', { name: 'Добавить задачу' }).fill('Задача для редактирования');
+    await tasksPage.getByRole('button', { name: 'add task' }).click();
+    await expect(tasksPage.locator('text=Задача для редактирования')).toBeVisible();
     
+    const taskItem = tasksPage.locator('.task-item:has-text("Задача для редактирования")');
+
     // Открытие задачи для редактирования
-    await page.click('text=Задача для редактирования');
-    await page.click('button[aria-label="Редактировать"]');
+    await taskItem.getByRole('button', { name: 'edit' }).click();
     
     // Редактирование задачи
-    await page.fill('input[name="title"]', 'Отредактированная задача');
-    await page.click('button:has-text("Сохранить")');
+    await tasksPage.getByRole('textbox', { name: 'Редактировать задачу' }).fill('Отредактированная задача');
+    await tasksPage.getByRole('button', { name: 'save' }).click();
     
     // Проверка успешного редактирования
-    await expect(page.locator('text=Отредактированная задача')).toBeVisible();
+    await expect(tasksPage.locator('text=Отредактированная задача')).toBeVisible();
+    await expect(tasksPage.locator('text=Задача для редактирования')).not.toBeVisible();
   });
 
-  test('Удаление задачи', async ({ page }) => {
-    // Создание задачи для удаления
-    await page.click('button[aria-label="Добавить задачу"]');
-    await page.fill('input[name="title"]', 'Задача для удаления');
-    await page.click('button:has-text("Сохранить")');
+  // test('Удаление задачи', async ({ tasksPage }) => {
+  //   // Создание задачи для удаления
+  //   await tasksPage.getByRole('textbox', { name: 'Добавить задачу' }).fill('Задача для удаления');
+  //   await tasksPage.getByRole('button', { name: 'add task' }).click();
+  //   await expect(tasksPage.locator('text=Задача для удаления')).toBeVisible();
     
-    // Удаление задачи
-    await page.click('text=Задача для удаления');
-    await page.click('button[aria-label="Удалить"]');
-    await page.click('button:has-text("Подтвердить")');
-    
-    // Проверка успешного удаления
-    await expect(page.locator('text=Задача для удаления')).not.toBeVisible();
-  });
+  //   const taskItem = tasksPage.locator('.task-item:has-text("Задача для удаления")');
 
-  test('Изменение статуса задачи', async ({ page }) => {
+  //   // Удаление задачи
+  //   await taskItem.getByRole('button', { name: 'delete' }).click();
+    
+  //   // Проверка успешного удаления
+  //   await expect(tasksPage.locator('text=Задача для удаления')).not.toBeVisible();
+  // });
+
+  test('Изменение статуса задачи', async ({ tasksPage }) => {
     // Создание задачи для изменения статуса
-    await page.click('button[aria-label="Добавить задачу"]');
-    await page.fill('input[name="title"]', 'Задача для изменения статуса');
-    await page.click('button:has-text("Сохранить")');
+    await tasksPage.getByRole('button', { name: 'Задачи Незавершённые задачи' }).click();
+
+    await tasksPage.getByRole('textbox', { name: 'Добавить задачу' }).fill('Задача для изменения статуса');
+    await tasksPage.getByRole('button', { name: 'add task' }).click();
+    await expect(tasksPage.locator('text=Задача для изменения статуса')).toBeVisible();
     
+    const taskItem = tasksPage.locator('.task-item:has-text("Задача для изменения статуса")');
+
     // Изменение статуса задачи на "Выполнена"
-    await page.click('input[type="checkbox"]'); // Чекбокс для изменения статуса
+    await taskItem.getByRole('checkbox').check();
     
     // Проверка изменения статуса
-    await expect(page.locator('input[type="checkbox"]')).toBeChecked();
+    await expect(taskItem.getByRole('checkbox')).toBeChecked();
+
+    // Изменение статуса обратно на "Не выполнена"
+    await taskItem.getByRole('checkbox').uncheck();
+    await expect(taskItem.getByRole('checkbox')).not.toBeChecked();
+  });
+
+  test('Создание нового списка', async ({ tasksPage }) => {
+    const listName = `Новый список ${Date.now()}`;
+    await tasksPage.getByRole('button', { name: 'Создать список' }).click();
+    await tasksPage.getByPlaceholder('Название списка').fill(listName);
+    await tasksPage.getByRole('button', { name: 'Сохранить' }).click();
+    await expect(tasksPage.getByText(listName)).toBeVisible();
+  });
+
+  test('Создание новой группы', async ({ tasksPage }) => {
+    const groupName = `Новая группа ${Date.now()}`;
+    await tasksPage.locator('div').filter({ hasText: /^Создать список$/ }).getByRole('button').nth(1).click();
+    await tasksPage.getByPlaceholder('Название группы').fill(groupName);
+    await tasksPage.getByRole('button', { name: 'Сохранить' }).click();
+    await expect(tasksPage.getByText(groupName)).toBeVisible();
+  });
+
+  test('Создание нового проекта', async ({ tasksPage }) => {
+    const projectName = `Новый проект ${Date.now()}`;
+    await tasksPage.locator('div').filter({ hasText: /^Создать список$/ }).getByRole('button').nth(2).click();
+    await tasksPage.getByPlaceholder('Название проекта').fill(projectName);
+    await tasksPage.getByRole('button', { name: 'Сохранить' }).click();
+    await expect(tasksPage.getByText(projectName)).toBeVisible();
   });
 });

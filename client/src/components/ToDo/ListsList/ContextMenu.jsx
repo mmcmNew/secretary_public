@@ -12,10 +12,11 @@ export default function ContextMenu({
   onDeleteFromChildes,
   onChangeChildesOrder,
   onAddToGeneralList,
-  listsList,
-  projects
+  // onLinkToList,
+  // onMoveToList,
+  // listsList,
+  // projects
 }) {
-
   const isList = item?.type === 'list';
   const isGroup = item?.type === 'group';
   const isProject = item?.type === 'project';
@@ -25,81 +26,89 @@ export default function ContextMenu({
     action();
   };
 
-  const renderCommonItems = () => [
-    <MenuItem key="rename" onClick={() => handleAction(() => onEditClick(item.id))}>
+  const commonItems = () => [
+    <MenuItem key="rename" onClick={() => handleAction(() => onEditClick(item.id))} aria-label="Переименовать">
       Переименовать
     </MenuItem>,
     <Divider key="divider" />,
-    <MenuItem key="moveUp" onClick={() => handleAction(() => onChangeChildesOrder(item.id, 'up', groupId))}>
+    <MenuItem key="moveUp" onClick={() => handleAction(() => onChangeChildesOrder(item.id, 'up', groupId))} aria-label="Переместить выше">
       Переместить выше
     </MenuItem>,
-    <MenuItem key="moveDown" onClick={() => handleAction(() => onChangeChildesOrder(item.id, 'down', groupId))}>
+    <MenuItem key="moveDown" onClick={() => handleAction(() => onChangeChildesOrder(item.id, 'down', groupId))} aria-label="Переместить ниже">
       Переместить ниже
     </MenuItem>
   ];
+
+  let menuItems = [];
+  if (item && isList) {
+    menuItems = [
+      ...commonItems(),
+      <MenuItem key="moveToGroup" onClick={onOpenGroupMenu} aria-label="Переместить в группу">
+        Переместить в группу
+      </MenuItem>,
+      <MenuItem key="linkToGroup" onClick={onOpenGroupMenu} aria-label="Связать с группой">
+        Связать с группой
+      </MenuItem>,
+      <MenuItem key="moveToProject" onClick={onOpenProjectMenu} aria-label="Переместить в проект">
+        Переместить в проект
+      </MenuItem>,
+      <MenuItem key="linkToProject" onClick={onOpenProjectMenu} aria-label="Связать с проектом">
+        Связать с проектом
+      </MenuItem>,
+      <Divider key="divider2" />,
+      <MenuItem key="deleteFromGroup" onClick={() => handleAction(() => onDeleteFromChildes(item.id, groupId))} aria-label="Удалить из этой группы">
+        Удалить из этой группы
+      </MenuItem>
+    ];
+  } else if (item && isGroup) {
+    menuItems = [
+      ...commonItems(),
+      <MenuItem key="moveToProject" onClick={onOpenProjectMenu} aria-label="Переместить в проект">
+        Переместить в проект
+      </MenuItem>,
+      <MenuItem key="linkToProject" onClick={onOpenProjectMenu} aria-label="Связать с проектом">
+        Связать с проектом
+      </MenuItem>,
+      <Divider key="divider3" />,
+      <MenuItem key="deleteFromGroup" onClick={() => handleAction(() => onDeleteFromChildes(item.id, groupId))} aria-label="Удалить из этой группы">
+        Удалить из этой группы
+      </MenuItem>
+    ];
+  } else if (item && isProject) {
+    menuItems = [
+      <MenuItem key="rename" onClick={() => handleAction(() => onEditClick(item.id))} aria-label="Переименовать">
+        Переименовать
+      </MenuItem>,
+      <Divider key="divider" />,
+      <MenuItem key="moveUp" onClick={() => handleAction(() => onChangeChildesOrder(item.id, 'up'))} aria-label="Переместить выше">
+        Переместить выше
+      </MenuItem>,
+      <MenuItem key="moveDown" onClick={() => handleAction(() => onChangeChildesOrder(item.id, 'down'))} aria-label="Переместить ниже">
+        Переместить ниже
+      </MenuItem>
+    ];
+  } else if (item && !item.inGeneralList) {
+    menuItems = [
+      <MenuItem key="addToGeneral" onClick={() => handleAction(() => onAddToGeneralList(item.id))} aria-label="Добавить в основной список">
+        Добавить в основной список
+      </MenuItem>
+    ];
+  }
 
   return (
     <Menu
       anchorEl={anchorEl}
       open={Boolean(anchorEl)}
       onClose={onClose}
+      aria-label="Контекстное меню"
+      dense // Для компактности при длинных списках
     >
-      {item && isList && [
-        ...renderCommonItems(),
-        <MenuItem key="moveToGroup" onClick={(e) => handleAction(() => onOpenGroupMenu(e, 'move'))}>
-          Переместить в группу
-        </MenuItem>,
-        <MenuItem key="linkToGroup" onClick={(e) => handleAction(() => onOpenGroupMenu(e, 'link'))}>
-          Связать с группой
-        </MenuItem>,
-        <MenuItem key="moveToProject" onClick={(e) => handleAction(() => onOpenProjectMenu(e, 'move'))}>
-          Переместить в проект
-        </MenuItem>,
-        <MenuItem key="linkToProject" onClick={(e) => handleAction(() => onOpenProjectMenu(e, 'link'))}>
-          Связать с проектом
-        </MenuItem>,
-        <Divider key="divider2" />,
-        <MenuItem key="deleteFromGroup" onClick={() => handleAction(() => onDeleteFromChildes(item.id, groupId))}>
-          Удалить из этой группы
-        </MenuItem>
-      ]}
-
-      {item && isGroup && [
-        ...renderCommonItems(),
-        <MenuItem key="moveToProject" onClick={(e) => handleAction(() => onOpenProjectMenu(e, 'move'))}>
-          Переместить в проект
-        </MenuItem>,
-        <MenuItem key="linkToProject" onClick={(e) => handleAction(() => onOpenProjectMenu(e, 'link'))}>
-          Связать с проектом
-        </MenuItem>,
-        <Divider key="divider3" />,
-        <MenuItem key="deleteFromGroup" onClick={() => handleAction(() => onDeleteFromChildes(item.id, groupId))}>
-          Удалить из этой группы
-        </MenuItem>
-      ]}
-
-      {item && !item.inGeneralList && !isList && !isGroup && !isProject && [
-        <MenuItem key="addToGeneral" onClick={() => handleAction(() => onAddToGeneralList(item.id))}>
-          Добавить в основной список
-        </MenuItem>
-      ]}
-
-      {item && isProject && [
-        <MenuItem key="rename" onClick={() => handleAction(() => onEditClick(item.id))}>
-          Переименовать
-        </MenuItem>,
-        <Divider key="divider" />,
-        <MenuItem key="moveUp" onClick={() => handleAction(() => onChangeChildesOrder(item.id, 'up'))}>
-          Переместить выше
-        </MenuItem>,
-        <MenuItem key="moveDown" onClick={() => handleAction(() => onChangeChildesOrder(item.id, 'down'))}>
-          Переместить ниже
-        </MenuItem>
-      ]}
-
+      {menuItems}
     </Menu>
   );
 }
+
+// PropTypes без изменений
 
 ContextMenu.propTypes = {
   anchorEl: PropTypes.object,
@@ -112,6 +121,8 @@ ContextMenu.propTypes = {
   onDeleteFromChildes: PropTypes.func.isRequired,
   onChangeChildesOrder: PropTypes.func.isRequired,
   onAddToGeneralList: PropTypes.func.isRequired,
+  onLinkToList: PropTypes.func.isRequired,
+  onMoveToList: PropTypes.func.isRequired,
   listsList: PropTypes.array.isRequired,
   projects: PropTypes.array.isRequired
 };

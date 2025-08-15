@@ -272,7 +272,7 @@ export default function AntiScheduleLayout({
 
   function handleChangeEventStatus(eventId, updatedFields) {
     // console.log("handleChangeEventStatus", eventId, updatedFields);
-    const eventColor = updatedFields.status_id == 2 ? "green" : "#3788D8";
+    const eventColor = updatedFields.is_completed ? "green" : "#3788D8";
     const updatedEvents = calendarEvents.map((event) => (event.id == eventId ? { ...event, ...updatedFields, color: eventColor } : event));
     setCalendarEvents(updatedEvents);
     setCurrentTasks(updatedEvents);
@@ -294,7 +294,7 @@ export default function AntiScheduleLayout({
   }
 
   function handleChangeTaskStatus(taskId, updatedFields) {
-    const eventColor = updatedFields.status_id == 2 ? "green" : "#3788D8";
+    const eventColor = updatedFields.is_completed ? "green" : "#3788D8";
     const updatedTasks = myDayTasks.map((task) => (task.id == taskId ? { ...task, ...updatedFields, color: eventColor } : task));
     setMyDayTasks(updatedTasks);
     setCurrentTasks(updatedTasks);
@@ -322,7 +322,7 @@ export default function AntiScheduleLayout({
       }
 
       const color =
-        event?.status_id == 2
+        event?.is_completed
           ? "#008000"
           : event?.priority_id == 3
           ? "#A52A2A"

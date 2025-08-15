@@ -65,7 +65,7 @@ function TasksList({
         const completed = [];
         if (Array.isArray(tasks)) {
             tasks.forEach(task => {
-                if (task.status_id === 2) {
+                if (task.is_completed) {
                     completed.push(task);
                 } else {
                     active.push(task);
@@ -108,7 +108,7 @@ function TasksList({
     // Мемоизированные обработчики
     const handleToggle = useCallback(async (task_id, checked) => {
         if (!selectedList?.id) return;
-        const status_id = checked ? 2 : 1;
+        const status_id = checked ? 2 : 1; // TODO: get final status from settings
         try {
             await changeTaskStatusMutation({ taskId: task_id, status_id, completed_at: checked ? new Date().toISOString() : null, listId: selectedList.id }).unwrap();
             if (onSuccess) onSuccess(`Task status changed`);

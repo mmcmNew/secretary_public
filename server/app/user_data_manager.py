@@ -175,4 +175,5 @@ class UserDataManager:
                 print(f"Данные пользователя {user_id} удалены")
                 return True
         except Exception as e:
-            print(f"Ошибка при удалении данных пользователя {user_id}: {e}")        return False
+            print(f"Ошибка при удалении данных пользователя {user_id}: {e}")        
+            return False
