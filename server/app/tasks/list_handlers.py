@@ -242,7 +242,7 @@ def edit_list(data, user_id=None):
     if not list_id or not list_type:
         return {'success': False, 'message': 'listId and type are required'}, 400
         
-    updated_fields = {key: value for key, value in data.items() if key not in ['listId', 'type', 'order']}
+    updated_fields = {key: value for key, value in data.items() if key not in ['listId', 'type']}
 
     model_map = {
         'group': Group,

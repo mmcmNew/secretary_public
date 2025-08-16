@@ -2,6 +2,7 @@
 from . import to_do_app
 from functools import wraps
 from flask import request, jsonify, current_app
+import uuid
 from flask_jwt_extended import jwt_required
 from .list_handlers import (
     get_lists_and_groups_data,
@@ -217,11 +218,18 @@ def get_tasks_route():
     list_id = request.args.get('list_id', None)
     if not list_id:
         return {'error': 'list_id is required'}, 400
+
+    system_lists = ['events', 'my_day', 'all', 'tasks', 'important', 'background']
+    if list_id not in system_lists:
+        try:
+            uuid.UUID(list_id)
+        except ValueError:
+            return {'error': f'Invalid list_id: {list_id}'}, 400
+
     start = request.args.get('start')
     end = request.args.get('end')
     client_timezone = request.args.get('time_zone', 'UTC')
     user_id = current_user.id
-    # current_app.logger.info(f'get_tasks, list_id: {list_id}')
     return get_tasks(list_id, client_timezone, start, end, user_id=user_id)
 
 
@@ -233,11 +241,22 @@ def get_tasks_route():
 @etag('tasksVersion')
 def get_tasks_by_ids_route():
     ids_param = request.args.get('ids', '')
-    try:
-        ids = [i.strip() for i in ids_param.split(',') if i.strip()]
-    except ValueError:
-        return {'error': 'Invalid ids'}, 400
     user_id = current_user.id
+
+    if not ids_param:
+        return get_tasks_by_ids([], user_id=user_id)
+
+    ids_list = [i.strip() for i in ids_param.split(',') if i.strip()]
+
+    try:
+        # Проверяем, что все ID являются валидными UUID
+        for id_str in ids_list:
+            uuid.UUID(id_str)
+        ids = ids_list
+    except ValueError:
+        # Если хотя бы один ID не является валидным UUID, возвращаем ошибку
+        return {'error': 'Invalid ids provided'}, 400
+
     return get_tasks_by_ids(ids, user_id=user_id)
 
 
@@ -245,6 +264,9 @@ def get_tasks_by_ids_route():
 @jwt_required()
 def del_task_route():
     data = request.get_json()
+    # Проверка типа taskId, чтобы он был строкой (UUID)
+    if not isinstance(data.get('taskId'), str):
+         return jsonify({'error': 'Invalid type for taskId, expected string.'}), 400
     user_id = current_user.id
     result, status_code = del_task(data, user_id=user_id)
     response = jsonify(result)
@@ -614,6 +636,16 @@ def delete_task_type_route(type_id):
     task_type = TaskType.query.filter_by(id=type_id, user_id=current_user.id).first()
     if not task_type:
         return jsonify({'error': 'Not found'}), 404
+
+    # Import Task model here to avoid circular imports if it's not already imported
+    from .models import Task
+
+    # Set type_id to NULL for all tasks associated with this task_type
+    tasks_to_update = Task.query.filter_by(type_id=type_id, user_id=current_user.id).all()
+    for task in tasks_to_update:
+        task.type_id = None
+        db.session.add(task) # Mark as dirty for update
+
     db.session.delete(task_type)
     db.session.commit()
     new_version = DataVersion.update_version('taskTypesVersion')

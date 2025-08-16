@@ -1,7 +1,7 @@
 *logs
 *journals/
 **/__pycache__/
-**/test*.py
+# **/test*.py
 server/app/dist/index.html
 **/dist
 instance/

@@ -36,12 +36,17 @@ def app():
         db.create_all()
         
         # Добавляем начальные данные
-        add_initial_test_data()
+        add_initial_test_data(db.session)
         
         yield app
         
         # Очистка после тестов
         db.drop_all()
+
+@pytest.fixture(scope='function')
+def db_session(app):
+    with app.app_context():
+        yield db.session
 
 @pytest.fixture(scope='session')
 def client(app):
@@ -53,7 +58,8 @@ def auth_client(app, test_user):
     """Создание тестового клиента с аутентификацией"""
     with app.test_client() as client:
         # Создаем токен для тестового пользователя
-        access_token = create_access_token(identity=str(test_user.id))
+        with app.app_context():
+            access_token = create_access_token(identity=str(test_user.id))
         
         # Сохраняем токен для использования в тестах
         client.__access_token__ = access_token
@@ -72,50 +78,44 @@ def auth_client(app, test_user):
         yield client
 
 @pytest.fixture(scope='function')
-def test_user(app):
+def test_user(db_session, clean_db):
     """Создание тестового пользователя"""
-    with app.app_context():
-        # Проверяем, существует ли уже тестовый пользователь
-        user = User.query.filter_by(email='test@example.com').first()
-        if not user:
-            user = User(
-                email='test@example.com',
-                user_name='Test User'
-            )
-            user.set_password('testpassword')
-            db.session.add(user)
-            db.session.commit()
-        
-        yield user
-        
-        # Удаляем тестового пользователя после теста
-        # db.session.delete(user)
-        # db.session.commit()
+    user = User.query.filter_by(email='test@example.com').first()
+    if not user:
+        user = User(
+            email='test@example.com',
+            user_name='Test User'
+        )
+        user.set_password('testpassword')
+        db_session.add(user)
+        db_session.commit()
+    
+    yield user
 
-def add_initial_test_data():
+def add_initial_test_data(session):
     """Добавление начальных данных для тестов"""
     # Добавляем приоритеты, если их нет
-    if not Priority.query.first():
+    if not session.query(Priority).first():
         priorities = [
             Priority(name="Low"),
             Priority(name="Medium"),
             Priority(name="High"),
         ]
         for priority in priorities:
-            db.session.add(priority)
+            session.add(priority)
     
     # Добавляем статусы, если их нет
-    if not Status.query.first():
+    if not session.query(Status).first():
         statuses = [
             Status(name="Not Started"),
             Status(name="In Progress"),
             Status(name="Completed"),
         ]
         for status in statuses:
-            db.session.add(status)
+            session.add(status)
     
     # Добавляем интервалы, если их нет
-    if not Interval.query.first():
+    if not session.query(Interval).first():
         intervals = [
             Interval(name="DAILY", title="День"),
             Interval(name="WEEKLY", title="Неделя"),
@@ -124,65 +124,72 @@ def add_initial_test_data():
             Interval(name="WORK", title="Рабочие дни"),
         ]
         for interval in intervals:
-            db.session.add(interval)
+            session.add(interval)
     
-    db.session.commit()
+    session.commit()
 
 
 @pytest.fixture(scope='function')
-def test_list(app, test_user):
+def test_list(db_session, test_user):
     """Создание тестового списка"""
-    with app.app_context():
-        test_list = List(
-            title='Test List',
-            user_id=test_user.id,
-            order=0
-        )
-        db.session.add(test_list)
-        db.session.commit()
-        yield test_list
+    test_list = List(
+        title='Test List',
+        user_id=test_user.id,
+        order=0
+    )
+    db_session.add(test_list)
+    db_session.commit()
+    yield test_list
 
 
 @pytest.fixture(scope='function')
-def test_group(app, test_user):
+def test_group(db_session, test_user):
     """Создание тестовой группы"""
-    with app.app_context():
-        test_group = Group(
-            title='Test Group',
-            user_id=test_user.id,
-            order=0
-        )
-        db.session.add(test_group)
-        db.session.commit()
-        yield test_group
+    test_group = Group(
+        title='Test Group',
+        user_id=test_user.id,
+        order=0
+    )
+    db_session.add(test_group)
+    db_session.commit()
+    yield test_group
 
 
 @pytest.fixture(scope='function')
-def test_project(app, test_user):
+def test_project(db_session, test_user):
     """Создание тестового проекта"""
-    with app.app_context():
-        test_project = Project(
-            title='Test Project',
-            user_id=test_user.id,
-            order=0
-        )
-        db.session.add(test_project)
-        db.session.commit()
-        yield test_project
+    test_project = Project(
+        title='Test Project',
+        user_id=test_user.id,
+        order=0
+    )
+    db_session.add(test_project)
+    db_session.commit()
+    yield test_project
 
 
 @pytest.fixture(scope='function')
-def test_task(app, test_user):
+def test_task(db_session, test_user):
     """Создание тестовой задачи"""
-    with app.app_context():
-        test_task = Task(
-            title='Test Task',
-            user_id=test_user.id
-        )
-        db.session.add(test_task)
-        db.session.commit()
-        yield test_task
+    test_task = Task(
+        title='Test Task',
+        user_id=test_user.id
+    )
+    db_session.add(test_task)
+    db_session.commit()
+    yield test_task
 
+@pytest.fixture(scope='function')
+def task_for_today(db_session, test_user):
+    """Создание тестовой задачи на сегодня"""
+    task = Task(
+        title='Task for today',
+        user_id=test_user.id,
+        end=datetime.datetime.now(datetime.timezone.utc)
+    )
+    db_session.add(task)
+    db_session.commit()
+    yield task
 
 def is_valid_uuid(uuid_string):
     """Проверяет, является ли строка валидным UUID"""
@@ -193,21 +200,15 @@ def is_valid_uuid(uuid_string):
         return False
 
 @pytest.fixture(scope='function')
-def clean_db(app):
+def clean_db(db_session):
     """Фикстура для очистки базы данных перед каждым тестом"""
-    with app.app_context():
-        # Удаляем все данные из таблиц
-        for table in reversed(db.metadata.sorted_tables):
-            db.session.execute(table.delete())
-        
-        # Добавляем начальные данные
-        add_initial_test_data()
-        
-        db.session.commit()
-        
-        yield db
-        
-        # Очистка после теста
-        for table in reversed(db.metadata.sorted_tables):
-            db.session.execute(table.delete())
-        db.session.commit()
+    # Удаляем все данные из таблиц
+    for table in reversed(db.metadata.sorted_tables):
+        db_session.execute(table.delete())
+    
+    # Добавляем начальные данные
+    add_initial_test_data(db_session)
+    
+    db_session.commit()
+    
+    yield db_session

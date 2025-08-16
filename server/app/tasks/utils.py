@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import uuid
 
 
 def _parse_iso_datetime(value):
@@ -27,3 +28,11 @@ def _is_task_in_range(task, start_dt, end_dt, is_events=False):
     if end_dt and st and st > end_dt:
         return False
     return True
+
+def is_valid_uuid(uuid_string):
+    """Проверяет, является ли строка валидным UUID"""
+    try:
+        uuid.UUID(uuid_string)
+        return True
+    except (ValueError, TypeError):
+        return False

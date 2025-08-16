@@ -1,5 +1,5 @@
 from flask import current_app
-
+from .utils import is_valid_uuid
 from .models import db, Task, List, Group, Project, Status
 from .utils import _parse_iso_datetime
 
@@ -62,6 +62,9 @@ def link_group_list(data, user_id=None):
 
         if not all([source_id, target_id, source_type, target_type]):
             return {"error": "source_id, target_id, source_type, and target_type must be provided"}, 400
+
+        if not is_valid_uuid(source_id) or not is_valid_uuid(target_id):
+            return {"error": "Invalid ID format"}, 400
 
         source = get_entity_by_type_and_id(source_type, source_id, user_id)
         if not source:
@@ -176,6 +179,9 @@ def link_task(data, user_id=None):
 
         if not all([task_id, target_id, target_type]):
             return {"error": "task_id, target_id, and target_type are required"}, 400
+
+        if not is_valid_uuid(task_id) or not is_valid_uuid(target_id):
+            return {"error": "Invalid ID format"}, 400
 
         task = get_entity_by_type_and_id('task', task_id, user_id)
         if not task:

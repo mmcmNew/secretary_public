@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 
 from .models import db, Task, Status, List, task_list_relations, task_subtasks_relations
 from .calendar.models import TaskOverride
-from .utils import _parse_iso_datetime, _is_task_in_range
+from .utils import _parse_iso_datetime, _is_task_in_range, is_valid_uuid
 import pytz
 
 
@@ -139,8 +139,9 @@ def add_task(data, user_id=None):
     end = data.get('end', None)
     list_id = data.get('listId', 'tasks')
     is_background = False
-    is_important = False
+    is_important = data.get('is_important', False)
     updated_list_dict = {}
+    task_type_id = data.get('type_id', None)
 
     if end:
         end = _parse_iso_datetime(end)
@@ -157,7 +158,7 @@ def add_task(data, user_id=None):
             is_background = True
 
     new_task = Task(title=task_title, end=end, start=start, is_important=is_important,
-                    is_background=is_background, user_id=user_id)
+                    is_background=is_background, user_id=user_id, type_id=task_type_id)
     db.session.add(new_task)
 
     # Проверяем, является ли list_id UUID, а не системным именем
@@ -231,6 +232,9 @@ def edit_task(data, user_id=None):
     if not task_id:
         return {'success': False, 'message': 'Task ID is required'}, 400
 
+    if not is_valid_uuid(task_id):
+        return {'success': False, 'message': 'Invalid Task ID'}, 400
+
     updated_fields = {key: value for key, value in data.items() if key not in ['taskId', 'subtasks', 'current_start']}
 
     current_app.logger.info(f'edit_task {updated_fields}')
@@ -263,6 +267,10 @@ def change_task_status(data, user_id=None):
 
     if task_id is None or is_completed is None:
         return {'success': False, 'message': 'taskId and is_completed are required'}, 400
+    
+    # Валидация типа is_completed
+    if not isinstance(is_completed, bool):
+        return {'success': False, 'message': 'is_completed must be a boolean value'}, 400
 
     task = Task.query.options(db.joinedload(Task.subtasks)).filter_by(id=task_id, user_id=user_id).first()
     if not task:

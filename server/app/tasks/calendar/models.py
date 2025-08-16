@@ -10,7 +10,7 @@ class TaskOverride(db.Model):
     )
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     task_id = db.Column(db.String(36), db.ForeignKey('productivity.tasks.TaskID'), nullable=False)
-    user_id = db.Column(db.Integer, nullable=False)
+    user_id = db.Column(db.String(36), nullable=False)
     date = db.Column(db.Date, nullable=False)
     type = db.Column(db.String(20), nullable=False, default='modified')
     data = db.Column(db.JSON, default={})
