@@ -2,7 +2,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { apiSlice } from './api/apiSlice';
 
-const tasksSlice = createSlice({
+export const tasksSlice = createSlice({
   name: 'tasks',
   initialState: {
     tasks: [],
@@ -26,7 +26,7 @@ export default tasksSlice.reducer;
 export const tasksApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getTasks: builder.query({
-      query: (listId) => `/tasks/get_tasks?list_id=${listId}`,
+      query: (listId) => `/api/tasks/get_tasks?list_id=${listId}`,
       providesTags: (result, error, listId) => [{ type: 'Task', id: listId }],
       transformResponse: (response) => {
         console.log('Transforming response from getTasks:', response);
@@ -34,12 +34,12 @@ export const tasksApi = apiSlice.injectEndpoints({
       },
     }),
     getTasksByIds: builder.query({
-      query: (ids) => `/tasks/get_tasks_by_ids?ids=${ids.join(',')}`,
+      query: (ids) => `/api/tasks/get_tasks_by_ids?ids=${ids.join(',')}`,
       providesTags: (result, error, ids) => ids.map(id => ({ type: 'Task', id })),
     }),
     addTask: builder.mutation({
       query: (newTask) => ({
-        url: '/tasks/add_task',
+        url: '/api/tasks/add_task',
         method: 'POST',
         body: newTask,
       }),
@@ -47,7 +47,7 @@ export const tasksApi = apiSlice.injectEndpoints({
     }),
     addSubtask: builder.mutation({
       query: (newSubtask) => ({
-        url: '/tasks/add_subtask',
+        url: '/api/tasks/add_subtask',
         method: 'POST',
         body: newSubtask,
       }),
@@ -55,23 +55,23 @@ export const tasksApi = apiSlice.injectEndpoints({
     }),
     updateTask: builder.mutation({
       query: (updatedTask) => ({
-        url: '/tasks/edit_task',
+        url: '/api/tasks/edit_task',
         method: 'PUT',
         body: updatedTask,
       }),
       invalidatesTags: (result, error, updatedTask) => [{ type: 'Task', id: updatedTask.listId }],
     }),
     deleteTask: builder.mutation({
-      query: (taskId) => ({
-        url: '/tasks/del_task',
+      query: ({ taskId }) => ({ // Принимаем taskId и listId
+        url: '/api/tasks/del_task',
         method: 'DELETE',
-        body: { taskId },
+        body: { taskId }, // Отправляем только taskId в теле
       }),
       invalidatesTags: (result, error, { listId }) => [{ type: 'Task', id: listId }],
     }),
     changeTaskStatus: builder.mutation({
       query: ({ taskId, is_completed, completed_at }) => ({
-        url: '/tasks/change_status',
+        url: '/api/tasks/change_status',
         method: 'PUT',
         body: { taskId, is_completed, completed_at },
       }),
@@ -79,7 +79,7 @@ export const tasksApi = apiSlice.injectEndpoints({
     }),
     linkGroupList: builder.mutation({
       query: (data) => ({
-        url: '/tasks/link_group_list',
+        url: '/api/tasks/link_group_list',
         method: 'PUT',
         body: data,
       }),
@@ -87,7 +87,7 @@ export const tasksApi = apiSlice.injectEndpoints({
     }),
     deleteFromChildes: builder.mutation({
       query: (data) => ({
-        url: '/tasks/delete_from_childes',
+        url: '/api/tasks/delete_from_childes',
         method: 'DELETE',
         body: data,
       }),
@@ -95,23 +95,23 @@ export const tasksApi = apiSlice.injectEndpoints({
     }),
     linkTask: builder.mutation({
       query: (data) => ({
-        url: '/tasks/link_task',
+        url: '/api/tasks/link_task',
         method: 'PUT',
         body: data,
       }),
       invalidatesTags: ['Task'],
     }),
     getFieldsConfig: builder.query({
-      query: () => '/tasks/fields_config',
+      query: () => '/api/tasks/fields_config',
       providesTags: ['FieldsConfig'],
     }),
     getTaskTypeGroups: builder.query({
-      query: () => '/tasks/task_type_groups',
+      query: () => '/api/tasks/task_type_groups',
       providesTags: ['TaskTypeGroup'],
     }),
     addTaskTypeGroup: builder.mutation({
       query: (newGroup) => ({
-        url: '/tasks/task_type_groups',
+        url: '/api/tasks/task_type_groups',
         method: 'POST',
         body: newGroup,
       }),
@@ -119,7 +119,7 @@ export const tasksApi = apiSlice.injectEndpoints({
     }),
     updateTaskTypeGroup: builder.mutation({
       query: ({ id, ...updatedGroup }) => ({
-        url: `/tasks/task_type_groups/${id}`,
+        url: `/api/tasks/task_type_groups/${id}`,
         method: 'PUT',
         body: updatedGroup,
       }),
@@ -127,18 +127,18 @@ export const tasksApi = apiSlice.injectEndpoints({
     }),
     deleteTaskTypeGroup: builder.mutation({
       query: (id) => ({
-        url: `/tasks/task_type_groups/${id}`,
+        url: `/api/tasks/task_type_groups/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['TaskTypeGroup', 'FieldsConfig'],
     }),
     getTaskTypes: builder.query({
-      query: () => '/tasks/task_types',
+      query: () => '/api/tasks/task_types',
       providesTags: ['TaskType'],
     }),
     addTaskType: builder.mutation({
       query: (newType) => ({
-        url: '/tasks/task_types',
+        url: '/api/tasks/task_types',
         method: 'POST',
         body: newType,
       }),
@@ -146,7 +146,7 @@ export const tasksApi = apiSlice.injectEndpoints({
     }),
     updateTaskType: builder.mutation({
       query: ({ id, ...updatedType }) => ({
-        url: `/tasks/task_types/${id}`,
+        url: `/api/tasks/task_types/${id}`,
         method: 'PUT',
         body: updatedType,
       }),
@@ -154,18 +154,18 @@ export const tasksApi = apiSlice.injectEndpoints({
     }),
     deleteTaskType: builder.mutation({
       query: (id) => ({
-        url: `/tasks/task_types/${id}`,
+        url: `/api/tasks/task_types/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['TaskType', 'FieldsConfig'],
     }),
     getSubtasks: builder.query({
-      query: (parentTaskId) => `/tasks/get_subtasks?parent_task_id=${parentTaskId}`,
+      query: (parentTaskId) => `/api/tasks/get_subtasks?parent_task_id=${parentTaskId}`,
       providesTags: (result, error, parentTaskId) => [{ type: 'Subtask', id: parentTaskId }],
     }),
     patchCalendarInstance: builder.mutation({
       query: (instanceData) => ({
-        url: '/tasks/instance',
+        url: '/api/tasks/instance',
         method: 'PATCH',
         body: instanceData,
       }),

@@ -1,8 +1,63 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { logout, setCredentials } from '../authSlice';
 
+// Use an absolute baseUrl when running in the test environment (Vitest/Node)
+// because Node's fetch implementation requires absolute URLs. In browser
+// runtime we keep the relative '/api' path.
+//
+// Determine test mode safely so this file can run in browser (Vite),
+// in Node (Vitest/Node) and in environments where `process` may be
+// undefined. We prefer `process.env.NODE_ENV === 'test'` when available,
+// otherwise fall back to `import.meta.env.MODE === 'test'` used by Vite/Vitest.
+const isTestEnv = (() => {
+  // Check Node-style process on the global object first (works in Node and many test runners)
+  if (typeof globalThis !== 'undefined' && globalThis.process && globalThis.process.env && globalThis.process.env.NODE_ENV === 'test') {
+    return true;
+  }
+
+  // Fallback to Vite/Vitest import.meta.env when available
+  try {
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.MODE === 'test') {
+      return true;
+    }
+  } catch {
+    // import.meta may not be available in some runtimes; ignore errors
+  }
+
+  return false;
+})();
+
+// Allow overriding the backend URL used during tests via BASE_API_URL env var.
+// Default to the local server with SSL and the same /api prefix used in the app.
+const resolveEnvBaseUrl = () => {
+  // Prefer Node-style env when available (Vitest running under Node).
+  try {
+    const proc = typeof globalThis !== 'undefined' ? globalThis['process'] : undefined;
+    if (proc && proc.env && proc.env.BASE_API_URL) {
+      return proc.env.BASE_API_URL;
+    }
+  } catch {
+    // ignore
+  }
+
+  // Next try Vite/Vitest import.meta.env
+  try {
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_API_URL) {
+      return import.meta.env.BASE_API_URL;
+    }
+  } catch {
+    // import.meta might be unavailable in some runtimes; ignore errors
+  }
+
+  return null;
+};
+
+// The Flask app registers dashboard routes at the application root (e.g. '/dashboard/last'),
+// not under '/api'. For tests that call dashboard endpoints use the server root.
+const testBaseUrl = resolveEnvBaseUrl() || 'https://localhost:5100';
+
 const baseQuery = fetchBaseQuery({
-  baseUrl: '/api',
+  baseUrl: isTestEnv ? testBaseUrl : '/api',
   prepareHeaders: (headers, { getState, endpoint }) => {
     const accessToken = getState().auth.accessToken;
     if (accessToken) {
@@ -24,6 +79,15 @@ const baseQuery = fetchBaseQuery({
 });
 
 const baseQueryWithReauth = async (args, api, extraOptions) => {
+  if (isTestEnv) {
+    try {
+      const url = typeof args === 'string' ? args : args?.url;
+      const method = typeof args === 'object' && args.method ? args.method.toUpperCase() : 'GET';
+      console.log('[TEST-LOG] Request:', method, url, args && args.body ? { body: args.body } : '');
+    } catch {
+      // ignore logging errors in tests
+    }
+  }
   // Сначала проверяем, нужно ли открыть модальное окно
   const { isAuthenticated } = api.getState().auth;
   if (!isAuthenticated && typeof args !== 'string' && args.method !== 'GET') {
@@ -42,12 +106,26 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
   }
 
   let result = await baseQuery(args, api, extraOptions);
-
+  if (isTestEnv) {
+    try {
+      console.log('[TEST-LOG] baseQuery result:', result && (result.error ? { error: result.error } : { data: result.data }));
+    } catch {
+      // ignore
+    }
+  }
   if (result.error && result.error.status === 401) {
     // Пытаемся обновить токен только если есть refresh токен
     const refreshToken = localStorage.getItem('refreshToken');
     if (refreshToken) {
       const refreshResult = await baseQuery('/auth/refresh', api, extraOptions);
+
+      if (isTestEnv) {
+        try {
+          console.log('[TEST-LOG] refresh result:', refreshResult && (refreshResult.error ? { error: refreshResult.error } : { data: refreshResult.data }));
+        } catch {
+          // ignore
+        }
+      }
 
       if (refreshResult.data) {
         // Если токен успешно обновлен, сохраняем его
@@ -73,5 +151,5 @@ export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
   tagTypes: ['Task', 'List', 'CalendarEvent'],
-  endpoints: (builder) => ({}),
+  endpoints: () => ({}),
 });

@@ -2,7 +2,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { apiSlice } from './api/apiSlice';
 
-const listsSlice = createSlice({
+export const listsSlice = createSlice({
   name: 'lists',
   initialState: {
     lists: [],

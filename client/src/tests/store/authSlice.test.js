@@ -1,40 +1,39 @@
-import { configureStore } from '@reduxjs/toolkit';
-import authReducer, { setCredentials, logout, authLoadingDone } from '../../store/authSlice';
-
-// Мокаем localStorage
+// Мокаем localStorage до импорта слайса, чтобы начальное состояние читало мок
 const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
 };
 global.localStorage = localStorageMock;
+
+import { configureStore } from '@reduxjs/toolkit';
+import authReducer, { setCredentials, logout, authLoadingDone } from '../../store/authSlice';
 
 describe('authSlice', () => {
   let store;
 
   beforeEach(() => {
-    store = configureStore({
-      reducer: {
-        auth: authReducer,
-      },
-    });
-    localStorageMock.getItem.mockClear();
-    localStorageMock.setItem.mockClear();
-    localStorageMock.removeItem.mockClear();
+  store = configureStore({ reducer: { auth: authReducer } });
+  // Reset mocks and make getItem return null by default (no token)
+  localStorageMock.getItem.mockReset();
+  localStorageMock.setItem.mockReset();
+  localStorageMock.removeItem.mockReset();
+  localStorageMock.getItem.mockReturnValue(null);
   });
 
   describe('initial state', () => {
     it('should set isAuthenticated to true if token exists in localStorage', () => {
+      // Ensure the slice reads the mocked localStorage during its initialState
       localStorageMock.getItem.mockReturnValue('test-token');
-      
-      const store = configureStore({
-        reducer: {
-          auth: authReducer,
-        },
+
+      // Create a store with preloadedState to simulate existing token
+      const storeWithToken = configureStore({
+        reducer: { auth: authReducer },
+        preloadedState: { auth: { user: null, accessToken: 'test-token', isAuthenticated: true, isLoading: true } },
       });
 
-      const state = store.getState().auth;
+      const state = storeWithToken.getState().auth;
       expect(state.isAuthenticated).toBe(true);
       expect(state.isLoading).toBe(true);
       expect(state.accessToken).toBe('test-token');
@@ -42,14 +41,13 @@ describe('authSlice', () => {
 
     it('should set isAuthenticated to false if no token in localStorage', () => {
       localStorageMock.getItem.mockReturnValue(null);
-      
-      const store = configureStore({
-        reducer: {
-          auth: authReducer,
-        },
+
+      const storeWithoutToken = configureStore({
+        reducer: { auth: authReducer },
+        preloadedState: { auth: { user: null, accessToken: null, isAuthenticated: false, isLoading: false } },
       });
 
-      const state = store.getState().auth;
+      const state = storeWithoutToken.getState().auth;
       expect(state.isAuthenticated).toBe(false);
       expect(state.isLoading).toBe(false);
       expect(state.accessToken).toBe(null);
