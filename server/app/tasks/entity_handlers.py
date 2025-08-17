@@ -6,7 +6,7 @@ from .utils import _parse_iso_datetime
 
 def get_entity_by_type_and_id(entity_type, entity_id, user_id):
     """Получает сущность по типу и ID, используя новую схему UUID."""
-    current_app.logger.info(f'🔍 get_entity_by_type_and_id called: type={entity_type}, id={entity_id}, user_id={user_id}')
+    current_app.logger.info(f'get_entity_by_type_and_id called: type={entity_type}, id={entity_id}, user_id={user_id}')
     
     model_map = {
         'list': List,
@@ -22,7 +22,7 @@ def get_entity_by_type_and_id(entity_type, entity_id, user_id):
         
     try:
         obj = model.query.filter_by(id=entity_id, user_id=user_id).first()
-        current_app.logger.info(f"✅ Resolved {entity_type} ID {entity_id} -> {obj}")
+        current_app.logger.info(f"Resolved {entity_type} ID {entity_id} -> {obj}")
         return obj
     except Exception as e:
         current_app.logger.error(f"❌ get_entity_by_type_and_id failed for {entity_type}:{entity_id}: {e}")
@@ -34,7 +34,7 @@ def get_entity_by_id(raw_id, user_id, entity_type=None):
     Получает сущность по ID. Если тип не указан, пытается определить его.
     Эта функция оставлена для обратной совместимости, но рекомендуется использовать get_entity_by_type_and_id.
     """
-    current_app.logger.info(f'🔍 get_entity_by_id called: raw_id={raw_id}, user_id={user_id}, entity_type={entity_type}')
+    current_app.logger.info(f'get_entity_by_id called: raw_id={raw_id}, user_id={user_id}, entity_type={entity_type}')
     
     if entity_type:
         return get_entity_by_type_and_id(entity_type, raw_id, user_id)
@@ -43,66 +43,12 @@ def get_entity_by_id(raw_id, user_id, entity_type=None):
     for model in models_to_check:
         instance = model.query.filter_by(id=raw_id, user_id=user_id).first()
         if instance:
-            current_app.logger.info(f"✅ Resolved ID {raw_id} to {type(instance).__name__} -> {instance}")
+            current_app.logger.info(f"Resolved ID {raw_id} to {type(instance).__name__} -> {instance}")
             return instance
             
-    current_app.logger.warning(f"⚠️ get_entity_by_id failed to find entity for ID {raw_id}")
+    current_app.logger.warning(f"get_entity_by_id failed to find entity for ID {raw_id}")
     return None
 
-
-def link_group_list(data, user_id=None):
-    if user_id is None:
-        raise ValueError("user_id must be provided for link_group_list")
-
-    try:
-        source_id = data.get('source_id')
-        target_id = data.get('target_id')
-        source_type = data.get('source_type')
-        target_type = data.get('target_type')
-
-        if not all([source_id, target_id, source_type, target_type]):
-            return {"error": "source_id, target_id, source_type, and target_type must be provided"}, 400
-
-        if not is_valid_uuid(source_id) or not is_valid_uuid(target_id):
-            return {"error": "Invalid ID format"}, 400
-
-        source = get_entity_by_type_and_id(source_type, source_id, user_id)
-        if not source:
-            return {"error": "Source entity not found"}, 404
-
-        target = get_entity_by_type_and_id(target_type, target_id, user_id)
-        if not target:
-            return {"error": "Target entity not found"}, 404
-
-        current_app.logger.debug(f"source: {source}, type: {type(source)}")
-        current_app.logger.debug(f"target: {target}, type: {type(target)}")
-
-        if isinstance(target, Group):
-            if isinstance(source, List) and target not in source.groups:
-                source.groups.append(target)
-        elif isinstance(target, Project):
-            if isinstance(source, List) and target not in source.projects:
-                source.projects.append(target)
-            elif isinstance(source, Group) and target not in source.projects:
-                source.projects.append(target)
-        elif isinstance(target, List):
-             if isinstance(source, Task) and source not in target.tasks:
-                source.lists.append(target)
-                if source.id not in (target.childes_order or []):
-                    updated = target.childes_order.copy() if target.childes_order else []
-                    updated.append(source.id)
-                    target.childes_order = updated
-        
-        db.session.add(source)
-        db.session.add(target)
-        db.session.commit()
-
-        return {"success": True}, 200
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f'link_group_list failed: {e}', exc_info=True)
-        return {"error": "Internal server error"}, 500
 
 
 def delete_from_childes(data, user_id=None):
@@ -122,12 +68,13 @@ def delete_from_childes(data, user_id=None):
         if not source:
             return {"error": "Source entity not found"}, 404
 
+        parent = None
         if not parent_id or not parent_type:
             if hasattr(source, 'in_general_list'):
                 source.in_general_list = False
                 db.session.add(source)
                 db.session.commit()
-            return {"success": True, "message": "Removed from general list"}, 200
+            return {"success": True, "message": "Removed from general list", "source": source.to_dict()}, 200
         
         if parent_id in ['my_day', 'tasks', 'important', 'all', 'events']:
             return {"success": True}, 200
@@ -159,7 +106,11 @@ def delete_from_childes(data, user_id=None):
         db.session.add(source)
         db.session.commit()
 
-        return {"success": True}, 200
+        response = {"success": True, "source": source.to_dict()}
+        if parent:
+            response["parent"] = parent.to_dict()
+
+        return response, 200
 
     except Exception as e:
         db.session.rollback()
@@ -212,10 +163,18 @@ def link_task(data, user_id=None):
         db.session.add(task)
         db.session.commit()
 
-        if action == 'move' and source_list_id:
-            delete_from_childes({'source_id': task_id, 'source_type': 'task', 'parent_id': source_list_id, 'parent_type': 'list'}, user_id=user_id)
+        response_data = {"success": True, "task": task.to_dict(), "target": target.to_dict()}
 
-        return {"success": True}, 200
+        if action == 'move' and source_list_id:
+            delete_result, _ = delete_from_childes({'source_id': task_id, 'source_type': 'task', 'parent_id': source_list_id, 'parent_type': 'list'}, user_id=user_id)
+            if delete_result and delete_result.get('success'):
+                if 'parent' in delete_result:
+                    response_data['old_parent'] = delete_result['parent']
+                # task in response_data will be updated with the latest version from delete_from_childes
+                if 'source' in delete_result:
+                    response_data['task'] = delete_result['source']
+
+        return response_data, 200
 
     except Exception as e:
         db.session.rollback()
@@ -341,7 +300,7 @@ def link_items(data, user_id=None):
         db.session.commit()
         current_app.logger.info('✅ link_items: Successfully linked items')
         
-        return {"success": True}, 200
+        return {"success": True, "parent": target_entity.to_dict()}, 200
     
     except Exception as e:
         db.session.rollback()
@@ -357,56 +316,121 @@ def move_items(data, user_id=None):
     source_id = data.get('source_id')
     target_type = data.get('target_type')
     target_id = data.get('target_id')
+    # Parameters to specify the exact parent to remove from
+    source_parent_id = data.get('source_parent_id')
+    source_parent_type = data.get('source_parent_type')
     
-    current_app.logger.info(f'📦 move_items called: source_type={source_type}, source_id={source_id}, target_type={target_type}, target_id={target_id}, user_id={user_id}')
+    current_app.logger.info(f'📦 move_items called: source_type={source_type}, source_id={source_id}, target_type={target_type}, target_id={target_id}, source_parent_id={source_parent_id}, source_parent_type={source_parent_type}, user_id={user_id}')
     
-    if not source_id or not target_id or not source_type or not target_type:
+    if not source_id or not source_type:
         current_app.logger.error('❌ move_items: Missing required parameters')
-        return {"error": "source_type, source_id, target_type and target_id are required"}, 400
+        return {"error": "source_type and source_id are required"}, 400
+    
+    # Require source_parent_id
+    if not source_parent_id:
+        current_app.logger.error('❌ move_items: Missing source_parent_id')
+        return {"error": "source_parent_id is required"}, 400
+    
+    # For non-general list sources, require source_parent_type
+    if source_parent_id != 'generalList' and not source_parent_type:
+        current_app.logger.error('❌ move_items: Missing source_parent_type')
+        return {"error": "source_parent_type is required"}, 400
+    
+    # For groups, they cannot be moved from general list
+    if source_type == 'group' and source_parent_id == 'generalList':
+        current_app.logger.error('❌ move_items: Groups cannot be moved from general list')
+        return {"error": "Groups cannot be moved from general list"}, 400
     
     try:
         source_entity = get_entity_by_type_and_id(source_type, source_id, user_id)
-        target_entity = get_entity_by_type_and_id(target_type, target_id, user_id)
         
-        current_app.logger.info(f'📋 move_items: source_entity={source_entity}, target_entity={target_entity}')
-        
-        if not source_entity or not target_entity:
-            current_app.logger.error('❌ move_items: Source or target entity not found')
-            return {"error": "Source or target entity not found"}, 404
-        
-        if hasattr(source_entity, 'project_id') and source_entity.project_id:
-            current_app.logger.info(f'📦 move_items: Removing project_id {source_entity.project_id}')
-            source_entity.project_id = None
-        if hasattr(source_entity, 'group_id') and source_entity.group_id:
-            current_app.logger.info(f'📦 move_items: Removing group_id {source_entity.group_id}')
-            source_entity.group_id = None
-        
-        if target_type == 'group' and source_type == 'list':
-            current_app.logger.info(f'📦 move_items: Moving List to Group {target_entity.id}')
-            source_entity.group_id = target_entity.id
-        elif target_type == 'project':
-            if source_type in ['list', 'group']:
-                current_app.logger.info(f'📦 move_items: Moving {source_type} to Project {target_entity.id}')
-                source_entity.project_id = target_entity.id
+        if not source_entity:
+            current_app.logger.error('❌ move_items: Source entity not found')
+            return {"error": "Source entity not found"}, 404
+
+        old_parents = []
+        # Remove from old parents
+        if source_type == 'list':
+            if source_parent_id == 'generalList':
+                # Remove from general list
+                if hasattr(source_entity, 'in_general_list'):
+                    source_entity.in_general_list = False
+                    db.session.add(source_entity)
             else:
-                current_app.logger.error(f'❌ move_items: Invalid move combination - source: {source_type}')
-                return {"error": "Invalid move combination"}, 400
+                # Remove from specific parent only
+                parent_entity = get_entity_by_type_and_id(source_parent_type, source_parent_id, user_id)
+                if parent_entity:
+                    old_parents.append(parent_entity)
+                    if parent_entity.childes_order and source_id in parent_entity.childes_order:
+                        new_order = list(parent_entity.childes_order)
+                        new_order.remove(source_id)
+                        parent_entity.childes_order = new_order
+                        db.session.add(parent_entity)
+                    if parent_entity in source_entity.groups:
+                        source_entity.groups.remove(parent_entity)
+                    elif parent_entity in source_entity.projects:
+                        source_entity.projects.remove(parent_entity)
+        elif source_type == 'group':
+            # Remove from specific parent only (groups cannot be in general list, already checked above)
+            parent_entity = get_entity_by_type_and_id(source_parent_type, source_parent_id, user_id)
+            if parent_entity:
+                old_parents.append(parent_entity)
+                if parent_entity.childes_order and source_id in parent_entity.childes_order:
+                    new_order = list(parent_entity.childes_order)
+                    new_order.remove(source_id)
+                    parent_entity.childes_order = new_order
+                    db.session.add(parent_entity)
+                if parent_entity in source_entity.projects:
+                    source_entity.projects.remove(parent_entity)
+
+        target_entity = None
+        if target_id == 'generalList':
+            # Move to general list
+            if hasattr(source_entity, 'in_general_list'):
+                source_entity.in_general_list = True
+                db.session.add(source_entity)
         else:
-            current_app.logger.error(f'❌ move_items: Invalid target for move - target: {target_type}')
-            return {"error": "Invalid target for move"}, 400
-        
-        childes_order = target_entity.childes_order or []
-        if source_entity.id not in childes_order:
-            childes_order.append(source_entity.id)
-            target_entity.childes_order = childes_order
-            current_app.logger.info(f'✅ move_items: Updated childes_order: {childes_order}')
-            db.session.add(target_entity)
-        
-        db.session.add(source_entity)
+            if not target_type or not target_id:
+                return {"error": "target_type and target_id are required"}, 400
+
+            target_entity = get_entity_by_type_and_id(target_type, target_id, user_id)
+            if not target_entity:
+                current_app.logger.error('❌ move_items: Target entity not found')
+                return {"error": "Target entity not found"}, 404
+
+            # Add to new parent
+            if target_type == 'group' and source_type == 'list':
+                source_entity.groups.append(target_entity)
+            elif target_type == 'project':
+                if source_type == 'list' or source_type == 'group':
+                    source_entity.projects.append(target_entity)
+                else:
+                    return {"error": "Invalid move combination"}, 400
+            else:
+                return {"error": "Invalid target for move"}, 400
+
+            childes_order = target_entity.childes_order or []
+            if source_entity.id not in childes_order:
+                new_order = list(childes_order)
+                new_order.append(source_entity.id)
+                target_entity.childes_order = new_order
+                db.session.add(target_entity)
+            
+            if hasattr(source_entity, 'in_general_list'):
+                source_entity.in_general_list = False
+                db.session.add(source_entity)
+
         db.session.commit()
         current_app.logger.info('✅ move_items: Successfully moved items')
         
-        return {"success": True}, 200
+        response_data = {"success": True}
+        if target_entity:
+            response_data["parent"] = target_entity.to_dict()
+        
+        response_data["old_parents"] = [p.to_dict() for p in old_parents]
+        response_data["source_entity"] = source_entity.to_dict()
+
+        return response_data, 200
     
     except Exception as e:
         db.session.rollback()
@@ -423,23 +447,3 @@ def _normalize_orders_by_type(entity_type, user_id):
         db.session.add(sibling)
     
     db.session.commit()
-
-
-def _get_max_order(entity):
-    """Get maximum order value for siblings of the given entity"""
-    entity_type = type(entity)
-    
-    if entity_type.__name__ == 'List':
-        if hasattr(entity, 'group_id') and entity.group_id:
-            return db.session.query(func.max(entity_type.order)).filter_by(group_id=entity.group_id, user_id=entity.user_id).scalar() or 0
-        elif hasattr(entity, 'project_id') and entity.project_id:
-            return db.session.query(func.max(entity_type.order)).filter_by(project_id=entity.project_id, group_id=None, user_id=entity.user_id).scalar() or 0
-        else:
-            return db.session.query(func.max(entity_type.order)).filter_by(group_id=None, project_id=None, user_id=entity.user_id).scalar() or 0
-    elif entity_type.__name__ == 'Group':
-        if hasattr(entity, 'project_id') and entity.project_id:
-            return db.session.query(func.max(entity_type.order)).filter_by(project_id=entity.project_id, user_id=entity.user_id).scalar() or 0
-        else:
-            return db.session.query(func.max(entity_type.order)).filter_by(project_id=None, user_id=entity.user_id).scalar() or 0
-    else:
-        return db.session.query(func.max(entity_type.order)).filter_by(user_id=entity.user_id).scalar() or 0

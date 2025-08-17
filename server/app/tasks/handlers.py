@@ -12,4 +12,4 @@ from .calendar.handlers import get_calendar_events
 from .utils import _parse_iso_datetime, _is_task_in_range
 from .list_handlers import get_lists_and_groups_data, add_object, edit_list, get_lists_tree_data
 from .task_handlers import get_tasks, get_tasks_by_ids, add_task, add_subtask, edit_task, change_task_status, del_task, get_subtasks_by_parent_id, create_daily_scenario
-from .entity_handlers import parse_entity, get_entity_by_id, link_group_list, delete_from_childes, link_task
+from .entity_handlers import parse_entity, get_entity_by_id, delete_from_childes, link_task

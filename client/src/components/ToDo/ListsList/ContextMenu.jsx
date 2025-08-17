@@ -87,7 +87,7 @@ export default function ContextMenu({
         Переместить ниже
       </MenuItem>
     ];
-  } else if (item && !item.inGeneralList) {
+  } else if (item && !item.in_general_list) {
     menuItems = [
       <MenuItem key="addToGeneral" onClick={() => handleAction(() => onAddToGeneralList(item.id))} aria-label="Добавить в основной список">
         Добавить в основной список

@@ -41,7 +41,7 @@ def test_delete_from_childes_success(auth_client, test_user):
         'target_type': 'group'
     }
     
-    response = auth_client.put('/api/tasks/link_group_list', 
+    response = auth_client.put('/api/tasks/link_items', 
                               data=json.dumps(link_data),
                               content_type='application/json')
     

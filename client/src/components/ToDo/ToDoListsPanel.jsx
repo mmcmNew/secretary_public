@@ -5,15 +5,14 @@ import { AccountTree } from '@mui/icons-material';
 import { memo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
-import { useGetListsQuery, useAddObjectMutation, useMoveListObjectMutation, useUpdateListMutation, useDeleteListMutation, useLinkItemsMutation, useMoveItemsMutation, useDeleteFromChildesMutation, useAddToGeneralListMutation } from '../../store/listsSlice';
-import { setSelectedListId, setSelectedList, toggleGroup, addToGeneralList } from '../../store/todoLayoutSlice';
+import { useGetListsQuery, useAddObjectMutation, useUpdateListMutation, useDeleteListMutation, useLinkItemsMutation, useMoveItemsMutation, useDeleteFromChildesMutation, useAddToGeneralListMutation } from '../../store/listsSlice';
+import { setSelectedListId, setSelectedList, toggleGroup } from '../../store/todoLayoutSlice';
 
 
 function ToDoListsPanel({ mobile }) {
   const dispatch = useDispatch();
   const { data, error, isLoading } = useGetListsQuery();
   const [addObject] = useAddObjectMutation();
-  const [moveListObject] = useMoveListObjectMutation();
   const [updateList] = useUpdateListMutation();
   const [deleteList] = useDeleteListMutation();
   const [linkItems] = useLinkItemsMutation();

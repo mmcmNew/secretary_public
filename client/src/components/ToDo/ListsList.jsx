@@ -173,15 +173,15 @@ function ListsList({
         onClose={handleCloseMenu}
         onEditClick={handleEditStart}
         onDeleteClick={() => {
-          if (targetItem) onDeleteList(targetItem.id);
+          if (targetItem) onDeleteList(targetItem.realId || targetItem.id);
           handleCloseMenu();
         }}
         onMoveUp={() => {
-          if (targetItem) onChangeChildesOrder(targetItem.id, 'up');
+          if (targetItem) onChangeChildesOrder(targetItem.realId || targetItem.id, 'up');
           handleCloseMenu();
         }}
         onMoveDown={() => {
-          if (targetItem) onChangeChildesOrder(targetItem.id, 'down');
+          if (targetItem) onChangeChildesOrder(targetItem.realId || targetItem.id, 'down');
           handleCloseMenu();
         }}
         onOpenGroupMenu={(e) => handleOpenSubMenu(e, 'group')}

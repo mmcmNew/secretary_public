@@ -1,0 +1,2234 @@
+{
+  "POST /api/tasks/add_task": {
+    "request": {
+      "data": {
+        "title": "Test Series",
+        "start": "2025-07-22T07:30:00Z",
+        "end": "2025-07-22T09:30:00Z",
+        "listId": "tasks"
+      }
+    },
+    "response": {
+      "data": {
+        "message": "Задача добавлена",
+        "success": true,
+        "task": {
+          "attachments": null,
+          "childes_order": [],
+          "color": null,
+          "completed_at": null,
+          "end": "2025-07-22T09:30:00Z",
+          "id": "b1ec566b-c4a7-4620-aa61-5468d0fb8acd",
+          "interval_id": null,
+          "is_background": false,
+          "is_completed": false,
+          "is_important": false,
+          "is_infinite": false,
+          "lists_ids": [],
+          "note": null,
+          "priority_id": null,
+          "range": {
+            "end": "2025-07-22T09:30:00Z",
+            "start": "2025-07-22T07:30:00Z"
+          },
+          "start": "2025-07-22T07:30:00Z",
+          "status_id": null,
+          "title": "Test Series",
+          "type": null,
+          "type_id": null
+        },
+        "task_list": {}
+      }
+    }
+  },
+  "PATCH /api/tasks/instance": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "instance": {
+          "data": {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": "2025-07-22T09:30:00Z",
+            "id": "b1ec566b-c4a7-4620-aa61-5468d0fb8acd",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": "Instance note",
+            "priority_id": null,
+            "range": {
+              "end": "2025-07-22T09:30:00Z",
+              "start": "2025-07-22T07:30:00Z"
+            },
+            "start": "2025-07-22T07:30:00Z",
+            "status_id": null,
+            "title": "Test Series",
+            "type": null,
+            "type_id": null
+          },
+          "date": "2025-07-22",
+          "is_override": true,
+          "override_id": 1,
+          "parent_task_id": "b1ec566b-c4a7-4620-aa61-5468d0fb8acd",
+          "type": "modified"
+        },
+        "success": true
+      }
+    }
+  },
+  "POST /api/tasks/add_list": {
+    "request": {
+      "data": {
+        "type": "list",
+        "title": "Новый список задач",
+        "order": 0
+      }
+    },
+    "response": {
+      "data": {
+        "message": "Объект добавлен",
+        "new_object": {
+          "background_tasks_count": 0,
+          "childes_order": [],
+          "deleted": false,
+          "id": "ec65879b-14c1-4e21-abf9-6ebd38b4480b",
+          "important_tasks_count": 0,
+          "in_general_list": true,
+          "order": 0,
+          "title": "Новый список задач",
+          "type": "list",
+          "unfinished_tasks_count": 0
+        },
+        "object_type": "list",
+        "success": true
+      }
+    }
+  },
+  "POST /api/tasks/add_subtask": {
+    "request": {
+      "data": {
+        "title": "Подзадача",
+        "parentTaskId": "d42595d7-851a-4cf6-8c83-dada01e5f7d8"
+      }
+    },
+    "response": {
+      "data": {
+        "message": "Подзадача добавлена",
+        "parent_task": {
+          "attachments": null,
+          "childes_order": [
+            "6781cd4d-961c-4224-ae9f-68732da8e1df"
+          ],
+          "color": null,
+          "completed_at": null,
+          "end": null,
+          "id": "d42595d7-851a-4cf6-8c83-dada01e5f7d8",
+          "interval_id": null,
+          "is_background": false,
+          "is_completed": false,
+          "is_important": false,
+          "is_infinite": false,
+          "lists_ids": [],
+          "note": null,
+          "priority_id": null,
+          "range": {
+            "end": null,
+            "start": null
+          },
+          "start": null,
+          "status_id": null,
+          "title": "Родительская задача",
+          "type": null,
+          "type_id": null
+        },
+        "subtask": {
+          "attachments": null,
+          "childes_order": [],
+          "color": null,
+          "completed_at": null,
+          "end": null,
+          "id": "6781cd4d-961c-4224-ae9f-68732da8e1df",
+          "interval_id": null,
+          "is_background": false,
+          "is_completed": false,
+          "is_important": false,
+          "is_infinite": false,
+          "lists_ids": [],
+          "note": null,
+          "priority_id": null,
+          "range": {
+            "end": null,
+            "start": null
+          },
+          "start": null,
+          "status_id": null,
+          "title": "Подзадача",
+          "type": null,
+          "type_id": null
+        },
+        "success": true
+      }
+    }
+  },
+  "PUT /api/tasks/change_status": {
+    "request": {
+      "data": {
+        "taskId": "cb7c32f4-69cc-4d6c-b504-92a049bd7816",
+        "is_completed": true
+      }
+    },
+    "response": {
+      "data": {
+        "changed_ids": [
+          "cb7c32f4-69cc-4d6c-b504-92a049bd7816"
+        ],
+        "success": true
+      }
+    }
+  },
+  "DELETE /api/tasks/del_task": {
+    "request": {
+      "data": {
+        "taskId": "3c1003c1-bff9-41e4-93fc-a66373e0498f"
+      }
+    },
+    "response": {
+      "data": {
+        "message": "Subtask deleted successfully",
+        "success": true
+      }
+    }
+  },
+  "PUT /api/tasks/link_items": {
+    "request": {
+      "data": {
+        "source_id": "74f8ff8c-97ac-4f26-b1f6-74ad2979ffa7",
+        "source_type": "list",
+        "target_id": "8261ad69-18ae-48b8-8865-c290cb373a56",
+        "target_type": "group"
+      }
+    },
+    "response": {
+      "data": {
+        "parent": {
+          "childes_order": [
+            "74f8ff8c-97ac-4f26-b1f6-74ad2979ffa7"
+          ],
+          "deleted": false,
+          "id": "8261ad69-18ae-48b8-8865-c290cb373a56",
+          "in_general_list": true,
+          "order": 0,
+          "title": "Группа для тестирования удаления из детей",
+          "type": "group"
+        },
+        "success": true
+      }
+    }
+  },
+  "DELETE /api/tasks/delete_from_childes": {
+    "request": {
+      "data": {
+        "source_id": "74f8ff8c-97ac-4f26-b1f6-74ad2979ffa7",
+        "source_type": "list",
+        "parent_id": "8261ad69-18ae-48b8-8865-c290cb373a56",
+        "parent_type": "group"
+      }
+    },
+    "response": {
+      "data": {
+        "parent": {
+          "childes_order": [],
+          "deleted": false,
+          "id": "8261ad69-18ae-48b8-8865-c290cb373a56",
+          "in_general_list": true,
+          "order": 0,
+          "title": "Группа для тестирования удаления из детей",
+          "type": "group"
+        },
+        "source": {
+          "background_tasks_count": 0,
+          "childes_order": [],
+          "deleted": false,
+          "id": "74f8ff8c-97ac-4f26-b1f6-74ad2979ffa7",
+          "important_tasks_count": 0,
+          "in_general_list": true,
+          "order": 0,
+          "title": "Список для тестирования удаления из детей",
+          "type": "list",
+          "unfinished_tasks_count": 0
+        },
+        "success": true
+      }
+    }
+  },
+  "PUT /api/tasks/edit_list": {
+    "request": {
+      "data": {
+        "listId": "cc1ffe27-5583-40eb-a9ad-1452436e09f3",
+        "type": "list",
+        "title": "Обновленный список",
+        "order": 1
+      }
+    },
+    "response": {
+      "data": {
+        "success": true,
+        "updated_list": {
+          "background_tasks_count": 0,
+          "childes_order": [],
+          "deleted": false,
+          "id": "cc1ffe27-5583-40eb-a9ad-1452436e09f3",
+          "important_tasks_count": 0,
+          "in_general_list": true,
+          "order": 1,
+          "title": "Обновленный список",
+          "type": "list",
+          "unfinished_tasks_count": 0
+        }
+      }
+    }
+  },
+  "PUT /api/tasks/edit_task": {
+    "request": {
+      "data": {
+        "taskId": "6ad67200-05ef-43e7-8cc2-cafd7be96dd3",
+        "title": "Обновленная задача",
+        "note": "Тестовое примечание"
+      }
+    },
+    "response": {
+      "data": {
+        "success": true,
+        "task": {
+          "attachments": null,
+          "childes_order": [],
+          "color": null,
+          "completed_at": null,
+          "end": null,
+          "id": "6ad67200-05ef-43e7-8cc2-cafd7be96dd3",
+          "interval_id": null,
+          "is_background": false,
+          "is_completed": false,
+          "is_important": false,
+          "is_infinite": false,
+          "lists_ids": [],
+          "note": "Тестовое примечание",
+          "priority_id": null,
+          "range": {
+            "end": null,
+            "start": null
+          },
+          "start": null,
+          "status_id": null,
+          "title": "Обновленная задача",
+          "type": null,
+          "type_id": null
+        }
+      }
+    }
+  },
+  "GET /api/tasks/fields_config": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "attachments": {
+          "id": 15,
+          "name": "Добавить файл",
+          "type": "string"
+        },
+        "color": {
+          "id": 5,
+          "name": "Цвет на календаре",
+          "type": "color"
+        },
+        "completed_at": {
+          "id": 17,
+          "name": "Дата выполнения",
+          "type": "datetime"
+        },
+        "cost": {
+          "id": 8,
+          "name": "Добавить файл",
+          "type": "number"
+        },
+        "divider1": {
+          "id": 3,
+          "type": "divider"
+        },
+        "divider2": {
+          "id": 6,
+          "type": "divider"
+        },
+        "divider3": {
+          "id": 9,
+          "type": "divider"
+        },
+        "divider4": {
+          "id": 13,
+          "type": "divider"
+        },
+        "interval_id": {
+          "id": 11,
+          "name": "Повтор",
+          "options": [
+            {
+              "label": "День",
+              "value": 1
+            },
+            {
+              "label": "Неделя",
+              "value": 2
+            },
+            {
+              "label": "Месяц",
+              "value": 3
+            },
+            {
+              "label": "Год",
+              "value": 4
+            },
+            {
+              "label": "Рабочие дни",
+              "value": 5
+            },
+            {
+              "label": "Без повтора",
+              "value": null
+            }
+          ],
+          "type": "select"
+        },
+        "is_background": {
+          "id": 4,
+          "name": "Фоновая задача",
+          "type": "toggle"
+        },
+        "is_infinite": {
+          "id": 12,
+          "name": "Бесконечно повторять на календаре",
+          "type": "toggle"
+        },
+        "note": {
+          "id": 16,
+          "name": "Заметка",
+          "type": "text"
+        },
+        "priority_id": {
+          "id": 10,
+          "name": "Приоритет",
+          "options": [
+            {
+              "label": "Low",
+              "value": 1
+            },
+            {
+              "label": "Medium",
+              "value": 2
+            },
+            {
+              "label": "High",
+              "value": 3
+            }
+          ],
+          "type": "select"
+        },
+        "range": {
+          "id": 1,
+          "name": "Срок",
+          "type": "range"
+        },
+        "reward": {
+          "id": 7,
+          "name": "Награда",
+          "type": "toggle"
+        },
+        "type_id": {
+          "groupBy": "type",
+          "id": 14,
+          "name": "Тип задачи",
+          "options": [],
+          "type": "select"
+        }
+      }
+    }
+  },
+  "GET /api/tasks/get_calendar_events?start=2025-08-17T20:19:44.917492Z&end=2025-08-19T20:19:44.917492Z": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "events": [],
+        "parent_tasks": []
+      }
+    }
+  },
+  "GET /api/tasks/get_calendar_events": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "events": [],
+        "parent_tasks": []
+      }
+    }
+  },
+  "GET /api/tasks/get_calendar_events?start=2025-08-17T20:19:45.414683Z&end=2025-08-18T20:19:45.414683Z": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "events": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": "2025-08-17T22:19:45.331823Z",
+            "id": "d3c3e31a-1541-4bed-92bc-cadd9720fb19",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": "2025-08-17T22:19:45.331823Z",
+              "start": "2025-08-17T21:19:45.331823Z"
+            },
+            "start": "2025-08-17T21:19:45.331823Z",
+            "status_id": null,
+            "title": "Задача для моего дня",
+            "type": null,
+            "type_id": null
+          }
+        ],
+        "parent_tasks": []
+      }
+    }
+  },
+  "GET /api/tasks/get_calendar_events?start=2025-08-27T20:19:45.612572Z&end=2025-08-28T20:19:45.612572Z": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "events": [],
+        "parent_tasks": []
+      }
+    }
+  },
+  "GET /api/tasks/get_calendar_events?start=2025-08-17T20:19:46.096395Z&end=2025-08-18T20:19:46.096395Z": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "events": [],
+        "parent_tasks": []
+      }
+    }
+  },
+  "GET /api/tasks/get_lists": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "default_lists": [
+          {
+            "childes_order": [],
+            "id": "my_day",
+            "realId": "my_day",
+            "title": "Мой день",
+            "type": "list",
+            "unfinished_tasks_count": 0
+          },
+          {
+            "childes_order": [],
+            "id": "tasks",
+            "realId": "tasks",
+            "title": "Задачи",
+            "type": "list",
+            "unfinished_tasks_count": 0
+          },
+          {
+            "childes_order": [],
+            "id": "important",
+            "realId": "important",
+            "title": "Важные",
+            "type": "list",
+            "unfinished_tasks_count": 0
+          },
+          {
+            "childes_order": [],
+            "id": "background",
+            "realId": "background",
+            "title": "Фоновые задачи",
+            "type": "list",
+            "unfinished_tasks_count": 0
+          }
+        ],
+        "lists": [],
+        "projects": []
+      }
+    }
+  },
+  "GET /api/tasks/get_lists_tree": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": [
+        {
+          "data": [
+            {
+              "data": {
+                "realId": "my_day",
+                "rootId": "default",
+                "type": "standard",
+                "unfinished_tasks_count": 0
+              },
+              "droppable": false,
+              "id": "my_day",
+              "parent": "default",
+              "text": "Мой день"
+            },
+            {
+              "data": {
+                "realId": "tasks",
+                "rootId": "default",
+                "type": "standard",
+                "unfinished_tasks_count": 0
+              },
+              "droppable": false,
+              "id": "tasks",
+              "parent": "default",
+              "text": "Задачи"
+            },
+            {
+              "data": {
+                "realId": "important",
+                "rootId": "default",
+                "type": "standard",
+                "unfinished_tasks_count": 0
+              },
+              "droppable": false,
+              "id": "important",
+              "parent": "default",
+              "text": "Важные"
+            },
+            {
+              "data": {
+                "realId": "background",
+                "rootId": "default",
+                "type": "standard",
+                "unfinished_tasks_count": 0
+              },
+              "droppable": false,
+              "id": "background",
+              "parent": "default",
+              "text": "Фоновые задачи"
+            }
+          ],
+          "id": "default",
+          "name": "Стандартные",
+          "rootId": "default"
+        },
+        {
+          "data": [],
+          "id": "projects",
+          "name": "Проекты",
+          "rootId": "projects"
+        },
+        {
+          "data": [],
+          "id": "lists",
+          "name": "Списки и группы",
+          "rootId": "lists"
+        }
+      ]
+    }
+  },
+  "GET /api/tasks/get_lists_tree?time_zone=Europe/Moscow": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": [
+        {
+          "data": [
+            {
+              "data": {
+                "realId": "my_day",
+                "rootId": "default",
+                "type": "standard",
+                "unfinished_tasks_count": 0
+              },
+              "droppable": false,
+              "id": "my_day",
+              "parent": "default",
+              "text": "Мой день"
+            },
+            {
+              "data": {
+                "realId": "tasks",
+                "rootId": "default",
+                "type": "standard",
+                "unfinished_tasks_count": 0
+              },
+              "droppable": false,
+              "id": "tasks",
+              "parent": "default",
+              "text": "Задачи"
+            },
+            {
+              "data": {
+                "realId": "important",
+                "rootId": "default",
+                "type": "standard",
+                "unfinished_tasks_count": 0
+              },
+              "droppable": false,
+              "id": "important",
+              "parent": "default",
+              "text": "Важные"
+            },
+            {
+              "data": {
+                "realId": "background",
+                "rootId": "default",
+                "type": "standard",
+                "unfinished_tasks_count": 0
+              },
+              "droppable": false,
+              "id": "background",
+              "parent": "default",
+              "text": "Фоновые задачи"
+            }
+          ],
+          "id": "default",
+          "name": "Стандартные",
+          "rootId": "default"
+        },
+        {
+          "data": [],
+          "id": "projects",
+          "name": "Проекты",
+          "rootId": "projects"
+        },
+        {
+          "data": [],
+          "id": "lists",
+          "name": "Списки и группы",
+          "rootId": "lists"
+        }
+      ]
+    }
+  },
+  "GET /api/tasks/get_lists_tree?time_zone=Invalid/Timezone": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": [
+        {
+          "data": [
+            {
+              "data": {
+                "realId": "my_day",
+                "rootId": "default",
+                "type": "standard",
+                "unfinished_tasks_count": 0
+              },
+              "droppable": false,
+              "id": "my_day",
+              "parent": "default",
+              "text": "Мой день"
+            },
+            {
+              "data": {
+                "realId": "tasks",
+                "rootId": "default",
+                "type": "standard",
+                "unfinished_tasks_count": 0
+              },
+              "droppable": false,
+              "id": "tasks",
+              "parent": "default",
+              "text": "Задачи"
+            },
+            {
+              "data": {
+                "realId": "important",
+                "rootId": "default",
+                "type": "standard",
+                "unfinished_tasks_count": 0
+              },
+              "droppable": false,
+              "id": "important",
+              "parent": "default",
+              "text": "Важные"
+            },
+            {
+              "data": {
+                "realId": "background",
+                "rootId": "default",
+                "type": "standard",
+                "unfinished_tasks_count": 0
+              },
+              "droppable": false,
+              "id": "background",
+              "parent": "default",
+              "text": "Фоновые задачи"
+            }
+          ],
+          "id": "default",
+          "name": "Стандартные",
+          "rootId": "default"
+        },
+        {
+          "data": [],
+          "id": "projects",
+          "name": "Проекты",
+          "rootId": "projects"
+        },
+        {
+          "data": [],
+          "id": "lists",
+          "name": "Списки и группы",
+          "rootId": "lists"
+        }
+      ]
+    }
+  },
+  "GET /api/tasks/get_lists?time_zone=Europe/Moscow": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "default_lists": [
+          {
+            "childes_order": [],
+            "id": "my_day",
+            "realId": "my_day",
+            "title": "Мой день",
+            "type": "list",
+            "unfinished_tasks_count": 0
+          },
+          {
+            "childes_order": [],
+            "id": "tasks",
+            "realId": "tasks",
+            "title": "Задачи",
+            "type": "list",
+            "unfinished_tasks_count": 0
+          },
+          {
+            "childes_order": [],
+            "id": "important",
+            "realId": "important",
+            "title": "Важные",
+            "type": "list",
+            "unfinished_tasks_count": 0
+          },
+          {
+            "childes_order": [],
+            "id": "background",
+            "realId": "background",
+            "title": "Фоновые задачи",
+            "type": "list",
+            "unfinished_tasks_count": 0
+          }
+        ],
+        "lists": [],
+        "projects": []
+      }
+    }
+  },
+  "GET /api/tasks/get_lists?time_zone=Invalid/Timezone": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "default_lists": [
+          {
+            "childes_order": [],
+            "id": "my_day",
+            "realId": "my_day",
+            "title": "Мой день",
+            "type": "list",
+            "unfinished_tasks_count": 0
+          },
+          {
+            "childes_order": [],
+            "id": "tasks",
+            "realId": "tasks",
+            "title": "Задачи",
+            "type": "list",
+            "unfinished_tasks_count": 0
+          },
+          {
+            "childes_order": [],
+            "id": "important",
+            "realId": "important",
+            "title": "Важные",
+            "type": "list",
+            "unfinished_tasks_count": 0
+          },
+          {
+            "childes_order": [],
+            "id": "background",
+            "realId": "background",
+            "title": "Фоновые задачи",
+            "type": "list",
+            "unfinished_tasks_count": 0
+          }
+        ],
+        "lists": [],
+        "projects": []
+      }
+    }
+  },
+  "GET /api/tasks/get_subtasks?parent_task_id=3fac23ff-5cd0-4a42-b6fc-1749afc4d9c3": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "subtasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "23e9bbd6-7af7-40e3-ac91-2896f31f6c01",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Подзадача 1",
+            "type": null,
+            "type_id": null
+          },
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "da4be300-ef28-471f-b1b3-0a46d790ffd2",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Подзадача 2",
+            "type": null,
+            "type_id": null
+          },
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "9ef0b4d7-f3a9-4c59-b16e-dfcd2aba7d47",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Подзадача 3",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_subtasks?parent_task_id=ce9882b1-15ba-4db7-92db-c1e9998cf508": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "subtasks": []
+      }
+    }
+  },
+  "GET /api/tasks/get_subtasks?parent_task_id=030af873-4892-4e7e-884e-0a95fbcb3033": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "subtasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "e026671b-4903-4f42-8c62-978b76ef7bff",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Первая подзадача",
+            "type": null,
+            "type_id": null
+          },
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "3c92e43e-2537-4238-919f-ec91767edd45",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Вторая подзадача",
+            "type": null,
+            "type_id": null
+          },
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "b9b5ce24-3f6b-4eea-a680-b7c81e583057",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Третья подзадача",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_subtasks?parent_task_id=10c36e56-0b6c-4c80-a431-c5331921c243": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "subtasks": []
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks?list_id=5a97ba3f-73ff-466b-ba25-cb68b48837fc": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "9d47a2a0-0baa-44aa-af6c-d41640644252",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [
+              "5a97ba3f-73ff-466b-ba25-cb68b48837fc"
+            ],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Задача 1",
+            "type": null,
+            "type_id": null
+          },
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "aa9272d2-760e-4a18-b575-9fc051c029c0",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [
+              "5a97ba3f-73ff-466b-ba25-cb68b48837fc"
+            ],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Задача 2",
+            "type": null,
+            "type_id": null
+          },
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "53447b72-3568-44fc-ba4f-7527e0cdb9ea",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [
+              "5a97ba3f-73ff-466b-ba25-cb68b48837fc"
+            ],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Задача 3",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks?list_id=all": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "745f1c0d-dd83-47b7-8ca7-29dfbf02bbf2",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Общая задача 1",
+            "type": null,
+            "type_id": null
+          },
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "375385f5-09d0-4342-ba86-605c30dcbd2c",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Общая задача 2",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks?list_id=events&start=2025-08-17T20:19:52.532657Z&end=2025-08-19T20:19:52.532657Z": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": []
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks_by_ids?ids=568f6b46-c955-4f51-85c1-179cdc4348c4,4a21aec7-9c2b-4c24-a9ef-78884492962c,2e5b0c2b-dbaf-4dfa-8ec8-46361538f3e3": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "568f6b46-c955-4f51-85c1-179cdc4348c4",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Задача для получения по ID 1",
+            "type": null,
+            "type_id": null
+          },
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "4a21aec7-9c2b-4c24-a9ef-78884492962c",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Задача для получения по ID 2",
+            "type": null,
+            "type_id": null
+          },
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "2e5b0c2b-dbaf-4dfa-8ec8-46361538f3e3",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Задача для получения по ID 3",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks_by_ids?ids=": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": []
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks_by_ids?ids=2b6c56f5-2d7b-4f9d-a241-6fdfad0474b2,2837e6a0-948f-49c4-8b23-80e7f53b55f4": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": []
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks_by_ids?ids=79cb4876-cee3-44e0-9d84-524ac93d04ce,a8c250f0-87ba-49a9-a513-10c6590aea9c": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "79cb4876-cee3-44e0-9d84-524ac93d04ce",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Существующая задача",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks?list_id=9446b24d-b998-4c7b-b0fb-ac94268a8888": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": [
+          {
+            "attachments": null,
+            "childes_order": [
+              "50f39bc9-9af0-4b0c-8300-58f8bd7c708b"
+            ],
+            "color": null,
+            "completed_at": null,
+            "end": "2025-08-24T20:19:54.848367Z",
+            "id": "bfb99421-9641-4f12-8fa0-f23f54e021a6",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": true,
+            "is_infinite": false,
+            "lists_ids": [
+              "9446b24d-b998-4c7b-b0fb-ac94268a8888"
+            ],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": "2025-08-24T20:19:54.848367Z",
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Создать REST API",
+            "type": {
+              "color": "#2196F3",
+              "description": "Задачи по разработке",
+              "group_id": "2c19e551-7f11-4477-94b4-91d45829a2ec",
+              "id": "e47cebd4-9bfc-46b0-a9ca-c8f77b334997",
+              "is_active": true,
+              "name": "Разработка",
+              "order": null,
+              "user_id": "af62a855-a847-44e8-bc99-62e44a84be36"
+            },
+            "type_id": "e47cebd4-9bfc-46b0-a9ca-c8f77b334997"
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_subtasks?parent_task_id=bfb99421-9641-4f12-8fa0-f23f54e021a6": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "subtasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "50f39bc9-9af0-4b0c-8300-58f8bd7c708b",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Создать модели данных",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks_by_ids?ids=bfb99421-9641-4f12-8fa0-f23f54e021a6,50f39bc9-9af0-4b0c-8300-58f8bd7c708b": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": [
+          {
+            "attachments": null,
+            "childes_order": [
+              "50f39bc9-9af0-4b0c-8300-58f8bd7c708b"
+            ],
+            "color": null,
+            "completed_at": null,
+            "end": "2025-08-24T20:19:54.848367Z",
+            "id": "bfb99421-9641-4f12-8fa0-f23f54e021a6",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": true,
+            "is_infinite": false,
+            "lists_ids": [
+              "9446b24d-b998-4c7b-b0fb-ac94268a8888"
+            ],
+            "note": "Обновленное описание API",
+            "priority_id": null,
+            "range": {
+              "end": "2025-08-24T20:19:54.848367Z",
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Создать REST API v2",
+            "type": {
+              "color": "#2196F3",
+              "description": "Задачи по разработке",
+              "group_id": "2c19e551-7f11-4477-94b4-91d45829a2ec",
+              "id": "e47cebd4-9bfc-46b0-a9ca-c8f77b334997",
+              "is_active": true,
+              "name": "Разработка",
+              "order": null,
+              "user_id": "af62a855-a847-44e8-bc99-62e44a84be36"
+            },
+            "type_id": "e47cebd4-9bfc-46b0-a9ca-c8f77b334997"
+          },
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": "2025-08-17T20:19:55.188630Z",
+            "end": null,
+            "id": "50f39bc9-9af0-4b0c-8300-58f8bd7c708b",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": true,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Создать модели данных",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks?list_id=e3572769-7cca-4631-9735-01481b9437a9": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "627ac4cb-c2d9-493d-aa6f-673397188e4c",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [
+              "e3572769-7cca-4631-9735-01481b9437a9"
+            ],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Тестовая задача",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks_by_ids?ids=627ac4cb-c2d9-493d-aa6f-673397188e4c": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "627ac4cb-c2d9-493d-aa6f-673397188e4c",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [
+              "e3572769-7cca-4631-9735-01481b9437a9"
+            ],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Тестовая задача",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "PUT /api/tasks/link_task": {
+    "request": {
+      "data": {
+        "task_id": "0f2c7d38-6b15-402c-a56f-e6b43c20b948",
+        "target_id": "de8a850e-1976-480f-8533-aefdcf06e1b7",
+        "target_type": "list"
+      }
+    },
+    "response": {
+      "data": {
+        "success": true,
+        "target": {
+          "background_tasks_count": 0,
+          "childes_order": [
+            "0f2c7d38-6b15-402c-a56f-e6b43c20b948"
+          ],
+          "deleted": false,
+          "id": "de8a850e-1976-480f-8533-aefdcf06e1b7",
+          "important_tasks_count": 0,
+          "in_general_list": true,
+          "order": 0,
+          "title": "Список для связывания с задачей",
+          "type": "list",
+          "unfinished_tasks_count": 0
+        },
+        "task": {
+          "attachments": null,
+          "childes_order": [],
+          "color": null,
+          "completed_at": null,
+          "end": null,
+          "id": "0f2c7d38-6b15-402c-a56f-e6b43c20b948",
+          "interval_id": null,
+          "is_background": false,
+          "is_completed": false,
+          "is_important": false,
+          "is_infinite": false,
+          "lists_ids": [
+            "de8a850e-1976-480f-8533-aefdcf06e1b7"
+          ],
+          "note": null,
+          "priority_id": null,
+          "range": {
+            "end": null,
+            "start": null
+          },
+          "start": null,
+          "status_id": null,
+          "title": "Задача для связывания",
+          "type": null,
+          "type_id": null
+        }
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks?list_id=5918d179-d9df-41aa-b599-f447a2b634b3": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "9921902d-8ec8-419f-829a-9c0ca9dfc8d5",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [
+              "5918d179-d9df-41aa-b599-f447a2b634b3"
+            ],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Тестовая задача",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_subtasks?parent_task_id=c869c2e1-2ec1-417a-ba30-967fafb8c50d": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "subtasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "1e49510f-59f0-4e9e-8ce1-9942d9957d92",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Подзадача",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks_by_ids?ids=12345678-1234-1234-1234-123456789012": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": []
+      }
+    }
+  },
+  "PUT /api/tasks/add_to_general_list": {
+    "request": {
+      "data": {
+        "item_id": "9f1d8f30-66fa-4e1e-b850-9b1c2f14d8a0",
+        "in_general_list": true
+      }
+    },
+    "response": {
+      "data": {
+        "success": true
+      }
+    }
+  },
+  "PUT /api/tasks/move_items": {
+    "request": {
+      "data": {
+        "source_id": "9f1d8f30-66fa-4e1e-b850-9b1c2f14d8a0",
+        "source_type": "list",
+        "target_id": "6ac9bc33-dc4a-46a2-abef-c8e8410b226d",
+        "target_type": "group",
+        "source_parent_id": "generalList",
+        "source_parent_type": null
+      }
+    },
+    "response": {
+      "data": {
+        "old_parents": [],
+        "parent": {
+          "childes_order": [
+            "9f1d8f30-66fa-4e1e-b850-9b1c2f14d8a0"
+          ],
+          "deleted": false,
+          "id": "6ac9bc33-dc4a-46a2-abef-c8e8410b226d",
+          "in_general_list": true,
+          "order": 0,
+          "title": "Group 1",
+          "type": "group"
+        },
+        "source_entity": {
+          "background_tasks_count": 0,
+          "childes_order": [],
+          "deleted": false,
+          "id": "9f1d8f30-66fa-4e1e-b850-9b1c2f14d8a0",
+          "important_tasks_count": 0,
+          "in_general_list": false,
+          "order": 0,
+          "title": "List 1",
+          "type": "list",
+          "unfinished_tasks_count": 0
+        },
+        "success": true
+      }
+    }
+  },
+  "DELETE /api/tasks/task_type_groups/747e7cfc-3393-4d6c-b722-c1f0a6af3806": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "result": "deleted"
+      }
+    }
+  },
+  "DELETE /api/tasks/task_type_groups/446bd387-d63b-448d-a6f8-be31f596571f": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "result": "deleted"
+      }
+    }
+  },
+  "GET /api/tasks/task_type_groups": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "11c23484-c336-44da-a099-89db4aa2db7e": {
+          "color": null,
+          "description": null,
+          "id": "11c23484-c336-44da-a099-89db4aa2db7e",
+          "is_active": true,
+          "name": "Группа 3",
+          "order": null,
+          "user_id": "bc82ad9b-fee8-4373-bac5-a6704efc0875"
+        },
+        "c5cda99b-016a-4640-89e9-f66fd6dab771": {
+          "color": null,
+          "description": null,
+          "id": "c5cda99b-016a-4640-89e9-f66fd6dab771",
+          "is_active": true,
+          "name": "Группа 2",
+          "order": null,
+          "user_id": "bc82ad9b-fee8-4373-bac5-a6704efc0875"
+        },
+        "d8b8d266-3851-4faa-8fb2-3c75db82cf8b": {
+          "color": null,
+          "description": null,
+          "id": "d8b8d266-3851-4faa-8fb2-3c75db82cf8b",
+          "is_active": true,
+          "name": "Группа 1",
+          "order": null,
+          "user_id": "bc82ad9b-fee8-4373-bac5-a6704efc0875"
+        }
+      }
+    }
+  },
+  "PUT /api/tasks/task_type_groups/ff09774c-16bc-48d4-828f-6b130e978261": {
+    "request": {
+      "data": {
+        "name": "Обновленная группа",
+        "color": "#FF00FF",
+        "order": 2,
+        "is_active": false,
+        "description": "Обновленное описание"
+      }
+    },
+    "response": {
+      "data": {
+        "color": "#FF00FF",
+        "description": "Обновленное описание",
+        "id": "ff09774c-16bc-48d4-828f-6b130e978261",
+        "is_active": false,
+        "name": "Обновленная группа",
+        "order": 2,
+        "user_id": "22497d84-6bb4-4507-9436-c92707ed7828"
+      }
+    }
+  },
+  "PUT /api/tasks/task_type_groups/fc74f8de-6ed7-4794-a846-85edf5dc0855": {
+    "request": {
+      "data": {
+        "name": "Новое имя группы"
+      }
+    },
+    "response": {
+      "data": {
+        "color": "#00FFFF",
+        "description": null,
+        "id": "fc74f8de-6ed7-4794-a846-85edf5dc0855",
+        "is_active": true,
+        "name": "Новое имя группы",
+        "order": 3,
+        "user_id": "e7755278-bb58-4cdd-98e0-a7a6a1ce0e4d"
+      }
+    }
+  },
+  "PUT /api/tasks/task_type_groups/16ac29e7-8bec-4a91-831c-f8bd6122b990": {
+    "request": {
+      "data": {}
+    },
+    "response": {
+      "data": {
+        "color": null,
+        "description": null,
+        "id": "16ac29e7-8bec-4a91-831c-f8bd6122b990",
+        "is_active": true,
+        "name": "Группа для обновления с пустыми данными",
+        "order": null,
+        "user_id": "6aff6cac-99dd-4965-b260-885d0f688599"
+      }
+    }
+  },
+  "DELETE /api/tasks/task_types/897bef79-5b43-4b9b-924d-0914a67c4c01": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "result": "deleted"
+      }
+    }
+  },
+  "DELETE /api/tasks/task_types/e6bba90d-4228-47b7-ada6-f8ca2e9933bd": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "result": "deleted"
+      }
+    }
+  },
+  "GET /api/tasks/task_types": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "2fe11a30-f202-4e11-89c6-3c01fee2627c": {
+          "color": "#3788D8",
+          "description": null,
+          "group_id": "3545257f-ba13-4686-81de-37d06c0c3257",
+          "id": "2fe11a30-f202-4e11-89c6-3c01fee2627c",
+          "is_active": true,
+          "name": "Тип 3",
+          "order": null,
+          "user_id": "7d5a60a3-42c9-40bc-9fa8-31c2d8603f8b"
+        },
+        "75953a2a-bbad-4894-9919-ca2adc7cdedb": {
+          "color": "#3788D8",
+          "description": null,
+          "group_id": "3545257f-ba13-4686-81de-37d06c0c3257",
+          "id": "75953a2a-bbad-4894-9919-ca2adc7cdedb",
+          "is_active": true,
+          "name": "Тип 1",
+          "order": null,
+          "user_id": "7d5a60a3-42c9-40bc-9fa8-31c2d8603f8b"
+        },
+        "baa82f6a-4c5f-4004-8286-62908a1a76f3": {
+          "color": "#3788D8",
+          "description": null,
+          "group_id": "3545257f-ba13-4686-81de-37d06c0c3257",
+          "id": "baa82f6a-4c5f-4004-8286-62908a1a76f3",
+          "is_active": true,
+          "name": "Тип 2",
+          "order": null,
+          "user_id": "7d5a60a3-42c9-40bc-9fa8-31c2d8603f8b"
+        }
+      }
+    }
+  },
+  "PUT /api/tasks/task_types/6b4d2af2-e15d-4b58-90bb-d68c875d668a": {
+    "request": {
+      "data": {
+        "name": "Обновленный тип задачи",
+        "color": "#FF00FF",
+        "description": "Обновленное описание",
+        "order": 2,
+        "group_id": "b49363f3-3752-4ad8-964a-b7a8b5595bcf",
+        "is_active": false
+      }
+    },
+    "response": {
+      "data": {
+        "color": "#FF00FF",
+        "description": "Обновленное описание",
+        "group_id": "b49363f3-3752-4ad8-964a-b7a8b5595bcf",
+        "id": "6b4d2af2-e15d-4b58-90bb-d68c875d668a",
+        "is_active": false,
+        "name": "Обновленный тип задачи",
+        "order": 2,
+        "user_id": "126334d9-6915-4a44-9a14-71233571b074"
+      }
+    }
+  },
+  "PUT /api/tasks/task_types/22acd87e-5e1b-494e-b628-a703cda40775": {
+    "request": {
+      "data": {
+        "name": "Новое имя типа задачи"
+      }
+    },
+    "response": {
+      "data": {
+        "color": "#00FFFF",
+        "description": null,
+        "group_id": null,
+        "id": "22acd87e-5e1b-494e-b628-a703cda40775",
+        "is_active": true,
+        "name": "Новое имя типа задачи",
+        "order": 3,
+        "user_id": "b415a369-52cb-48de-ae61-20adfbd8f210"
+      }
+    }
+  },
+  "PUT /api/tasks/task_types/17f93acf-62e0-47c5-a04a-7a04c1c97b1b": {
+    "request": {
+      "data": {}
+    },
+    "response": {
+      "data": {
+        "color": "#3788D8",
+        "description": null,
+        "group_id": null,
+        "id": "17f93acf-62e0-47c5-a04a-7a04c1c97b1b",
+        "is_active": true,
+        "name": "Тип задачи для обновления с пустыми данными",
+        "order": null,
+        "user_id": "52c2c64d-f9dd-49ee-a2ec-5bf18f5e8554"
+      }
+    }
+  },
+  "PUT /api/tasks/task_types/ac220caf-cdce-4080-bad5-5b555cc35ed7": {
+    "request": {
+      "data": {
+        "name": "Обновленный тип",
+        "color": "#4CAF50",
+        "description": "Новое описание"
+      }
+    },
+    "response": {
+      "data": {
+        "color": "#4CAF50",
+        "description": "Новое описание",
+        "group_id": null,
+        "id": "ac220caf-cdce-4080-bad5-5b555cc35ed7",
+        "is_active": true,
+        "name": "Обновленный тип",
+        "order": null,
+        "user_id": "524fdd03-b438-4dcb-88c4-7ca541c53f4c"
+      }
+    }
+  },
+  "DELETE /api/tasks/task_types/5652e1ee-f79e-4e97-b9c8-013bb11a1fa4": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "result": "deleted"
+      }
+    }
+  },
+  "PUT /api/tasks/task_type_groups/277c2091-a769-47e9-a56a-1681e79314d3": {
+    "request": {
+      "data": {
+        "name": "Обновленная группа",
+        "color": "#E91E63"
+      }
+    },
+    "response": {
+      "data": {
+        "color": "#E91E63",
+        "description": "Описание группы",
+        "id": "277c2091-a769-47e9-a56a-1681e79314d3",
+        "is_active": true,
+        "name": "Обновленная группа",
+        "order": null,
+        "user_id": "2fa53948-d9ca-4ee5-a83c-96b7d4052efd"
+      }
+    }
+  },
+  "DELETE /api/tasks/task_type_groups/277c2091-a769-47e9-a56a-1681e79314d3": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "result": "deleted"
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks?list_id=cdf448bd-f631-4f8e-a681-fd8b2cf33d2f": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "eba13851-b9a2-4172-aca3-9524dcba46f1",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [
+              "cdf448bd-f631-4f8e-a681-fd8b2cf33d2f"
+            ],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Test Task",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_tasks_by_ids?ids=5bbc63b7-4b4f-4588-ad52-db45fa4b9d70": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "tasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "5bbc63b7-4b4f-4588-ad52-db45fa4b9d70",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Test Task",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  },
+  "GET /api/tasks/get_subtasks?parent_task_id=3e861b47-5920-44a2-affb-d94af3ce4e39": {
+    "request": {
+      "data": null
+    },
+    "response": {
+      "data": {
+        "subtasks": [
+          {
+            "attachments": null,
+            "childes_order": [],
+            "color": null,
+            "completed_at": null,
+            "end": null,
+            "id": "638d35a4-0acf-4ccc-a2ff-04ee8a8fbacb",
+            "interval_id": null,
+            "is_background": false,
+            "is_completed": false,
+            "is_important": false,
+            "is_infinite": false,
+            "lists_ids": [],
+            "note": null,
+            "priority_id": null,
+            "range": {
+              "end": null,
+              "start": null
+            },
+            "start": null,
+            "status_id": null,
+            "title": "Подзадача для получения",
+            "type": null,
+            "type_id": null
+          }
+        ]
+      }
+    }
+  }
+}

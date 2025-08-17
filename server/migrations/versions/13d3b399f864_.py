@@ -80,7 +80,7 @@ def upgrade_():
     sa.Column('GroupName', sa.String(length=255), nullable=True),
     sa.Column('Order', sa.Integer(), nullable=True),
     sa.Column('ChildesOrder', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('InGeneralList', sa.Boolean(), nullable=True),
+    sa.Column('in_general_list', sa.Boolean(), nullable=True),
     sa.Column('Deleted', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('GroupID'),
     schema='productivity'
@@ -98,7 +98,7 @@ def upgrade_():
     sa.Column('ListName', sa.String(length=255), nullable=True),
     sa.Column('Order', sa.Integer(), nullable=True),
     sa.Column('ChildesOrder', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('InGeneralList', sa.Boolean(), nullable=True),
+    sa.Column('in_general_list', sa.Boolean(), nullable=True),
     sa.Column('Deleted', sa.Boolean(), nullable=True),
     sa.Column('unfinished_count', sa.Integer(), nullable=False),
     sa.Column('important_count', sa.Integer(), nullable=False),

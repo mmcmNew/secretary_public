@@ -11,7 +11,7 @@ test.describe('Функциональность задач', () => {
   test('Создание новой задачи', async ({ tasksPage }) => {
     // const taskName = `Тестовая задача ${Date.now()}`;
 
-    await tasksPage.getByRole('button', { name: 'Задачи Незавершённые задачи' }).click();
+    await tasksPage.getByRole('button', { name: 'Задачи' }).click();
 
     // Заполнение формы
     await tasksPage.getByRole('textbox', { name: 'Добавить задачу' }).fill(taskName);
@@ -83,26 +83,20 @@ test.describe('Функциональность задач', () => {
   });
 
   test('Создание нового списка', async ({ tasksPage }) => {
-    const listName = `Новый список ${Date.now()}`;
+    const listName = `Новый список`;
     await tasksPage.getByRole('button', { name: 'Создать список' }).click();
-    await tasksPage.getByPlaceholder('Название списка').fill(listName);
-    await tasksPage.getByRole('button', { name: 'Сохранить' }).click();
     await expect(tasksPage.getByText(listName)).toBeVisible();
   });
 
   test('Создание новой группы', async ({ tasksPage }) => {
-    const groupName = `Новая группа ${Date.now()}`;
+    const groupName = `Новая группа`;
     await tasksPage.locator('div').filter({ hasText: /^Создать список$/ }).getByRole('button').nth(1).click();
-    await tasksPage.getByPlaceholder('Название группы').fill(groupName);
-    await tasksPage.getByRole('button', { name: 'Сохранить' }).click();
     await expect(tasksPage.getByText(groupName)).toBeVisible();
   });
 
   test('Создание нового проекта', async ({ tasksPage }) => {
-    const projectName = `Новый проект ${Date.now()}`;
+    const projectName = `Новый проект`;
     await tasksPage.locator('div').filter({ hasText: /^Создать список$/ }).getByRole('button').nth(2).click();
-    await tasksPage.getByPlaceholder('Название проекта').fill(projectName);
-    await tasksPage.getByRole('button', { name: 'Сохранить' }).click();
     await expect(tasksPage.getByText(projectName)).toBeVisible();
   });
 });

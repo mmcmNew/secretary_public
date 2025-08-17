@@ -5,7 +5,7 @@ from app.modules.MetaAIAPI import get_eden_ai_response
 
 from app.tasks.list_handlers import get_lists_and_groups_data, add_object
 from app.tasks.task_handlers import add_task, add_subtask, change_task_status, get_tasks
-from app.tasks.entity_handlers import link_group_list, delete_from_childes, link_task
+from app.tasks.entity_handlers import delete_from_childes, link_task
 
 from rapidfuzz import fuzz, process
 

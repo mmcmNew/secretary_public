@@ -364,7 +364,7 @@ function TasksList({
                             }
                         };
                         rootProjects.forEach(item => traverse(item));
-                        const rootLists = (listsList || []).filter(item => item.inGeneralList && !item.deleted && !item.parent_id);
+                        const rootLists = (listsList || []).filter(item => item.in_general_list && !item.deleted && !item.parent_id);
                         rootLists.forEach(item => traverse(item));
                         return elements;
                     })()}

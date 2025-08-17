@@ -53,7 +53,7 @@ export default function ListsSection({
           onToggle={() => onToggleGroup && onToggleGroup(item.realId || item.id)}
         >
           {item.childes_order?.map((childId) => {
-            const childItem = items.find((i) => i.id === childId);
+            const childItem = items.find((i) => i.id === childId || i.realId === childId);
             return childItem ? renderItem(childItem, item.id) : null;
           })}
         </GroupItem>

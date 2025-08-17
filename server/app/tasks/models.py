@@ -276,7 +276,7 @@ class Group(db.Model):
     title = db.Column('GroupName', db.String(255))
     order = db.Column('Order', db.Integer, default=-1)
     childes_order = db.Column('ChildesOrder', JSONB, default=[])
-    in_general_list = db.Column('InGeneralList', db.Boolean, default=True)
+    in_general_list = db.Column('inGeneralList', db.Boolean, default=True)
     deleted = db.Column('Deleted', db.Boolean, default=False)
 
     lists = db.relationship('List', secondary=list_group_relations, back_populates='groups')
@@ -289,7 +289,7 @@ class Group(db.Model):
             'title': self.title,
             'order': self.order,
             'childes_order': self.childes_order,
-            'inGeneralList': self.in_general_list,
+            'in_general_list': self.in_general_list,
             'deleted': self.deleted,
         }
 
@@ -302,7 +302,7 @@ class List(db.Model):
     title = db.Column('ListName', db.String(255))
     order = db.Column('Order', db.Integer, default=-1)
     childes_order = db.Column('ChildesOrder', JSONB, default=[])
-    in_general_list = db.Column('InGeneralList', db.Boolean, default=True)
+    in_general_list = db.Column('inGeneralList', db.Boolean, default=True)
     deleted = db.Column('Deleted', db.Boolean, default=False)
     unfinished_count = db.Column('unfinished_count', db.Integer, nullable=False, default=0)
     important_count = db.Column('important_count', db.Integer, nullable=False, default=0)
@@ -322,7 +322,7 @@ class List(db.Model):
             'unfinished_tasks_count': self.unfinished_count,
             'important_tasks_count': self.important_count,
             'background_tasks_count': self.background_count,
-            'inGeneralList': self.in_general_list,
+            'in_general_list': self.in_general_list,
             'deleted': self.deleted,
         }
 

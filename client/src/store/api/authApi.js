@@ -1,11 +1,11 @@
 import { apiSlice } from './apiSlice';
-import { setCredentials, logout } from '../authSlice';
+import { setCredentials } from '../authSlice';
 
 export const authApiSlice = apiSlice.injectEndpoints({
   endpoints: builder => ({
     login: builder.mutation({
       query: credentials => ({
-        url: '/login',
+        url: '/api/login',
         method: 'POST',
         body: credentials,
       }),
@@ -21,7 +21,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
     }),
     register: builder.mutation({
       query: userInfo => ({
-        url: '/register',
+        url: '/api/register',
         method: 'POST',
         body: userInfo,
       }),
@@ -37,7 +37,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
     }),
     refreshAccessToken: builder.mutation({
       query: () => ({
-        url: '/auth/refresh',
+        url: '/api/auth/refresh',
         method: 'POST',
       }),
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
@@ -51,7 +51,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
       },
     }),
     getMe: builder.query({
-      query: () => '/user', // На сервере это /api/user
+      query: () => '/api/user',
     }),
     getDemoToken: builder.mutation({
       query: () => '/demo/auth',
@@ -62,8 +62,9 @@ export const authApiSlice = apiSlice.injectEndpoints({
             user: data.data.user,
             accessToken: data.data.token
           }));
-        } catch (err) {
+        } catch (error) {
           // Handle error if needed
+          console.error('Failed to get demo token:', error);
         }
       }
     }),

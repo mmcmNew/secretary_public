@@ -91,7 +91,7 @@ def test_full_workflow_with_uuid(auth_client, test_user, clean_db):
         'target_type': 'group'
     }
     
-    link_response = auth_client.put('/api/tasks/link_group_list',
+    link_response = auth_client.put('/api/tasks/link_items',
                                    data=json.dumps(link_data),
                                    content_type='application/json')
     

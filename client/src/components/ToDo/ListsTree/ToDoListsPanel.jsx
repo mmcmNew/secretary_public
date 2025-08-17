@@ -5,7 +5,7 @@ import { AccountTree } from '@mui/icons-material';
 import { memo, useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch } from 'react-redux';
-import { useGetListsTreeQuery, useAddObjectMutation, useMoveListObjectMutation, useUpdateListMutation } from '../../../store/listsSlice';
+import { useGetListsTreeQuery, useAddObjectMutation, useMoveItemsMutation, useUpdateListMutation } from '../../../store/listsSlice';
 // import { setSelectedListId } from '../../store/todoLayoutSlice';
 
 
@@ -13,7 +13,7 @@ function ToDoListsPanel({ mobile }) {
   const dispatch = useDispatch();
   const { data, error, isLoading } = useGetListsTreeQuery();
   const [addObject] = useAddObjectMutation();
-  const [moveListObject] = useMoveListObjectMutation();
+  const [moveListObject] = useMoveItemsMutation();
   const [updateList] = useUpdateListMutation();
   const [selectedListId, setSelectedListId] = useState(null);
   // const selectedListId = useSelector);

@@ -88,7 +88,31 @@ def get_calendar_events(start=None, end=None, user_id=None):
 
     current_app.logger.info(f'get_calendar_events {start_dt} {end_dt}')
 
-    tasks_query = Task.query.options(*load_options).filter_by(user_id=user_id).all()
+    # If caller provided a date range, limit tasks loaded to recurring tasks
+    # or tasks that may intersect the requested range. This avoids loading
+    # the entire user's task table for every calendar query which was a
+    # major source of latency under load.
+    from sqlalchemy import or_, and_
+    if start_dt and end_dt:
+        tasks_query = (
+            Task.query.options(*load_options)
+            .filter(Task.user_id == user_id)
+            .filter(
+                or_(
+                    Task.interval_id.isnot(None),
+                    and_(
+                        Task.start != None,
+                        or_(Task.end == None, Task.end >= start_dt),
+                        Task.start <= end_dt,
+                    ),
+                )
+            )
+            .all()
+        )
+    else:
+        # When no date range is provided fall back to loading everything
+        # (keeps existing behavior for endpoints that expect full data).
+        tasks_query = Task.query.options(*load_options).filter_by(user_id=user_id).all()
     events = []
     parent_tasks = []
 
@@ -97,21 +121,19 @@ def get_calendar_events(start=None, end=None, user_id=None):
     current_app.logger.info(f'recurring_task_ids {recurring_task_ids}')
     current_app.logger.info(f'tasks_query {tasks_query}')
 
-    if recurring_task_ids and start_dt and end_dt:
-        overrides = TaskOverride.query.filter(
-            TaskOverride.task_id.in_(recurring_task_ids),
-            TaskOverride.date >= start_dt.date(),
-            TaskOverride.date <= end_dt.date(),
-            TaskOverride.user_id == user_id
-        ).all()
-    elif recurring_task_ids:
-        overrides = TaskOverride.query.filter(
-            TaskOverride.task_id.in_(recurring_task_ids),
-            TaskOverride.user_id == user_id
-        ).all()
+    if recurring_task_ids:
+        q = TaskOverride.query.filter(TaskOverride.task_id.in_(recurring_task_ids), TaskOverride.user_id == user_id)
+        if start_dt and end_dt:
+            q = q.filter(TaskOverride.date >= start_dt.date(), TaskOverride.date <= end_dt.date())
+        overrides = q.all()
     else:
         overrides = []
     override_map = {(o.task_id, o.date): o for o in overrides}
+
+    # Collect overrides that are redundant and should be removed. We will
+    # delete them in a single batch commit after building the event list to
+    # avoid commits during the read loop which can cause spikes in latency.
+    overrides_to_delete = []
 
     for task in tasks_query:
         if task.interval_id and task.start:
@@ -159,9 +181,41 @@ def get_calendar_events(start=None, end=None, user_id=None):
                     return instance
 
                 if override:
-                    if delete_redundant_override(override, task):
+                    # Check redundancy WITHOUT deleting. If redundant, mark
+                    # for deletion and treat as non-override instance.
+                    redundant = True
+                    fields = [
+                        'title', 'start', 'end', 'note', 'status_id', 'completed_at', 'color', 'priority_id', 'type_id'
+                    ]
+                    task_dict = task.to_dict()
+                    override_data = override.data or {}
+                    for field in fields:
+                        val_override = override_data.get(field)
+                        val_task = task_dict.get(field)
+                        if field in ('start', 'end'):
+                            if val_override and val_task:
+                                try:
+                                    t_override = datetime.fromisoformat(val_override.replace('Z', '')).time()
+                                    t_task = datetime.fromisoformat(val_task.replace('Z', '')).time()
+                                except Exception:
+                                    redundant = False
+                                    break
+                                if t_override != t_task:
+                                    redundant = False
+                                    break
+                            elif val_override != val_task:
+                                redundant = False
+                                break
+                        else:
+                            if val_override != val_task:
+                                redundant = False
+                                break
+
+                    if redundant:
+                        overrides_to_delete.append(override)
                         events.append(build_instance(task.to_dict(), is_override=False))
                         continue
+
                     if override.type == 'skip':
                         continue
                     elif override.type == 'modified':
@@ -175,10 +229,22 @@ def get_calendar_events(start=None, end=None, user_id=None):
                 events.append(task.to_dict())
 
 
+    # Remove redundant overrides in a single batch commit to avoid
+    # write spikes during the read path.
+    if overrides_to_delete:
+        try:
+            for ov in overrides_to_delete:
+                db.session.delete(ov)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception('Failed to delete redundant overrides')
+
     return {
         'events': events,
         'parent_tasks': parent_tasks
     }, 200
+
 
 
 def get_task_override_by_id(override_id, user_id=None):

@@ -114,7 +114,7 @@ export default function GroupItem({
 GroupItem.propTypes = {
   group: PropTypes.object.isRequired,
   isSelected: PropTypes.bool,
-  onSelect: PropTypes.func.isRequired,
+  onSelect: PropTypes.func,
   onContextMenu: PropTypes.func,
   isEditing: PropTypes.bool,
   editingTitle: PropTypes.string,

@@ -40,7 +40,6 @@
 8. `GET /tasks/get_tasks` - Получение задач
 9. `GET /tasks/get_tasks_by_ids` - Получение задач по ID
 10. `DELETE /tasks/del_task` - Удаление задачи
-11. `PUT /tasks/link_group_list` - Связывание группы и списка
 12. `DELETE /tasks/delete_from_childes` - Удаление из дочерних элементов
 13. `PUT /tasks/link_task` - Связывание задачи
 14. `GET /tasks/fields_config` - Получение конфигурации полей

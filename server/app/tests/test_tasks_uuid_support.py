@@ -234,32 +234,6 @@ def test_edit_list_with_uuid(auth_client, test_user, test_list):
     assert is_valid_uuid(data['updated_list']['id'])
 
 
-def test_link_group_list_with_uuid(auth_client, test_user, test_group, test_list):
-    """Тест связывания группы и списка с UUID"""
-    # Подготавливаем данные для запроса в соответствии с entity_handlers
-    link_data = {
-        'source_id': test_list.id,
-        'source_type': 'list',
-        'target_id': test_group.id,
-        'target_type': 'group'
-    }
-    
-    # Отправляем PUT запрос
-    response = auth_client.put('/api/tasks/link_group_list', 
-                              data=json.dumps(link_data),
-                              content_type='application/json')
-    
-    # Проверяем статус ответа
-    assert response.status_code == 200
-    
-    # Проверяем структуру ответа
-    data = json.loads(response.data)
-    assert data['success'] is True
-    # Проверяем, что ID являются валидными UUID
-    assert is_valid_uuid(test_group.id)
-    assert is_valid_uuid(test_list.id)
-
-
 def test_get_lists_returns_uuid_ids(auth_client, test_user, test_list, test_group):
     """Тест получения списков возвращает UUID идентификаторы"""
     # Отправляем GET запрос

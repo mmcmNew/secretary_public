@@ -57,7 +57,7 @@ const resolveEnvBaseUrl = () => {
 const testBaseUrl = resolveEnvBaseUrl() || 'https://localhost:5100';
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: isTestEnv ? testBaseUrl : '/api',
+  baseUrl: isTestEnv ? testBaseUrl : '/',
   prepareHeaders: (headers, { getState, endpoint }) => {
     const accessToken = getState().auth.accessToken;
     if (accessToken) {
@@ -117,7 +117,10 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
     // Пытаемся обновить токен только если есть refresh токен
     const refreshToken = localStorage.getItem('refreshToken');
     if (refreshToken) {
-      const refreshResult = await baseQuery('/auth/refresh', api, extraOptions);
+      const refreshResult = await baseQuery({
+        url: '/api/refresh',
+        method: 'POST',
+      }, api, extraOptions);
 
       if (isTestEnv) {
         try {

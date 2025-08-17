@@ -77,14 +77,6 @@ export const tasksApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (result, error, { listId }) => [{ type: 'Task', id: listId }],
     }),
-    linkGroupList: builder.mutation({
-      query: (data) => ({
-        url: '/api/tasks/link_group_list',
-        method: 'PUT',
-        body: data,
-      }),
-      invalidatesTags: ['List'],
-    }),
     deleteFromChildes: builder.mutation({
       query: (data) => ({
         url: '/api/tasks/delete_from_childes',
@@ -182,7 +174,6 @@ export const {
   useUpdateTaskMutation,
   useDeleteTaskMutation,
   useChangeTaskStatusMutation,
-  useLinkGroupListMutation,
   useDeleteFromChildesMutation,
   useLinkTaskMutation,
   useGetFieldsConfigQuery,

@@ -32,6 +32,37 @@ class BaseConfig:
     SCHEMAS = ['users', 'content', 'workspace', 'communication', 'productivity']
 
     @staticmethod
+    def setup_logger(app):
+        instance_path = app.instance_path
+        log_dir = os.path.join(instance_path, 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+
+        date_str = datetime.now().strftime('%Y-%m-%d')
+        debug_log = os.path.join(log_dir, f'debug_{date_str}.log')
+        error_log = os.path.join(log_dir, f'error_{date_str}.log')
+
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+        debug_handler = RotatingFileHandler(debug_log, maxBytes=1_000_000, backupCount=5, encoding='utf-8')
+        debug_handler.setLevel(logging.DEBUG)
+        debug_handler.setFormatter(formatter)
+
+        error_handler = RotatingFileHandler(error_log, maxBytes=1_000_000, backupCount=5, encoding='utf-8')
+        error_handler.setLevel(logging.ERROR)
+        error_handler.setFormatter(formatter)
+
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.DEBUG)
+        console_handler.setFormatter(formatter)
+        console_handler.encoding = 'utf-8'
+
+        app.logger.setLevel(logging.DEBUG)
+        app.logger.addHandler(debug_handler)
+        app.logger.addHandler(error_handler)
+        app.logger.addHandler(console_handler)
+        app.logger.info('Logger initialized')
+
+    @staticmethod
     def init_app(app):
         instance_path = app.instance_path
         db_dir = os.path.join(instance_path, BaseConfig.INSTANCE_DB_DIR)
@@ -47,34 +78,31 @@ class BaseConfig:
         #     db_path = os.path.join(db_dir, 'app.db')
         #     app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
 
-        # Логирование
-        log_dir = os.path.join(instance_path, 'logs')
-        os.makedirs(log_dir, exist_ok=True)
-
-        date_str = datetime.now().strftime('%Y-%m-%d')
-        debug_log = os.path.join(log_dir, f'debug_{date_str}.log')
-        error_log = os.path.join(log_dir, f'error_{date_str}.log')
-
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-        debug_handler = RotatingFileHandler(debug_log, maxBytes=1_000_000, backupCount=5)
-        debug_handler.setLevel(logging.DEBUG)
-        debug_handler.setFormatter(formatter)
-
-        error_handler = RotatingFileHandler(error_log, maxBytes=1_000_000, backupCount=5)
-        error_handler.setLevel(logging.ERROR)
-        error_handler.setFormatter(formatter)
-
+        BaseConfig.setup_logger(app)
         app.logger.setLevel(logging.DEBUG)
-        app.logger.addHandler(debug_handler)
-        app.logger.addHandler(error_handler)
+
         app.logger.info('App started')
+
 
 
 class TestingConfig(BaseConfig):
     DEBUG = True
     WTF_CSRF_ENABLED = False
     # SQLALCHEMY_ECHO = True
+    @staticmethod
+    def init_app(app):
+        instance_path = app.instance_path
+        db_dir = os.path.join(instance_path, BaseConfig.INSTANCE_DB_DIR)
+        os.makedirs(db_dir, exist_ok=True)
+        # Используем отдельную тестовую базу
+        test_postgres_url = "postgresql+psycopg2://secretary:secretary@localhost:5432/secretary_test_db"
+        database_url = os.environ.get('POSTGRES_TEST_URI') or test_postgres_url
+        app.config['SCHEMAS'] = BaseConfig.SCHEMAS
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+        # Логирование
+        BaseConfig.setup_logger(app)
+        app.logger.setLevel(logging.DEBUG)
+        app.logger.info('Test App started')
 
 
 class WorkConfig(BaseConfig):
