@@ -29,6 +29,7 @@ function ListsList({
 }) {
   const { anchorEl, openMenu, closeMenu } = useContextMenu();
   const [targetItem, setTargetItem] = useState(null);
+  const [targetParent, setTargetParent] = useState(null);
   const [listMenuAnchorEl, setListMenuAnchorEl] = useState(null);
   const [menuActionType, setMenuActionType] = useState(null);
   const [editingItemId, setEditingItemId] = useState(null);
@@ -36,9 +37,10 @@ function ListsList({
   const [editingItem, setEditingItem] = useState(null); // Новое состояние для сохранения редактируемого элемента
   const inputRef = useRef(null);
 
-  const handleContextMenu = useCallback((event, item) => {
+  const handleContextMenu = useCallback((event, item, parent = null) => {
     openMenu(event);
     setTargetItem(item);
+    setTargetParent(parent || null);
   }, [openMenu]);
 
   const handleOpenSubMenu = (event, actionType) => {
@@ -53,14 +55,17 @@ function ListsList({
 
   const handleSubMenuAction = (targetListId) => {
     const sourceType = targetItem.type;
-    const sourceId = targetItem.realId || targetItem.id;
+    const sourceId = targetItem.id;
     const targetType = menuActionType;
     const targetId = targetListId;
-    
+    // include parent info for server when available
+    const source_parent_id = targetParent?.id ?? null;
+    const source_parent_type = targetParent?.type ?? null;
+
     if (menuActionType === 'move') {
-      onMoveToList(sourceType, sourceId, targetType, targetId);
+      onMoveToList(sourceType, sourceId, targetType, targetId, { source_parent_id, source_parent_type });
     } else if (menuActionType === 'link') {
-      onLinkToList(sourceType, sourceId, targetType, targetId);
+      onLinkToList(sourceType, sourceId, targetType, targetId, { source_parent_id, source_parent_type });
     }
     handleCloseSubMenu();
     handleCloseMenu();
@@ -83,7 +88,7 @@ function ListsList({
 
   const handleEditSave = useCallback(() => {
     if (editingItemId && editingItem && editingTitle.trim() !== '') {
-      onUpdateList(editingItem.realId || editingItem.id, { 
+      onUpdateList(editingItem.id, { 
         title: editingTitle,
         type: editingItem.type 
       });
@@ -170,27 +175,27 @@ function ListsList({
       <ContextMenu
         anchorEl={anchorEl}
         item={targetItem}
-        onClose={handleCloseMenu}
+  onClose={handleCloseMenu}
         onEditClick={handleEditStart}
         onDeleteClick={() => {
-          if (targetItem) onDeleteList(targetItem.realId || targetItem.id);
+          if (targetItem) onDeleteList(targetItem.id);
           handleCloseMenu();
         }}
         onMoveUp={() => {
-          if (targetItem) onChangeChildesOrder(targetItem.realId || targetItem.id, 'up');
+          if (targetItem) onChangeChildesOrder(targetItem.id, 'up');
           handleCloseMenu();
         }}
         onMoveDown={() => {
-          if (targetItem) onChangeChildesOrder(targetItem.realId || targetItem.id, 'down');
+          if (targetItem) onChangeChildesOrder(targetItem.id, 'down');
           handleCloseMenu();
         }}
-        onOpenGroupMenu={(e) => handleOpenSubMenu(e, 'group')}
-        onOpenProjectMenu={(e) => handleOpenSubMenu(e, 'project')}
+  onOpenGroupMenu={(e) => handleOpenSubMenu(e, 'group')}
+  onOpenProjectMenu={(e) => handleOpenSubMenu(e, 'project')}
         onDeleteFromChildes={onDeleteFromChildes}
         onChangeChildesOrder={onChangeChildesOrder}
         onAddToGeneralList={onAddToGeneralList}
-        onLinkToList={onLinkToList}
-        onMoveToList={onMoveToList}
+  onLinkToList={onLinkToList}
+  onMoveToList={onMoveToList}
         listsList={lists}
         projects={projects}
       />
@@ -200,7 +205,7 @@ function ListsList({
         onClose={handleCloseSubMenu}
       >
         {(menuActionType === 'group' ? lists : projects).map((list) => (
-          <MenuItem key={list.id} onClick={() => handleSubMenuAction(list.realId || list.id)}>
+          <MenuItem key={list.id} onClick={() => handleSubMenuAction(list.id)}>
             {list.title}
           </MenuItem>
         ))}

@@ -1,3 +1,4 @@
+/* eslint-disable react/display-name */
 import { List } from '@mui/material'; // Добавьте useMemo
 import PropTypes from 'prop-types';
 import { useCallback } from 'react';
@@ -18,7 +19,7 @@ export default function ListsSection({
 }) {
   const isItemSelected = useCallback(
     (item) => {
-      if (selectedListId === item.id || selectedListId === item.realId) return true;
+      if (selectedListId === item.id) return true;
 
       return item.childes_order?.some(
         (childId) =>
@@ -28,19 +29,19 @@ export default function ListsSection({
     [selectedListId, editState.editingItemId]
   );
 
-  const renderItem = useMemo(() => (item, parentId = null) => { // Memoize для perf
+  const renderItem = useMemo(() => (item, parent = null) => { // Memoize для perf
     if (item.type === 'group' || item.type === 'project') {
-      const isOpen = openGroups[item.realId || item.id] ?? false;
+      const isOpen = openGroups[item.id] ?? false;
 
       return (
         <GroupItem
           key={item.id}
           group={item}
           isSelected={isItemSelected(item)}
-          onSelect={(e) => onToggleGroup && onToggleGroup(item.realId || item.id)}
+          onSelect={() => onToggleGroup && onToggleGroup(item.id)}
           onContextMenu={
             isNeedContextMenu
-              ? (e) => onContextMenu(e, item, parentId)
+              ? (e) => onContextMenu(e, item, parent)
               : undefined
           }
           isEditing={editState.editingItemId === item.id}
@@ -50,11 +51,11 @@ export default function ListsSection({
           onBlur={editState.onBlur}
           inputRef={editState.inputRef}
           open={isOpen}
-          onToggle={() => onToggleGroup && onToggleGroup(item.realId || item.id)}
+          onToggle={() => onToggleGroup && onToggleGroup(item.id)}
         >
           {item.childes_order?.map((childId) => {
-            const childItem = items.find((i) => i.id === childId || i.realId === childId);
-            return childItem ? renderItem(childItem, item.id) : null;
+            const childItem = items.find((i) => i.id === childId);
+            return childItem ? renderItem(childItem, item) : null;
           })}
         </GroupItem>
       );
@@ -65,12 +66,12 @@ export default function ListsSection({
         key={item.id}
         item={item}
         isSelected={
-          selectedListId === item.id || selectedListId === item.realId
+          selectedListId === item.id
         }
-        onSelect={(e) => onSelect(e, item.realId || item.id)}
+        onSelect={(e) => onSelect(e, item.id)}
         onContextMenu={
           isNeedContextMenu
-            ? (e) => onContextMenu(e, item, parentId)
+            ? (e) => onContextMenu(e, item, parent)
             : undefined
         }
         isEditing={editState.editingItemId === item.id}

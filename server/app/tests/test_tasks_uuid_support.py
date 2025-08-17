@@ -249,7 +249,6 @@ def test_get_lists_returns_uuid_ids(auth_client, test_user, test_list, test_grou
     # Проверяем, что все ID являются валидными UUID
     for item in data['lists']:
         assert is_valid_uuid(item['id'])
-        assert is_valid_uuid(item['realId'])
         
         # Если есть дочерние элементы, проверяем их ID тоже
         if 'childes_order' in item and item['childes_order']:

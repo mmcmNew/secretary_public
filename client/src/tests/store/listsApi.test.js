@@ -32,7 +32,6 @@ describe('Lists RTK API', () => {
         expect(defaultList.id).toBeDefined();
         expect(defaultList.title).toBeDefined();
         expect(defaultList.type).toBeDefined();
-        // expect(defaultList.realId).toBeDefined();
         expect(Array.isArray(defaultList.childes_order)).toBe(true);
         expect(typeof defaultList.unfinished_tasks_count).toBe('number');
       }
@@ -46,7 +45,6 @@ describe('Lists RTK API', () => {
         expect(list.order).toBeDefined();
         expect(typeof list.order).toBe('number');
         expect(list.in_general_list).toBeDefined();
-        expect(list.realId).toBeDefined();
         expect(typeof list.in_general_list).toBe('boolean');
         expect(Array.isArray(list.childes_order)).toBe(true);
         expect(typeof list.deleted).toBe('boolean');
@@ -97,7 +95,6 @@ describe('Lists RTK API', () => {
           expect(childElement.text).toBeDefined();
           expect(typeof childElement.droppable).toBe('boolean');
           expect(childElement.data).toBeDefined();
-          expect(childElement.data.realId).toBeDefined();
           expect(childElement.data.rootId).toBeDefined();
           expect(childElement.data.type).toBeDefined();
           expect(typeof childElement.data.unfinished_tasks_count).toBe('number');

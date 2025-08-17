@@ -7,7 +7,7 @@ export default function GroupChildren({ item, childrenLists, renderListItem, ren
     <div style={styles.treeLineContainer}>
       {item.childes_order.map((childId, index) => {
         const child = childrenLists?.find(
-          (c) => c?.id === childId || c?.realId === childId
+          (c) => c?.id === childId
         );
 
         if (!child) return null;

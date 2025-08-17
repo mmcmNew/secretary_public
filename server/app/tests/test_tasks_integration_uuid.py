@@ -193,11 +193,9 @@ def test_full_workflow_with_uuid(auth_client, test_user, clean_db):
     # Проверяем, что все ID являются UUID
     for item in lists_data.get('lists', []):
         assert is_valid_uuid(item['id'])
-        assert is_valid_uuid(item['realId'])
     
     for item in lists_data.get('projects', []):
         assert is_valid_uuid(item['id'])
-        assert is_valid_uuid(item['realId'])
     
     # 14. Получаем задачи по ID
     tasks_by_ids_response = auth_client.get(f'/api/tasks/get_tasks_by_ids?ids={task["id"]},{subtask["id"]}')
@@ -319,7 +317,6 @@ def test_uuid_consistency_across_operations(auth_client, test_user):
     
     assert found_list is not None
     assert found_list['id'] == list_id
-    assert found_list['realId'] == list_id
 
 
 def test_error_handling_with_invalid_uuids(auth_client, test_user):

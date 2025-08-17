@@ -47,14 +47,20 @@ function ToDoListsPanel({ mobile }) {
     console.log(`Move ${listId} ${direction}`);
   };
 
-  const handleLinkToList = (sourceType, sourceId, targetType, targetId) => {
-    console.log('🔗 ToDoListsPanel: handleLinkToList called', { sourceType, sourceId, targetType, targetId });
-    linkItems({ source_type: sourceType, source_id: sourceId, target_type: targetType, target_id: targetId });
+  const handleLinkToList = (sourceType, sourceId, targetType, targetId, opts = {}) => {
+    console.log('🔗 ToDoListsPanel: handleLinkToList called', { sourceType, sourceId, targetType, targetId, opts });
+    const payload = { source_type: sourceType, source_id: sourceId, target_type: targetType, target_id: targetId };
+    if (opts.source_parent_id) payload.source_parent_id = opts.source_parent_id;
+    if (opts.source_parent_type) payload.source_parent_type = opts.source_parent_type;
+    linkItems(payload);
   };
 
-  const handleMoveToList = (sourceType, sourceId, targetType, targetId) => {
-    console.log('📦 ToDoListsPanel: handleMoveToList called', { sourceType, sourceId, targetType, targetId });
-    moveItems({ source_type: sourceType, source_id: sourceId, target_type: targetType, target_id: targetId });
+  const handleMoveToList = (sourceType, sourceId, targetType, targetId, opts = {}) => {
+    console.log('📦 ToDoListsPanel: handleMoveToList called', { sourceType, sourceId, targetType, targetId, opts });
+    const payload = { source_type: sourceType, source_id: sourceId, target_type: targetType, target_id: targetId };
+    if (opts.source_parent_id) payload.source_parent_id = opts.source_parent_id;
+    if (opts.source_parent_type) payload.source_parent_type = opts.source_parent_type;
+    moveItems(payload);
   };
 
   const handleDeleteFromChildes = (sourceId, groupId) => {
