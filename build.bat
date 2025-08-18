@@ -14,7 +14,11 @@ REM 3. Копирование dist в /app на сервер
 xcopy "client\dist" "server\app\static\" /s /e /i
 
 REM 5. Сборка контейнера
-docker build -t secretary-app .
+REM 5. Сборка контейнера
+REM Usage: build.bat [version-tag]
+REM Example: build.bat v1.2.1  -> will produce playermmcm/secretary-app:v1.2.1 and playermmcm/secretary-app:latest
+
+docker build -t playermmcm/secretary-app:v1.2.1 -t playermmcm/secretary-app:latest .
 
 REM 6. Запуск контейнера
 docker compose --env-file .env.docker up -d --build
