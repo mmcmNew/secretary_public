@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - 'v*.*.*' # More specific tag pattern, can be adjusted to 'v*' if needed
+  workflow_dispatch: # Добавляем ручной запуск
+    inputs:
+      build_and_push_docker:
+        description: 'Build and push Docker image?'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   test:

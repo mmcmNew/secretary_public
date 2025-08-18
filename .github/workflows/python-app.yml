@@ -10,6 +10,14 @@ on:
   pull_request:
     branches: [ "main" ]
 
+  workflow_dispatch: # Добавляем ручной запуск
+    inputs:
+      build_and_push_docker:
+        description: 'Build and push Docker image?'
+        type: boolean
+        required: false
+        default: false
+
 permissions:
   contents: read
 
