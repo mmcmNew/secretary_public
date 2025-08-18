@@ -22,4 +22,4 @@ edge_tts
 psycopg2-binary
 Flask-Caching
 pytz
-flask-debugtoolbar
+pytest

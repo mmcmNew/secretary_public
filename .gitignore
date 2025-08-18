@@ -22,3 +22,5 @@ client/e2e-tests/.auth/user.json
 client/.storybook/*
 client/src/stories/*
 client/e2e-tests/.auth/user.json
+.env
+.env.docker
