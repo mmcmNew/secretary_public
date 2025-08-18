@@ -2,17 +2,28 @@ version: '3.8'
 
 services:
   secretary-app:
-  container_name: secretary-app-prod
-    image: secretary-app:latest
-    env_file: .env.docker
-    ports:
-      - "80:5100"
+    container_name: secretary-app-prod
+    image: playermmcm/secretary-app:latest
     volumes:
-      - secretary_user_data:/app/app/user_data
-      - secretary_logs:/app/logs
+      - user_data:/app/app/user_data
+      - logs:/app/logs
     restart: unless-stopped
     depends_on:
       - postgres
+    # command: tail -f /dev/null
+    environment:
+      MODE: docker
+      HOST: 0.0.0.0
+      SERVER_PORT: 5100
+      SECRET_KEY: fa918053300bad9fe292417d94894510bc79d93d8aa585c196babe6487709142085986c17cd8d0add3e1812b82a6b63ed830
+      JWT_SECRET_KEY: 1196f1d717c5eceeaf47f14d72a8e80b1fb4269897a43f6acb90660164cec3292e65d91de5dd3ad7bc5c46df91f1c31d007c
+      AI_WEBHOOK_URL: https://n8n.ndomen.online/webhook/4999da23-b30e-494b-9435-9948be5ab8d4
+      AI_IMAGE_WEBHOOK_URL: https://n8n.ndomen.online/webhook/2da3e25d-1ff6-41f9-94e8-d55d43c1247b
+      SESSION_COOKIE_SECURE: "True"
+      SESSION_COOKIE_HTTPONLY: "True"
+      PERMANENT_SESSION_LIFETIME: "3600"
+      DATABASE_URL: postgresql+psycopg2://secretary:secretary@postgres:5432/secretary_db
+
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:5100/ || exit 1"]
       interval: 30s
@@ -23,7 +34,11 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.secretary.rule=Host(`tasks.ndomen.online`)"
       - "traefik.http.routers.secretary.entrypoints=websecure"
-      - "traefik.http.routers.secretary.tls.certresolver=myresolver"
+      - "traefik.http.routers.secretary.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.secretary.tls=true"
+      - "traefik.http.services.secretary.loadbalancer.server.port=5100"
+    networks:
+      - n8n_with_https_default
 
   postgres:
     image: postgres:16
@@ -32,10 +47,16 @@ services:
       POSTGRES_PASSWORD: secretary
       POSTGRES_DB: secretary_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
     restart: unless-stopped
+    networks:
+      - n8n_with_https_default
 
 volumes:
-  secretary_user_data:
-  secretary_logs:
-  postgres_data:
+  user_data:
+  logs:
+  pg_data:
+
+networks:
+  n8n_with_https_default:
+    external: true
