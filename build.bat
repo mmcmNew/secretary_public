@@ -8,10 +8,10 @@ call npm run build
 cd ..
 
 REM 2. Удаление папки dist на сервере
-if exist "server\app\dist" rmdir /s /q "server\app\dist"
+if exist "server\app\dist" rmdir /s /q "server\app\static"
 
 REM 3. Копирование dist в /app на сервер
-xcopy "client\dist" "server\app\dist\" /s /e /i
+xcopy "client\dist" "server\app\static\" /s /e /i
 
 REM 5. Сборка контейнера
 docker build -t secretary-app .
