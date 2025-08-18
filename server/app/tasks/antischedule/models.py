@@ -2,6 +2,7 @@ from flask import current_app
 from flask_jwt_extended import current_user
 from sqlalchemy.orm import joinedload
 from app.tasks.models import TaskType
+import uuid
 
 from app import db
 
