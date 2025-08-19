@@ -2,8 +2,6 @@ import { useState, memo, useCallback, useRef } from 'react';
 import {
   Box,
   Divider,
-  Menu,
-  MenuItem
 } from '@mui/material';
 import PropTypes from 'prop-types';
 import ListsSection from './ListsList/ListsSection';
@@ -30,46 +28,20 @@ function ListsList({
   const { anchorEl, openMenu, closeMenu } = useContextMenu();
   const [targetItem, setTargetItem] = useState(null);
   const [targetParent, setTargetParent] = useState(null);
-  const [listMenuAnchorEl, setListMenuAnchorEl] = useState(null);
-  const [menuActionType, setMenuActionType] = useState(null);
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [editingItem, setEditingItem] = useState(null); // Новое состояние для сохранения редактируемого элемента
   const inputRef = useRef(null);
 
   const handleContextMenu = useCallback((event, item, parent = null) => {
+    console.log('handleContextMenu called with item:', item, 'parent:', parent);
     openMenu(event);
     setTargetItem(item);
     setTargetParent(parent || null);
   }, [openMenu]);
 
-  const handleOpenSubMenu = (event, actionType) => {
-    setListMenuAnchorEl(event.currentTarget);
-    setMenuActionType(actionType);
-  };
 
-  const handleCloseSubMenu = () => {
-    setListMenuAnchorEl(null);
-    setMenuActionType(null);
-  };
 
-  const handleSubMenuAction = (targetListId) => {
-    const sourceType = targetItem.type;
-    const sourceId = targetItem.id;
-    const targetType = menuActionType;
-    const targetId = targetListId;
-    // include parent info for server when available
-    const source_parent_id = targetParent?.id ?? null;
-    const source_parent_type = targetParent?.type ?? null;
-
-    if (menuActionType === 'move') {
-      onMoveToList(sourceType, sourceId, targetType, targetId, { source_parent_id, source_parent_type });
-    } else if (menuActionType === 'link') {
-      onLinkToList(sourceType, sourceId, targetType, targetId, { source_parent_id, source_parent_type });
-    }
-    handleCloseSubMenu();
-    handleCloseMenu();
-  };
 
   const handleCloseMenu = useCallback(() => {
     closeMenu();
@@ -175,7 +147,8 @@ function ListsList({
       <ContextMenu
         anchorEl={anchorEl}
         item={targetItem}
-  onClose={handleCloseMenu}
+        parent={targetParent}
+        onClose={handleCloseMenu}
         onEditClick={handleEditStart}
         onDeleteClick={() => {
           if (targetItem) onDeleteList(targetItem.id);
@@ -189,27 +162,14 @@ function ListsList({
           if (targetItem) onChangeChildesOrder(targetItem.id, 'down');
           handleCloseMenu();
         }}
-  onOpenGroupMenu={(e) => handleOpenSubMenu(e, 'group')}
-  onOpenProjectMenu={(e) => handleOpenSubMenu(e, 'project')}
         onDeleteFromChildes={onDeleteFromChildes}
         onChangeChildesOrder={onChangeChildesOrder}
         onAddToGeneralList={onAddToGeneralList}
-  onLinkToList={onLinkToList}
-  onMoveToList={onMoveToList}
+        onLinkToList={onLinkToList}
+        onMoveToList={onMoveToList}
         listsList={lists}
         projects={projects}
       />
-      <Menu
-        anchorEl={listMenuAnchorEl}
-        open={Boolean(listMenuAnchorEl)}
-        onClose={handleCloseSubMenu}
-      >
-        {(menuActionType === 'group' ? lists : projects).map((list) => (
-          <MenuItem key={list.id} onClick={() => handleSubMenuAction(list.id)}>
-            {list.title}
-          </MenuItem>
-        ))}
-      </Menu>
     </Box>
   );
 }

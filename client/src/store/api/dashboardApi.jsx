@@ -11,10 +11,20 @@ export const dashboardApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['Dashboard'],
     }),
-    fetchDashboard: builder.query({
-      query: () => '/dashboard/last',
-      // Возвращаем ответ сервера как есть, преобразование контейнеров — в dashboardSlice
-      providesTags: ['Dashboard'],
+    getDashboard: builder.query({
+      queryFn: async (id, _queryApi, _extraOptions, baseQuery) => {
+        let response;
+        if (id) {
+          response = await baseQuery(`/dashboard/${id}`);
+          if (response.data && !response.error) {
+            return { data: response.data };
+          }
+        }
+        // If no id is provided or if the fetch by id fails, fetch the last dashboard
+        response = await baseQuery('/dashboard/last');
+        return response.error ? { error: response.error } : { data: response.data };
+      },
+      providesTags: (result, error, id) => (result ? [{ type: 'Dashboard', id }] : ['Dashboard']),
     }),
     saveDashboard: builder.mutation({
       query: (dashboard) => {
@@ -35,4 +45,4 @@ export const dashboardApi = apiSlice.injectEndpoints({
   }),
 });
 
-export const { useFetchDashboardQuery, useSaveDashboardMutation, useCreateDashboardMutation, useListDashboardsQuery } = dashboardApi;
+export const { useGetDashboardQuery, useSaveDashboardMutation, useCreateDashboardMutation, useListDashboardsQuery } = dashboardApi;

@@ -5,6 +5,8 @@ from sqlalchemy.types import JSON
 from flask import current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
+from.utils import DEFAULT_CONTAINERS
+import json
 
 
 # Модель для таблицы users
@@ -80,12 +82,29 @@ class User(db.Model):
             db.session.add(default_schema)
             db.session.commit()
     
+    def create_default_dashboard(self):
+        """Создает дефолтный дашборд для пользователя"""
+        
+        existing = Dashboard.query.filter_by(user_id=self.user_id).first()
+        if not existing:
+            default_dashboard = Dashboard(
+                user_id=self.user_id,
+                name='Default Dashboard',
+                containers= DEFAULT_CONTAINERS
+            )
+            db.session.add(default_dashboard)
+            db.session.commit()
+            self.last_dashboard_id = default_dashboard.id
+            db.session.commit()
+            current_app.logger.info(f"Default dashboard created for user {self.user_id}")
+
     def initialize_user_workspace(self):
         """Инициализирует рабочее пространство пользователя"""
         try:
             from app.user_data_manager import UserDataManager
             UserDataManager.create_user_workspace(self.user_id)
             self.create_default_journal()
+            self.create_default_dashboard()
             current_app.logger.info(f"Workspace initialized for user {self.user_id}")
         except Exception as e:
             current_app.logger.error(f"Failed to initialize workspace for user {self.user_id}: {e}")
@@ -124,3 +143,48 @@ class ChatHistory(db.Model):
             'files': self.files,
         }
 
+
+class Dashboard(db.Model):
+    __tablename__ = 'dashboard'
+    __table_args__ = {'schema': 'workspace'}
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), nullable=False)
+    name = Column(Text)
+    containers = db.Column(db.JSON)
+    timers = db.Column(db.JSON)
+    theme_mode = db.Column(db.String(20))
+    calendar_settings = db.Column(db.Text)
+
+    def to_dict(self):
+        try:
+            parsed_settings = json.loads(self.calendar_settings) if self.calendar_settings else None
+        except (TypeError, json.JSONDecodeError):
+            parsed_settings = None
+
+        return {
+            "id": self.id,
+            "name": self.name,
+            "containers": self.containers,
+            "timers": self.timers,
+            "themeMode": self.theme_mode,
+            "calendarSettings": parsed_settings
+        }
+
+    def create_default_containers(self):
+        """Создает дефолтные контейнеры для дашборда"""
+        if not self.containers:
+            self.containers = DEFAULT_CONTAINERS
+            db.session.add(self)
+            db.session.commit()
+            current_app.logger.info(f"Default containers created for dashboard {self.id}")
+    
+class Timers(db.Model):
+    __tablename__ = 'timers'
+    __table_args__ = {'schema': 'workspace'}
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String(36), nullable=False)
+    dashboard_id = Column(String(36), ForeignKey('workspace.dashboard.id'), nullable=False)
+    name = Column(Text)
+    start_time = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    end_time = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True)

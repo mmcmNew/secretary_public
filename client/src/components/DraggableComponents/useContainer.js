@@ -18,6 +18,7 @@ import {
   updateTimer as updateTimerAction,
   saveTimers as saveTimersAction
 } from '../../store/timersSlice';
+import { useSaveDashboardMutation } from '../../store/api/dashboardApi';
 
 /**
  * Хук для работы с контейнерами через Redux
@@ -25,6 +26,7 @@ import {
  */
 export default function useContainer() {
   const dispatch = useDispatch();
+  const [saveDashboard] = useSaveDashboardMutation();
   
   // Состояние контейнеров из Redux store
   const containers = useSelector(state => state?.dashboard?.containers);
@@ -33,6 +35,10 @@ export default function useContainer() {
   const isSecretarySpeak = useSelector(state => state?.ui?.isSecretarySpeak);
   const draggingContainer = useSelector(state => state?.ui?.draggingContainer);
   const timers = useSelector(state => state?.timers?.timers);
+  const dashboardId = useSelector(state => state?.dashboard?.id);
+  const dashboardName = useSelector(state => state?.dashboard?.name);
+  const themeMode = useSelector(state => state?.dashboard?.themeMode);
+  const calendarSettings = useSelector(state => state?.dashboard?.calendarSettings);
 
   // Функции для работы с контейнерами
   const addContainer = (containerData) => {
@@ -90,6 +96,23 @@ export default function useContainer() {
     return dispatch(saveTimersAction(timers));
   };
 
+  const sendContainersToServer = async () => {
+    const dashboardData = {
+      id: dashboardId,
+      name: dashboardName,
+      containers: containers,
+      timers: timers,
+      themeMode: themeMode,
+      calendarSettings: calendarSettings,
+    };
+    try {
+      await saveDashboard(dashboardData).unwrap();
+      console.log('Dashboard saved successfully!');
+    } catch (error) {
+      console.error('Failed to save dashboard:', error);
+    }
+  };
+
   return {
     // Состояние
     containers,
@@ -98,6 +121,8 @@ export default function useContainer() {
     isSecretarySpeak,
     draggingContainer,
     timers,
+    themeMode, // Add themeMode to returned state
+    calendarSettings, // Add calendarSettings to returned state
     
     // Функции для работы с контейнерами
     addContainer,
@@ -117,5 +142,6 @@ export default function useContainer() {
     removeTimer,
     updateTimer,
     sendTimersToServer,
+    sendContainersToServer, // Add the new function
   };
 }

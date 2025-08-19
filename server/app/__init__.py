@@ -70,8 +70,8 @@ def create_app(config_type='work'):
         app.register_blueprint(main_blueprint)
         from .tasks import to_do_app as tasks_blueprint
         app.register_blueprint(tasks_blueprint, url_prefix='/api')
-        from .dashboard import dashboard as dashboard_blueprint
-        app.register_blueprint(dashboard_blueprint)
+        # from .dashboard import dashboard as dashboard_blueprint
+        # app.register_blueprint(dashboard_blueprint)
         from .journals import journals as journals_blueprint
         app.register_blueprint(journals_blueprint, url_prefix='/api/journals')
         from .twitch import twitchAPI as twitch_blueprint
