@@ -4,7 +4,9 @@ import { updateContainer } from '../../store/dashboardSlice';
 
 function MinimizedContainers() {
   const dispatch = useDispatch();
-  const minimizedContainers = useSelector(state => state.dashboard.containers.filter(c => c.isMinimized));
+  const minimizedContainers = useSelector(state => state.dashboard?.containers) || [];
+  console.log('MinimizedContainers: minimizedContainers=', minimizedContainers);
+
 
   return (
     <Box sx={{ display: 'flex', overflowX: 'auto', padding: 1 }}>
@@ -14,7 +16,7 @@ function MinimizedContainers() {
           onClick={() => dispatch(updateContainer({ id: container.id, data: { isMinimized: !container.isMinimized } }))}
           sx={{ margin: 0.5 }}
         >
-          {container.name}
+          {container?.name}
         </Button>
       ))}
     </Box>

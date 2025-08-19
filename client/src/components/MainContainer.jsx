@@ -1,5 +1,6 @@
+import { PropTypes } from 'prop-types';
 import { useNavigate } from 'react-router-dom';
-import { createContext, useEffect, useMemo, useState, memo, useCallback } from 'react';
+import { createContext, useMemo, useState, memo, useCallback } from 'react';
 import { Box, Button, IconButton, Paper } from '@mui/material';
 import DraggableContainer from './DraggableComponents/DraggableContainer';
 import ContainerSpeedDial from './DraggableComponents/ContainerSpeedDial';
@@ -21,7 +22,7 @@ import AccountButton from './AccountButton';
 const ColorModeContext = createContext({ toggleColorMode: () => {} });
 
 // Memoize the header component to prevent unnecessary re-renders
-const Header = memo(({ mode, colorMode, theme, onNavigateMobile, onSave }) => (
+const Header = memo(({ colorMode, theme, onNavigateMobile, onSave }) => (
   <Paper sx={{
     width: '100%',
     height: '60px',
@@ -51,10 +52,10 @@ const Header = memo(({ mode, colorMode, theme, onNavigateMobile, onSave }) => (
 ));
 
 // Memoize the main content component
-const MainContent = memo(({ containers }) => (
+const MainContent = memo(({ containers=[] }) => (
   <Box sx={{ width: '99vw', height: '92vh', position: 'relative', margin: '0px' }}>
     {containers.map(container => (
-      !container.isMinimized && (
+      container && !container.isMinimized && (
         <DraggableContainer
           key={container.id}
           containerData={container}
@@ -76,7 +77,7 @@ function MainContainer() {
   } = useContainer();
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState(themeMode);
+  const [mode, setMode] = useState(themeMode || 'light');
 
   const colorMode = useMemo(
     () => ({
@@ -135,3 +136,17 @@ function MainContainer() {
 }
 
 export default memo(MainContainer);
+
+MainContainer.displayName = 'MainContainer'; // Set display name for better debugging
+MainContent.displayName = 'MainContent'; // Set display name for better debugging
+Header.displayName = 'Header'; // Set display name for better debugging
+MainContent.propTypes = {
+  containers: PropTypes.array.isRequired,
+};
+Header.propTypes = {
+  mode: PropTypes.string,
+  colorMode: PropTypes.object,
+  theme: PropTypes.object,
+  onNavigateMobile: PropTypes.func,
+  onSave: PropTypes.func,
+};

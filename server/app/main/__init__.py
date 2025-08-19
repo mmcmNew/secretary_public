@@ -11,3 +11,4 @@ main.register_blueprint(chat_bp)
 main.register_blueprint(files_bp)
 
 from . import routes
+from . import dashboard_routes

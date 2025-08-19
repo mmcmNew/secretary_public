@@ -48,13 +48,13 @@ def app():
     app = create_app('test')
     
     with app.app_context():
+        db.drop_all()
         # Импортируем модели внутри контекста приложения
         global User, Priority, Status, Interval, List, Group, Project, Task
         from app.main.models import User
         from app.tasks.models import Priority, Status, Interval, List, Group, Project, Task
         
         # Создаем все таблицы
-        db.drop_all()
         db.create_all()
         
         # Добавляем начальные данные

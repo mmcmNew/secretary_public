@@ -9,6 +9,10 @@ export function createContainer(type, id, containerData) {
         console.error(`Unknown container type: ${type}`);
         return null;
     }
+    if (!id) {
+      id = Date.now().toString(); // Generate a unique ID if not provided
+    }
+console.log(`Creating container with ID: ${id} and type: ${type}`);
 
     const newContainer = {
         ...containerData,
@@ -51,7 +55,8 @@ const dashboardSlice = createSlice({
       state.containers = action.payload;
     },
     addContainer: (state, action) => {
-      const newContainer = createContainer(action.payload, action.type, action.payload.props || {});
+      console.log('Adding container of type: ', action);
+      const newContainer = createContainer(action.payload, action.id || null, action.payload.props || {});
       if (newContainer) {
         state.containers.push(newContainer);
       }
@@ -69,26 +74,30 @@ const dashboardSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addMatcher(
-        dashboardApi.endpoints.fetchDashboard.matchFulfilled,
+        dashboardApi.endpoints.getDashboard.matchFulfilled,
         (state, action) => {
           state.loading = false;
           state.id = action.payload.id;
           state.name = action.payload.name;
-          state.containers = action.payload.containers.map((cont) => createContainer(cont.type, cont.id, cont));
+          state.containers = action.payload.containers.map((cont) => {
+            if (!cont) {
+              return null;
+            }
+            return createContainer(cont.type, cont.id, cont)});
           state.themeMode = action.payload.themeMode;
           state.timers = action.payload.timers;
           state.calendarSettings = action.payload.calendarSettings;
         }
       )
       .addMatcher(
-        dashboardApi.endpoints.fetchDashboard.matchPending,
+        dashboardApi.endpoints.getDashboard.matchPending,
         (state) => {
           state.loading = true;
           state.error = null;
         }
       )
       .addMatcher(
-        dashboardApi.endpoints.fetchDashboard.matchRejected,
+        dashboardApi.endpoints.getDashboard.matchRejected,
         (state, action) => {
           state.loading = false;
           state.error = action.payload;
@@ -122,14 +131,8 @@ const dashboardSlice = createSlice({
       )
       .addMatcher(
         dashboardApi.endpoints.saveDashboard.matchFulfilled,
-        (state, action) => {
+        (state) => {
           state.loading = false;
-          state.id = action.payload.id;
-          state.name = action.payload.name;
-          state.containers = action.payload.containers.map((cont) => createContainer(cont.type, cont.id, cont));
-          state.themeMode = action.payload.themeMode;
-          state.timers = action.payload.timers;
-          state.calendarSettings = action.payload.calendarSettings;
         }
       )
       .addMatcher(
@@ -145,35 +148,7 @@ const dashboardSlice = createSlice({
           state.loading = false;
           state.error = action.payload;
         }
-      ); 
-    builder
-      .addMatcher(dashboardApi.endpoints.fetchDashboard.matchFulfilled, (state, { payload }) => {
-        state.id = payload.id;
-        state.name = payload.name ?? 'dashboard';
-        state.containers = Array.isArray(payload.containers) ? payload.containers : [];
-        state.timers = payload.timers ?? null;
-        state.themeMode = payload.themeMode ?? 'light';
-        state.calendarSettings = payload.calendarSettings ?? null;
-        state.error = null;
-      })
-      .addMatcher(dashboardApi.endpoints.createDashboard.matchFulfilled, (state, { payload }) => {
-        state.id = payload.id;
-        state.name = payload.name ?? 'dashboard';
-        state.containers = Array.isArray(payload.containers) ? payload.containers : [];
-        state.timers = payload.timers ?? null;
-        state.themeMode = payload.themeMode ?? 'light';
-        state.calendarSettings = payload.calendarSettings ?? null;
-        state.error = null;
-      })
-      .addMatcher(dashboardApi.endpoints.saveDashboard.matchFulfilled, (state, { payload }) => {
-        state.id = payload.id;
-        state.name = payload.name ?? state.name;
-        state.containers = Array.isArray(payload.containers) ? payload.containers : state.containers;
-        state.timers = payload.timers ?? state.timers;
-        state.themeMode = payload.themeMode ?? state.themeMode;
-        state.calendarSettings = payload.calendarSettings ?? state.calendarSettings;
-        state.error = null;
-      });  
+      );
   },
 });
 

@@ -18,7 +18,7 @@
           "color": null,
           "completed_at": null,
           "end": "2025-07-22T09:30:00Z",
-          "id": "61bcfb20-de23-4f58-bdfc-65daa44913c1",
+          "id": "e582e80d-726d-4616-8902-7475d85ee6f7",
           "interval_id": null,
           "is_background": false,
           "is_completed": false,
@@ -54,7 +54,7 @@
             "color": null,
             "completed_at": null,
             "end": "2025-07-22T09:30:00Z",
-            "id": "61bcfb20-de23-4f58-bdfc-65daa44913c1",
+            "id": "e582e80d-726d-4616-8902-7475d85ee6f7",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -76,7 +76,7 @@
           "date": "2025-07-22",
           "is_override": true,
           "override_id": 1,
-          "parent_task_id": "61bcfb20-de23-4f58-bdfc-65daa44913c1",
+          "parent_task_id": "e582e80d-726d-4616-8902-7475d85ee6f7",
           "type": "modified"
         },
         "success": true
@@ -98,7 +98,7 @@
           "background_tasks_count": 0,
           "childes_order": [],
           "deleted": false,
-          "id": "3edadebf-bc47-4008-b604-b5404727a514",
+          "id": "c7bebf18-494e-4136-811a-d57b20c4165e",
           "important_tasks_count": 0,
           "in_general_list": true,
           "order": 0,
@@ -115,7 +115,7 @@
     "request": {
       "data": {
         "title": "Подзадача",
-        "parentTaskId": "fb4fe07b-d55d-4c5b-a754-32fec5ada09b"
+        "parentTaskId": "3dfc9ad3-7306-424b-b410-8acd84f88768"
       }
     },
     "response": {
@@ -124,12 +124,12 @@
         "parent_task": {
           "attachments": null,
           "childes_order": [
-            "3328aeb4-d187-4fd6-b956-9ac7381af4b0"
+            "a923a55d-71c1-40bc-a5c8-cf33519134ed"
           ],
           "color": null,
           "completed_at": null,
           "end": null,
-          "id": "fb4fe07b-d55d-4c5b-a754-32fec5ada09b",
+          "id": "3dfc9ad3-7306-424b-b410-8acd84f88768",
           "interval_id": null,
           "is_background": false,
           "is_completed": false,
@@ -154,7 +154,7 @@
           "color": null,
           "completed_at": null,
           "end": null,
-          "id": "3328aeb4-d187-4fd6-b956-9ac7381af4b0",
+          "id": "a923a55d-71c1-40bc-a5c8-cf33519134ed",
           "interval_id": null,
           "is_background": false,
           "is_completed": false,
@@ -180,14 +180,14 @@
   "PUT /api/tasks/change_status": {
     "request": {
       "data": {
-        "taskId": "30d698a0-ad9f-4891-851b-4d65721ec602",
+        "taskId": "f6a17073-c4b6-4bd6-a65d-5f74c7303ef9",
         "is_completed": true
       }
     },
     "response": {
       "data": {
         "changed_ids": [
-          "30d698a0-ad9f-4891-851b-4d65721ec602"
+          "f6a17073-c4b6-4bd6-a65d-5f74c7303ef9"
         ],
         "success": true
       }
@@ -196,7 +196,7 @@
   "DELETE /api/tasks/del_task": {
     "request": {
       "data": {
-        "taskId": "cdaf2816-2007-4ba0-a868-dec63d244f3e"
+        "taskId": "c3cac0f5-656a-45c7-90df-6e972147b20a"
       }
     },
     "response": {
@@ -209,9 +209,9 @@
   "PUT /api/tasks/link_items": {
     "request": {
       "data": {
-        "source_id": "cd485c89-5dd7-44e2-af84-7b774a06e710",
+        "source_id": "e1440a0a-65b6-4c7d-8c20-d18340097833",
         "source_type": "list",
-        "target_id": "3e39ccc1-fe66-4a47-9bae-b7c305c9b248",
+        "target_id": "6dfbc75a-fee6-44bf-b198-a47ddccd02ef",
         "target_type": "group"
       }
     },
@@ -219,10 +219,10 @@
       "data": {
         "parent": {
           "childes_order": [
-            "cd485c89-5dd7-44e2-af84-7b774a06e710"
+            "e1440a0a-65b6-4c7d-8c20-d18340097833"
           ],
           "deleted": false,
-          "id": "3e39ccc1-fe66-4a47-9bae-b7c305c9b248",
+          "id": "6dfbc75a-fee6-44bf-b198-a47ddccd02ef",
           "in_general_list": true,
           "order": 0,
           "title": "Группа для тестирования удаления из детей",
@@ -235,9 +235,9 @@
   "DELETE /api/tasks/delete_from_childes": {
     "request": {
       "data": {
-        "source_id": "cd485c89-5dd7-44e2-af84-7b774a06e710",
+        "source_id": "e1440a0a-65b6-4c7d-8c20-d18340097833",
         "source_type": "list",
-        "parent_id": "3e39ccc1-fe66-4a47-9bae-b7c305c9b248",
+        "parent_id": "6dfbc75a-fee6-44bf-b198-a47ddccd02ef",
         "parent_type": "group"
       }
     },
@@ -246,7 +246,7 @@
         "parent": {
           "childes_order": [],
           "deleted": false,
-          "id": "3e39ccc1-fe66-4a47-9bae-b7c305c9b248",
+          "id": "6dfbc75a-fee6-44bf-b198-a47ddccd02ef",
           "in_general_list": true,
           "order": 0,
           "title": "Группа для тестирования удаления из детей",
@@ -256,7 +256,7 @@
           "background_tasks_count": 0,
           "childes_order": [],
           "deleted": false,
-          "id": "cd485c89-5dd7-44e2-af84-7b774a06e710",
+          "id": "e1440a0a-65b6-4c7d-8c20-d18340097833",
           "important_tasks_count": 0,
           "in_general_list": true,
           "order": 0,
@@ -271,7 +271,7 @@
   "PUT /api/tasks/edit_list": {
     "request": {
       "data": {
-        "listId": "dab66cd9-4d99-4c8e-81c8-55901438d65b",
+        "listId": "1e292714-f7ec-4356-a0dc-6dbec62bdf84",
         "type": "list",
         "title": "Обновленный список",
         "order": 1
@@ -284,7 +284,7 @@
           "background_tasks_count": 0,
           "childes_order": [],
           "deleted": false,
-          "id": "dab66cd9-4d99-4c8e-81c8-55901438d65b",
+          "id": "1e292714-f7ec-4356-a0dc-6dbec62bdf84",
           "important_tasks_count": 0,
           "in_general_list": true,
           "order": 1,
@@ -298,7 +298,7 @@
   "PUT /api/tasks/edit_task": {
     "request": {
       "data": {
-        "taskId": "b319e055-ba88-4fd4-a049-4da922df85c4",
+        "taskId": "3ff28429-ff40-41a1-8245-fe6e7fab044d",
         "title": "Обновленная задача",
         "note": "Тестовое примечание"
       }
@@ -312,7 +312,7 @@
           "color": null,
           "completed_at": null,
           "end": null,
-          "id": "b319e055-ba88-4fd4-a049-4da922df85c4",
+          "id": "3ff28429-ff40-41a1-8245-fe6e7fab044d",
           "interval_id": null,
           "is_background": false,
           "is_completed": false,
@@ -461,7 +461,7 @@
       }
     }
   },
-  "GET /api/tasks/get_calendar_events?start=2025-08-17T21:15:40.590136Z&end=2025-08-19T21:15:40.590136Z": {
+  "GET /api/tasks/get_calendar_events?start=2025-08-19T17:35:11.617058Z&end=2025-08-21T17:35:11.617058Z": {
     "request": {
       "data": null
     },
@@ -483,7 +483,7 @@
       }
     }
   },
-  "GET /api/tasks/get_calendar_events?start=2025-08-17T21:15:41.118536Z&end=2025-08-18T21:15:41.118536Z": {
+  "GET /api/tasks/get_calendar_events?start=2025-08-19T17:35:12.118087Z&end=2025-08-20T17:35:12.118087Z": {
     "request": {
       "data": null
     },
@@ -495,8 +495,8 @@
             "childes_order": [],
             "color": null,
             "completed_at": null,
-            "end": "2025-08-17T23:15:40.991162Z",
-            "id": "3848ff0e-7540-4f48-8911-b3e98f1e8e10",
+            "end": "2025-08-19T19:35:12.013436Z",
+            "id": "8ff9f7d5-0d94-4f42-8881-48874db2890e",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -506,10 +506,10 @@
             "note": null,
             "priority_id": null,
             "range": {
-              "end": "2025-08-17T23:15:40.991162Z",
-              "start": "2025-08-17T22:15:40.991162Z"
+              "end": "2025-08-19T19:35:12.013436Z",
+              "start": "2025-08-19T18:35:12.013436Z"
             },
-            "start": "2025-08-17T22:15:40.991162Z",
+            "start": "2025-08-19T18:35:12.013436Z",
             "status_id": null,
             "title": "Задача для моего дня",
             "type": null,
@@ -520,7 +520,7 @@
       }
     }
   },
-  "GET /api/tasks/get_calendar_events?start=2025-08-27T21:15:41.306337Z&end=2025-08-28T21:15:41.306337Z": {
+  "GET /api/tasks/get_calendar_events?start=2025-08-29T17:35:12.376264Z&end=2025-08-30T17:35:12.376264Z": {
     "request": {
       "data": null
     },
@@ -531,7 +531,7 @@
       }
     }
   },
-  "GET /api/tasks/get_calendar_events?start=2025-08-17T21:15:41.714136Z&end=2025-08-18T21:15:41.714136Z": {
+  "GET /api/tasks/get_calendar_events?start=2025-08-19T17:35:12.818943Z&end=2025-08-20T17:35:12.818943Z": {
     "request": {
       "data": null
     },
@@ -881,7 +881,7 @@
       }
     }
   },
-  "GET /api/tasks/get_subtasks?parent_task_id=7ec1144c-a032-46d1-ad3f-e13a9f8b41fa": {
+  "GET /api/tasks/get_subtasks?parent_task_id=9cf422a2-062a-4e80-8d99-d27441fec03e": {
     "request": {
       "data": null
     },
@@ -894,7 +894,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "5c602fe4-7026-49c6-ac5e-dccaca23cddb",
+            "id": "9fcad238-ddb7-45d6-a892-5efb9ff737de",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -919,7 +919,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "60cde44b-7669-4b46-af1e-4c1bf47c54f9",
+            "id": "ee71acfa-bc71-4ffe-a999-7dc3b1f65b95",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -944,7 +944,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "1f15a60f-a7f1-4d7f-b35a-dcf85e70fe76",
+            "id": "16464264-8fc2-487a-a192-b52673ec7fc1",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -967,7 +967,7 @@
       }
     }
   },
-  "GET /api/tasks/get_subtasks?parent_task_id=1e4a0c0f-41f3-4d84-9e8d-a93cf8019852": {
+  "GET /api/tasks/get_subtasks?parent_task_id=971b0581-5d38-409f-b6f8-5de9ce51ba1d": {
     "request": {
       "data": null
     },
@@ -977,7 +977,7 @@
       }
     }
   },
-  "GET /api/tasks/get_subtasks?parent_task_id=dd030a26-1a05-4237-b135-54a2798c06a0": {
+  "GET /api/tasks/get_subtasks?parent_task_id=90af28fa-6cdb-48a1-a83a-5096f3991b61": {
     "request": {
       "data": null
     },
@@ -990,7 +990,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "bf65680c-d112-4c7b-a048-8d2d6e24648a",
+            "id": "647f0b48-034c-4879-b154-a27dbb988750",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -1015,7 +1015,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "9398fcab-b8e8-4e1e-820c-b7891d8e8108",
+            "id": "58752384-8171-477e-8775-88c1b338484d",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -1040,7 +1040,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "197f7db9-5816-4d79-90e3-9d08671711c8",
+            "id": "45835311-9a5e-4566-87d7-ce7d74608de0",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -1063,7 +1063,7 @@
       }
     }
   },
-  "GET /api/tasks/get_subtasks?parent_task_id=fe1cf549-82a4-49b8-8bdc-5b8c511b0a64": {
+  "GET /api/tasks/get_subtasks?parent_task_id=94b42609-5fb6-4035-b246-665baf701e7c": {
     "request": {
       "data": null
     },
@@ -1073,7 +1073,7 @@
       }
     }
   },
-  "GET /api/tasks/get_tasks?list_id=183daae9-8c5a-45f9-9aa2-89ec1fd2f9f4": {
+  "GET /api/tasks/get_tasks?list_id=a29731ff-11f2-403f-b5da-ff2ff2200840": {
     "request": {
       "data": null
     },
@@ -1086,14 +1086,14 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "4e65b6c2-0fd2-4838-9108-b0d59a22b94a",
+            "id": "0db1a512-db9b-4453-9dd2-a94de6c1e3b1",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
             "is_important": false,
             "is_infinite": false,
             "lists_ids": [
-              "183daae9-8c5a-45f9-9aa2-89ec1fd2f9f4"
+              "a29731ff-11f2-403f-b5da-ff2ff2200840"
             ],
             "note": null,
             "priority_id": null,
@@ -1113,14 +1113,14 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "a09e64db-52bc-469b-a4e1-5381f338a909",
+            "id": "7953bf5a-c022-4f36-8f9b-b44523566486",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
             "is_important": false,
             "is_infinite": false,
             "lists_ids": [
-              "183daae9-8c5a-45f9-9aa2-89ec1fd2f9f4"
+              "a29731ff-11f2-403f-b5da-ff2ff2200840"
             ],
             "note": null,
             "priority_id": null,
@@ -1140,14 +1140,14 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "3e56c1b4-02a1-4469-828c-d5856bf59a08",
+            "id": "eb945ac5-5d07-45c4-abe7-120df84a558a",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
             "is_important": false,
             "is_infinite": false,
             "lists_ids": [
-              "183daae9-8c5a-45f9-9aa2-89ec1fd2f9f4"
+              "a29731ff-11f2-403f-b5da-ff2ff2200840"
             ],
             "note": null,
             "priority_id": null,
@@ -1178,7 +1178,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "bdc54d39-682b-4613-8689-16e88c1beddd",
+            "id": "91fbe432-0891-40bf-83f0-fec37e6bc744",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -1203,7 +1203,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "3f7576b9-57ac-42e1-8bc5-262fe5e95570",
+            "id": "386c68a3-6286-42be-b2fc-809551b5d413",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -1226,7 +1226,7 @@
       }
     }
   },
-  "GET /api/tasks/get_tasks?list_id=events&start=2025-08-17T21:15:46.736824Z&end=2025-08-19T21:15:46.736824Z": {
+  "GET /api/tasks/get_tasks?list_id=events&start=2025-08-19T17:35:17.993486Z&end=2025-08-21T17:35:17.993486Z": {
     "request": {
       "data": null
     },
@@ -1236,7 +1236,7 @@
       }
     }
   },
-  "GET /api/tasks/get_tasks_by_ids?ids=5ba22017-9b02-45b2-8d4e-7efd169e4266,5f7f1029-eb4a-4154-967e-e8d2afe4c823,7c013069-cb54-4ad8-a4fb-24c06a02f543": {
+  "GET /api/tasks/get_tasks_by_ids?ids=7039d213-f86e-4037-bdff-b42e21a792b3,b62e7a87-b969-4966-879b-03c5295c1412,edea4e73-7852-4a32-9211-9614f6b53882": {
     "request": {
       "data": null
     },
@@ -1249,7 +1249,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "5ba22017-9b02-45b2-8d4e-7efd169e4266",
+            "id": "7039d213-f86e-4037-bdff-b42e21a792b3",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -1274,7 +1274,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "5f7f1029-eb4a-4154-967e-e8d2afe4c823",
+            "id": "b62e7a87-b969-4966-879b-03c5295c1412",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -1299,7 +1299,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "7c013069-cb54-4ad8-a4fb-24c06a02f543",
+            "id": "edea4e73-7852-4a32-9211-9614f6b53882",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -1332,7 +1332,7 @@
       }
     }
   },
-  "GET /api/tasks/get_tasks_by_ids?ids=aaa1b52c-1ef9-4f2f-9424-2ff797bcd16e,184633eb-b4d8-4e31-983d-e24887982fc0": {
+  "GET /api/tasks/get_tasks_by_ids?ids=4964bf59-a7c4-4887-8797-28e8ce47eb2f,c2f380af-3e9f-4959-9d4f-44af8982a3e9": {
     "request": {
       "data": null
     },
@@ -1342,7 +1342,7 @@
       }
     }
   },
-  "GET /api/tasks/get_tasks_by_ids?ids=97b7fd7f-7b50-4e8f-8407-440add333e60,31f68811-8624-4f63-b59d-895177d8a517": {
+  "GET /api/tasks/get_tasks_by_ids?ids=9c612ad8-23a1-450d-aaf2-a26cdd778e16,a58f3a0a-2803-4ee5-b405-33b3983287a1": {
     "request": {
       "data": null
     },
@@ -1355,7 +1355,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "97b7fd7f-7b50-4e8f-8407-440add333e60",
+            "id": "9c612ad8-23a1-450d-aaf2-a26cdd778e16",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -1378,7 +1378,7 @@
       }
     }
   },
-  "GET /api/tasks/get_tasks?list_id=36c7476d-1a9a-42b3-9d7d-49954275420f": {
+  "GET /api/tasks/get_tasks?list_id=e2f7b7f3-81b8-4a55-9c21-4594e3d0d5d7": {
     "request": {
       "data": null
     },
@@ -1388,24 +1388,24 @@
           {
             "attachments": null,
             "childes_order": [
-              "4332e1fd-669c-4b54-adb8-b76e974f18ba"
+              "056ecaa8-66df-47ca-b315-a8dfa0aa47ac"
             ],
             "color": null,
             "completed_at": null,
-            "end": "2025-08-24T21:15:49.050184Z",
-            "id": "a0091938-bfd6-41c5-b734-08e59ff7d7b8",
+            "end": "2025-08-26T17:35:20.265544Z",
+            "id": "f4919693-521f-4d2e-9075-273ccc54edd9",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
             "is_important": true,
             "is_infinite": false,
             "lists_ids": [
-              "36c7476d-1a9a-42b3-9d7d-49954275420f"
+              "e2f7b7f3-81b8-4a55-9c21-4594e3d0d5d7"
             ],
             "note": null,
             "priority_id": null,
             "range": {
-              "end": "2025-08-24T21:15:49.050184Z",
+              "end": "2025-08-26T17:35:20.265544Z",
               "start": null
             },
             "start": null,
@@ -1414,20 +1414,20 @@
             "type": {
               "color": "#2196F3",
               "description": "Задачи по разработке",
-              "group_id": "3c6ecbac-dcb4-4477-9d70-9d44a1776554",
-              "id": "ee838914-2b9b-431b-9843-d0f55765b08d",
+              "group_id": "4a6b0b43-487d-46c2-b0da-e364270a4954",
+              "id": "1844e4d3-a31b-4cff-b84f-90b5dfdd0ff5",
               "is_active": true,
               "name": "Разработка",
               "order": null,
-              "user_id": "8000ef5e-5e4a-46dc-9932-19a1567a1479"
+              "user_id": "fc25f143-79c9-447c-a76c-cf96fcac52b4"
             },
-            "type_id": "ee838914-2b9b-431b-9843-d0f55765b08d"
+            "type_id": "1844e4d3-a31b-4cff-b84f-90b5dfdd0ff5"
           }
         ]
       }
     }
   },
-  "GET /api/tasks/get_subtasks?parent_task_id=a0091938-bfd6-41c5-b734-08e59ff7d7b8": {
+  "GET /api/tasks/get_subtasks?parent_task_id=f4919693-521f-4d2e-9075-273ccc54edd9": {
     "request": {
       "data": null
     },
@@ -1440,7 +1440,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "4332e1fd-669c-4b54-adb8-b76e974f18ba",
+            "id": "056ecaa8-66df-47ca-b315-a8dfa0aa47ac",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -1463,7 +1463,7 @@
       }
     }
   },
-  "GET /api/tasks/get_tasks_by_ids?ids=a0091938-bfd6-41c5-b734-08e59ff7d7b8,4332e1fd-669c-4b54-adb8-b76e974f18ba": {
+  "GET /api/tasks/get_tasks_by_ids?ids=f4919693-521f-4d2e-9075-273ccc54edd9,056ecaa8-66df-47ca-b315-a8dfa0aa47ac": {
     "request": {
       "data": null
     },
@@ -1473,24 +1473,24 @@
           {
             "attachments": null,
             "childes_order": [
-              "4332e1fd-669c-4b54-adb8-b76e974f18ba"
+              "056ecaa8-66df-47ca-b315-a8dfa0aa47ac"
             ],
             "color": null,
             "completed_at": null,
-            "end": "2025-08-24T21:15:49.050184Z",
-            "id": "a0091938-bfd6-41c5-b734-08e59ff7d7b8",
+            "end": "2025-08-26T17:35:20.265544Z",
+            "id": "f4919693-521f-4d2e-9075-273ccc54edd9",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
             "is_important": true,
             "is_infinite": false,
             "lists_ids": [
-              "36c7476d-1a9a-42b3-9d7d-49954275420f"
+              "e2f7b7f3-81b8-4a55-9c21-4594e3d0d5d7"
             ],
             "note": "Обновленное описание API",
             "priority_id": null,
             "range": {
-              "end": "2025-08-24T21:15:49.050184Z",
+              "end": "2025-08-26T17:35:20.265544Z",
               "start": null
             },
             "start": null,
@@ -1499,22 +1499,22 @@
             "type": {
               "color": "#2196F3",
               "description": "Задачи по разработке",
-              "group_id": "3c6ecbac-dcb4-4477-9d70-9d44a1776554",
-              "id": "ee838914-2b9b-431b-9843-d0f55765b08d",
+              "group_id": "4a6b0b43-487d-46c2-b0da-e364270a4954",
+              "id": "1844e4d3-a31b-4cff-b84f-90b5dfdd0ff5",
               "is_active": true,
               "name": "Разработка",
               "order": null,
-              "user_id": "8000ef5e-5e4a-46dc-9932-19a1567a1479"
+              "user_id": "fc25f143-79c9-447c-a76c-cf96fcac52b4"
             },
-            "type_id": "ee838914-2b9b-431b-9843-d0f55765b08d"
+            "type_id": "1844e4d3-a31b-4cff-b84f-90b5dfdd0ff5"
           },
           {
             "attachments": null,
             "childes_order": [],
             "color": null,
-            "completed_at": "2025-08-17T21:15:49.529926Z",
+            "completed_at": "2025-08-19T17:35:20.631417Z",
             "end": null,
-            "id": "4332e1fd-669c-4b54-adb8-b76e974f18ba",
+            "id": "056ecaa8-66df-47ca-b315-a8dfa0aa47ac",
             "interval_id": null,
             "is_background": false,
             "is_completed": true,
@@ -1537,7 +1537,7 @@
       }
     }
   },
-  "GET /api/tasks/get_tasks?list_id=5d5cd58d-cab3-46a4-b6ad-e2ec9a771f2a": {
+  "GET /api/tasks/get_tasks?list_id=95b6aed5-d047-4e04-a8a8-3bf5d8d38ecf": {
     "request": {
       "data": null
     },
@@ -1550,14 +1550,14 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "a4b585ee-0e3d-441d-a07f-4d5f1f46d211",
+            "id": "2d2e86ef-d440-4386-b645-fed750d5d8a4",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
             "is_important": false,
             "is_infinite": false,
             "lists_ids": [
-              "5d5cd58d-cab3-46a4-b6ad-e2ec9a771f2a"
+              "95b6aed5-d047-4e04-a8a8-3bf5d8d38ecf"
             ],
             "note": null,
             "priority_id": null,
@@ -1575,7 +1575,7 @@
       }
     }
   },
-  "GET /api/tasks/get_tasks_by_ids?ids=a4b585ee-0e3d-441d-a07f-4d5f1f46d211": {
+  "GET /api/tasks/get_tasks_by_ids?ids=2d2e86ef-d440-4386-b645-fed750d5d8a4": {
     "request": {
       "data": null
     },
@@ -1588,14 +1588,14 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "a4b585ee-0e3d-441d-a07f-4d5f1f46d211",
+            "id": "2d2e86ef-d440-4386-b645-fed750d5d8a4",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
             "is_important": false,
             "is_infinite": false,
             "lists_ids": [
-              "5d5cd58d-cab3-46a4-b6ad-e2ec9a771f2a"
+              "95b6aed5-d047-4e04-a8a8-3bf5d8d38ecf"
             ],
             "note": null,
             "priority_id": null,
@@ -1616,8 +1616,8 @@
   "PUT /api/tasks/link_task": {
     "request": {
       "data": {
-        "task_id": "8b19c104-e8a7-40b6-a492-3fe4f47468e9",
-        "target_id": "649e7074-2204-4417-a6a8-e817f034c0cb",
+        "task_id": "4a03dd6c-fb1d-4ab1-b02d-1c511de01067",
+        "target_id": "8c71d615-55c0-413f-95bd-21432799bc88",
         "target_type": "list"
       }
     },
@@ -1627,10 +1627,10 @@
         "target": {
           "background_tasks_count": 0,
           "childes_order": [
-            "8b19c104-e8a7-40b6-a492-3fe4f47468e9"
+            "4a03dd6c-fb1d-4ab1-b02d-1c511de01067"
           ],
           "deleted": false,
-          "id": "649e7074-2204-4417-a6a8-e817f034c0cb",
+          "id": "8c71d615-55c0-413f-95bd-21432799bc88",
           "important_tasks_count": 0,
           "in_general_list": true,
           "order": 0,
@@ -1644,14 +1644,14 @@
           "color": null,
           "completed_at": null,
           "end": null,
-          "id": "8b19c104-e8a7-40b6-a492-3fe4f47468e9",
+          "id": "4a03dd6c-fb1d-4ab1-b02d-1c511de01067",
           "interval_id": null,
           "is_background": false,
           "is_completed": false,
           "is_important": false,
           "is_infinite": false,
           "lists_ids": [
-            "649e7074-2204-4417-a6a8-e817f034c0cb"
+            "8c71d615-55c0-413f-95bd-21432799bc88"
           ],
           "note": null,
           "priority_id": null,
@@ -1668,7 +1668,7 @@
       }
     }
   },
-  "GET /api/tasks/get_tasks?list_id=382dde69-e374-441e-8a3d-6e4771fde438": {
+  "GET /api/tasks/get_tasks?list_id=147bb3a8-9957-418d-b9b0-9a4666063ff1": {
     "request": {
       "data": null
     },
@@ -1681,14 +1681,14 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "46f2e150-f252-495f-a2e0-77674e6bb8b6",
+            "id": "6a1e7b43-42d8-43b6-807d-86a870195e28",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
             "is_important": false,
             "is_infinite": false,
             "lists_ids": [
-              "382dde69-e374-441e-8a3d-6e4771fde438"
+              "147bb3a8-9957-418d-b9b0-9a4666063ff1"
             ],
             "note": null,
             "priority_id": null,
@@ -1706,7 +1706,7 @@
       }
     }
   },
-  "GET /api/tasks/get_subtasks?parent_task_id=13a1e5f8-24bf-4806-9a93-52964e4752db": {
+  "GET /api/tasks/get_subtasks?parent_task_id=cf8ece18-5985-4bd7-97c4-57d5b2a63aec": {
     "request": {
       "data": null
     },
@@ -1719,7 +1719,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "57a26ebd-7109-4bf9-858f-859d4ba864d0",
+            "id": "1f294af1-31b7-42b2-965f-6aea986b45e7",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -1755,7 +1755,7 @@
   "PUT /api/tasks/add_to_general_list": {
     "request": {
       "data": {
-        "item_id": "d658adfd-a97f-4b2c-a26d-115382b02a5f",
+        "item_id": "2c91d5f0-fd61-4912-bdaa-ad66bcd549ca",
         "in_general_list": true
       }
     },
@@ -1768,9 +1768,9 @@
   "PUT /api/tasks/move_items": {
     "request": {
       "data": {
-        "source_id": "d658adfd-a97f-4b2c-a26d-115382b02a5f",
+        "source_id": "2c91d5f0-fd61-4912-bdaa-ad66bcd549ca",
         "source_type": "list",
-        "target_id": "77f16c5e-a732-4693-a1d0-9123333c7729",
+        "target_id": "016067ca-28bc-4127-b233-0922b0ef725d",
         "target_type": "group",
         "source_parent_id": "generalList",
         "source_parent_type": null
@@ -1781,10 +1781,10 @@
         "old_parents": [],
         "parent": {
           "childes_order": [
-            "d658adfd-a97f-4b2c-a26d-115382b02a5f"
+            "2c91d5f0-fd61-4912-bdaa-ad66bcd549ca"
           ],
           "deleted": false,
-          "id": "77f16c5e-a732-4693-a1d0-9123333c7729",
+          "id": "016067ca-28bc-4127-b233-0922b0ef725d",
           "in_general_list": true,
           "order": 0,
           "title": "Group 1",
@@ -1794,7 +1794,7 @@
           "background_tasks_count": 0,
           "childes_order": [],
           "deleted": false,
-          "id": "d658adfd-a97f-4b2c-a26d-115382b02a5f",
+          "id": "2c91d5f0-fd61-4912-bdaa-ad66bcd549ca",
           "important_tasks_count": 0,
           "in_general_list": false,
           "order": 0,
@@ -1806,7 +1806,7 @@
       }
     }
   },
-  "DELETE /api/tasks/task_type_groups/0b8eac7e-56d6-43ce-b81c-d03dcd05e1fc": {
+  "DELETE /api/tasks/task_type_groups/ae145964-331f-4e50-98d9-08310c9871fe": {
     "request": {
       "data": null
     },
@@ -1816,7 +1816,7 @@
       }
     }
   },
-  "DELETE /api/tasks/task_type_groups/017a1a9a-f7b2-482e-abea-05a52d4fb051": {
+  "DELETE /api/tasks/task_type_groups/63a9ef80-71a5-4738-ba33-b7bea4768378": {
     "request": {
       "data": null
     },
@@ -1832,37 +1832,37 @@
     },
     "response": {
       "data": {
-        "4c1bc30a-9add-4094-8fd3-bf1e0d3aff7d": {
+        "cc963f79-9048-4062-999c-5cad5c0cbbb5": {
           "color": null,
           "description": null,
-          "id": "4c1bc30a-9add-4094-8fd3-bf1e0d3aff7d",
-          "is_active": true,
-          "name": "Группа 1",
-          "order": null,
-          "user_id": "3fcc2383-56c3-4650-8d72-7e6aeae04da8"
-        },
-        "566c82d8-dbbb-4792-bc08-18a38cd60aa6": {
-          "color": null,
-          "description": null,
-          "id": "566c82d8-dbbb-4792-bc08-18a38cd60aa6",
-          "is_active": true,
-          "name": "Группа 2",
-          "order": null,
-          "user_id": "3fcc2383-56c3-4650-8d72-7e6aeae04da8"
-        },
-        "816ade70-0955-49ba-9109-fd9e15b081dc": {
-          "color": null,
-          "description": null,
-          "id": "816ade70-0955-49ba-9109-fd9e15b081dc",
+          "id": "cc963f79-9048-4062-999c-5cad5c0cbbb5",
           "is_active": true,
           "name": "Группа 3",
           "order": null,
-          "user_id": "3fcc2383-56c3-4650-8d72-7e6aeae04da8"
+          "user_id": "9f690832-7ae2-4775-836e-b8a354843ec3"
+        },
+        "ec800023-016d-4452-a80d-d0fe90e8dddb": {
+          "color": null,
+          "description": null,
+          "id": "ec800023-016d-4452-a80d-d0fe90e8dddb",
+          "is_active": true,
+          "name": "Группа 2",
+          "order": null,
+          "user_id": "9f690832-7ae2-4775-836e-b8a354843ec3"
+        },
+        "fb0f1871-293a-4b41-9a77-84339e89ec98": {
+          "color": null,
+          "description": null,
+          "id": "fb0f1871-293a-4b41-9a77-84339e89ec98",
+          "is_active": true,
+          "name": "Группа 1",
+          "order": null,
+          "user_id": "9f690832-7ae2-4775-836e-b8a354843ec3"
         }
       }
     }
   },
-  "PUT /api/tasks/task_type_groups/4778bbea-4c75-4bde-a145-db7cb3c5fc6a": {
+  "PUT /api/tasks/task_type_groups/e763ba95-72d7-4230-8b4f-8e3df702a265": {
     "request": {
       "data": {
         "name": "Обновленная группа",
@@ -1876,15 +1876,15 @@
       "data": {
         "color": "#FF00FF",
         "description": "Обновленное описание",
-        "id": "4778bbea-4c75-4bde-a145-db7cb3c5fc6a",
+        "id": "e763ba95-72d7-4230-8b4f-8e3df702a265",
         "is_active": false,
         "name": "Обновленная группа",
         "order": 2,
-        "user_id": "a34e3b19-eb02-4bed-983a-4693843fe727"
+        "user_id": "381b5934-eee1-4c2f-bd6d-4f6ba73344f1"
       }
     }
   },
-  "PUT /api/tasks/task_type_groups/cd8b3f91-51f2-4ac5-9cfd-350a169859a8": {
+  "PUT /api/tasks/task_type_groups/1ef8f4ab-10a3-48ec-a9b8-ffbc447a0972": {
     "request": {
       "data": {
         "name": "Новое имя группы"
@@ -1894,15 +1894,15 @@
       "data": {
         "color": "#00FFFF",
         "description": null,
-        "id": "cd8b3f91-51f2-4ac5-9cfd-350a169859a8",
+        "id": "1ef8f4ab-10a3-48ec-a9b8-ffbc447a0972",
         "is_active": true,
         "name": "Новое имя группы",
         "order": 3,
-        "user_id": "f98e3916-291e-4eaa-9c34-83503c8b0809"
+        "user_id": "c7108c30-0895-49c8-bc17-761ca1c0119b"
       }
     }
   },
-  "PUT /api/tasks/task_type_groups/84fcc226-bb87-427e-b53a-d4bfadaed4f3": {
+  "PUT /api/tasks/task_type_groups/5bdedacf-ae4f-4c7d-99df-aaf6464e3f37": {
     "request": {
       "data": {}
     },
@@ -1910,15 +1910,15 @@
       "data": {
         "color": null,
         "description": null,
-        "id": "84fcc226-bb87-427e-b53a-d4bfadaed4f3",
+        "id": "5bdedacf-ae4f-4c7d-99df-aaf6464e3f37",
         "is_active": true,
         "name": "Группа для обновления с пустыми данными",
         "order": null,
-        "user_id": "73fb52e5-90d8-4fcd-bfa2-1c98b494d538"
+        "user_id": "d00f699f-de0c-44be-9951-59bfa6dee656"
       }
     }
   },
-  "DELETE /api/tasks/task_types/a45d1afc-56f8-4ec1-bd09-7a2d0d9cfffd": {
+  "DELETE /api/tasks/task_types/36076449-9220-45d8-86d6-af7eb0ba8b1b": {
     "request": {
       "data": null
     },
@@ -1928,7 +1928,7 @@
       }
     }
   },
-  "DELETE /api/tasks/task_types/78038859-44ba-4f22-ac63-b1460e95bcc8": {
+  "DELETE /api/tasks/task_types/8529a907-758c-4acd-ad42-725aab6d1992": {
     "request": {
       "data": null
     },
@@ -1944,47 +1944,47 @@
     },
     "response": {
       "data": {
-        "2401f197-8178-477f-8913-875110aeb0f2": {
+        "3bd6764a-0bb9-40ef-a495-7c6dfc3aeeae": {
           "color": "#3788D8",
           "description": null,
-          "group_id": "4f38cd36-59d6-491f-ad1a-bc2dc78f0f1d",
-          "id": "2401f197-8178-477f-8913-875110aeb0f2",
+          "group_id": "b0717c80-81c6-4bb4-bfee-5df87bc7c18a",
+          "id": "3bd6764a-0bb9-40ef-a495-7c6dfc3aeeae",
           "is_active": true,
           "name": "Тип 3",
           "order": null,
-          "user_id": "98ecea27-925b-4c4c-883b-3ec012221da6"
+          "user_id": "4d14aec8-e74a-4dab-a605-16266e5f9ab8"
         },
-        "c8b69c76-99b0-4c90-a668-765202e06c1d": {
+        "bcbd799d-076a-40e8-b930-e6dec92cfce9": {
           "color": "#3788D8",
           "description": null,
-          "group_id": "4f38cd36-59d6-491f-ad1a-bc2dc78f0f1d",
-          "id": "c8b69c76-99b0-4c90-a668-765202e06c1d",
-          "is_active": true,
-          "name": "Тип 2",
-          "order": null,
-          "user_id": "98ecea27-925b-4c4c-883b-3ec012221da6"
-        },
-        "fd2f302d-10a3-4c8d-900f-4b8026a033bb": {
-          "color": "#3788D8",
-          "description": null,
-          "group_id": "4f38cd36-59d6-491f-ad1a-bc2dc78f0f1d",
-          "id": "fd2f302d-10a3-4c8d-900f-4b8026a033bb",
+          "group_id": "b0717c80-81c6-4bb4-bfee-5df87bc7c18a",
+          "id": "bcbd799d-076a-40e8-b930-e6dec92cfce9",
           "is_active": true,
           "name": "Тип 1",
           "order": null,
-          "user_id": "98ecea27-925b-4c4c-883b-3ec012221da6"
+          "user_id": "4d14aec8-e74a-4dab-a605-16266e5f9ab8"
+        },
+        "da99bc8a-e193-4b87-9afe-8d698272fd6b": {
+          "color": "#3788D8",
+          "description": null,
+          "group_id": "b0717c80-81c6-4bb4-bfee-5df87bc7c18a",
+          "id": "da99bc8a-e193-4b87-9afe-8d698272fd6b",
+          "is_active": true,
+          "name": "Тип 2",
+          "order": null,
+          "user_id": "4d14aec8-e74a-4dab-a605-16266e5f9ab8"
         }
       }
     }
   },
-  "PUT /api/tasks/task_types/18f3fbca-fe0e-4443-b987-67dcc17c159b": {
+  "PUT /api/tasks/task_types/776b9d80-3b0e-4590-ba25-6a7732a22108": {
     "request": {
       "data": {
         "name": "Обновленный тип задачи",
         "color": "#FF00FF",
         "description": "Обновленное описание",
         "order": 2,
-        "group_id": "85b4fee9-2783-4141-ada6-92324565638a",
+        "group_id": "77596c21-c65b-47b7-a228-b8be78e691fd",
         "is_active": false
       }
     },
@@ -1992,16 +1992,16 @@
       "data": {
         "color": "#FF00FF",
         "description": "Обновленное описание",
-        "group_id": "85b4fee9-2783-4141-ada6-92324565638a",
-        "id": "18f3fbca-fe0e-4443-b987-67dcc17c159b",
+        "group_id": "77596c21-c65b-47b7-a228-b8be78e691fd",
+        "id": "776b9d80-3b0e-4590-ba25-6a7732a22108",
         "is_active": false,
         "name": "Обновленный тип задачи",
         "order": 2,
-        "user_id": "6627a8ac-178f-46fa-9844-ee3ca2103c30"
+        "user_id": "9a22f8d1-80e3-4ab2-9280-b0210799e4be"
       }
     }
   },
-  "PUT /api/tasks/task_types/6929e0fb-56c1-4d3c-a5a4-b69750f35957": {
+  "PUT /api/tasks/task_types/a2d611af-1c82-4d84-90af-adf8f8ff7a06": {
     "request": {
       "data": {
         "name": "Новое имя типа задачи"
@@ -2012,15 +2012,15 @@
         "color": "#00FFFF",
         "description": null,
         "group_id": null,
-        "id": "6929e0fb-56c1-4d3c-a5a4-b69750f35957",
+        "id": "a2d611af-1c82-4d84-90af-adf8f8ff7a06",
         "is_active": true,
         "name": "Новое имя типа задачи",
         "order": 3,
-        "user_id": "2fe0e49c-6635-46fc-b31b-4c52396853ec"
+        "user_id": "9fab2f97-ad3f-4dfb-9121-51a296793c1b"
       }
     }
   },
-  "PUT /api/tasks/task_types/a9ffaf25-ebdb-4ba6-a391-cb92dd7ab329": {
+  "PUT /api/tasks/task_types/74b74103-fe1c-44eb-aa57-29e77b1e19b6": {
     "request": {
       "data": {}
     },
@@ -2029,15 +2029,15 @@
         "color": "#3788D8",
         "description": null,
         "group_id": null,
-        "id": "a9ffaf25-ebdb-4ba6-a391-cb92dd7ab329",
+        "id": "74b74103-fe1c-44eb-aa57-29e77b1e19b6",
         "is_active": true,
         "name": "Тип задачи для обновления с пустыми данными",
         "order": null,
-        "user_id": "a1da5326-9942-47fc-a37d-4ed50eb94119"
+        "user_id": "1fc119b2-59c5-463e-a455-137873107889"
       }
     }
   },
-  "PUT /api/tasks/task_types/e68b0168-a5ba-43b3-81c8-bff84ad5f5b7": {
+  "PUT /api/tasks/task_types/9dabf9e9-f433-407d-8c04-9335d8fda43e": {
     "request": {
       "data": {
         "name": "Обновленный тип",
@@ -2050,15 +2050,15 @@
         "color": "#4CAF50",
         "description": "Новое описание",
         "group_id": null,
-        "id": "e68b0168-a5ba-43b3-81c8-bff84ad5f5b7",
+        "id": "9dabf9e9-f433-407d-8c04-9335d8fda43e",
         "is_active": true,
         "name": "Обновленный тип",
         "order": null,
-        "user_id": "8172059b-da4b-486b-b61b-ca1faca58a76"
+        "user_id": "75d1aca5-5adc-4365-ac9f-e1774406645b"
       }
     }
   },
-  "DELETE /api/tasks/task_types/1d80e71f-1630-4996-bf03-73894ac00f2a": {
+  "DELETE /api/tasks/task_types/3893ef34-6b21-4f20-a7f6-9a8b8de23e22": {
     "request": {
       "data": null
     },
@@ -2068,7 +2068,7 @@
       }
     }
   },
-  "PUT /api/tasks/task_type_groups/5ff17640-2bd6-4def-b3f6-e67fafa106aa": {
+  "PUT /api/tasks/task_type_groups/6355c6ca-1f5c-4342-bfeb-0191e18c9399": {
     "request": {
       "data": {
         "name": "Обновленная группа",
@@ -2079,15 +2079,15 @@
       "data": {
         "color": "#E91E63",
         "description": "Описание группы",
-        "id": "5ff17640-2bd6-4def-b3f6-e67fafa106aa",
+        "id": "6355c6ca-1f5c-4342-bfeb-0191e18c9399",
         "is_active": true,
         "name": "Обновленная группа",
         "order": null,
-        "user_id": "144e03bd-dd87-4e38-8e3f-63db34f6fc03"
+        "user_id": "bafee95d-bbe6-48c6-b7fa-69d74afc29e9"
       }
     }
   },
-  "DELETE /api/tasks/task_type_groups/5ff17640-2bd6-4def-b3f6-e67fafa106aa": {
+  "DELETE /api/tasks/task_type_groups/6355c6ca-1f5c-4342-bfeb-0191e18c9399": {
     "request": {
       "data": null
     },
@@ -2097,7 +2097,7 @@
       }
     }
   },
-  "GET /api/tasks/get_tasks?list_id=ea05c652-b9e6-4c19-af70-03d2dab06763": {
+  "GET /api/tasks/get_tasks?list_id=31dee555-bfc0-4c49-beac-8030b7a1f655": {
     "request": {
       "data": null
     },
@@ -2110,14 +2110,14 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "a217f5ae-560e-4082-b1c9-3a0488831986",
+            "id": "e93f6f58-917d-4b23-93a9-9747fca3a453",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
             "is_important": false,
             "is_infinite": false,
             "lists_ids": [
-              "ea05c652-b9e6-4c19-af70-03d2dab06763"
+              "31dee555-bfc0-4c49-beac-8030b7a1f655"
             ],
             "note": null,
             "priority_id": null,
@@ -2135,7 +2135,7 @@
       }
     }
   },
-  "GET /api/tasks/get_tasks_by_ids?ids=3de2bcb7-015d-450e-86a9-64474e155282": {
+  "GET /api/tasks/get_tasks_by_ids?ids=6e838860-0906-4375-ad26-dd7b52e93bb6": {
     "request": {
       "data": null
     },
@@ -2148,7 +2148,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "3de2bcb7-015d-450e-86a9-64474e155282",
+            "id": "6e838860-0906-4375-ad26-dd7b52e93bb6",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,
@@ -2171,7 +2171,7 @@
       }
     }
   },
-  "GET /api/tasks/get_subtasks?parent_task_id=b9ae5b7b-957a-449e-bc5d-0d78ff798bad": {
+  "GET /api/tasks/get_subtasks?parent_task_id=f9a76acf-0726-4b98-97cc-87e88923d080": {
     "request": {
       "data": null
     },
@@ -2184,7 +2184,7 @@
             "color": null,
             "completed_at": null,
             "end": null,
-            "id": "081e0c3c-5177-4eeb-8abf-3afa489babc8",
+            "id": "18b79493-6414-48a7-a763-05f9ae5378c1",
             "interval_id": null,
             "is_background": false,
             "is_completed": false,

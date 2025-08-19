@@ -22,9 +22,11 @@ if ('serviceWorker' in navigator) {
 
 
 // Performance monitoring
-if (import.meta.env.MODE === 'development') {
-  const mainStart = performance.now();
-  window.mainStart = mainStart;
+if (import.meta.env.MODE === 'production') {
+  // const mainStart = performance.now();
+  // window.mainStart = mainStart;
+  console.log = () => {}; // Disable console.log in production
+  console.warn = () => {}; // Disable console.warn in production
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(

@@ -11,8 +11,6 @@ import SdStorageIcon from "@mui/icons-material/SdStorage";
 import EditCalendarIcon from "@mui/icons-material/EditCalendar";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import { useDispatch } from 'react-redux';
-import { addContainer } from '../../store/dashboardSlice';
 import useContainer from './useContainer';
 
 const actions = [
@@ -29,7 +27,7 @@ const actions = [
     // { icon: <ChecklistIcon />, name: "ToDo", type: "tasksTree" },
 ];
 function ContainerSpeedDial() {
-    const { addContainer, containers } = useContainer();
+    const { addContainer } = useContainer();
     const availableActions = actions;
 
     return (

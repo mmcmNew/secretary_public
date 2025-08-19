@@ -4,6 +4,7 @@ import { useGetMeQuery } from '../../store/api/authApi';
 import { setCredentials, logout, authLoadingDone } from '../../store/authSlice';
 import { Box, CircularProgress } from '@mui/material';
 import PropTypes from 'prop-types';
+import { dashboardApi } from '../../store/api/dashboardApi';
 
 function AuthInitializer({ children }) {
   const dispatch = useDispatch();
@@ -28,6 +29,7 @@ function AuthInitializer({ children }) {
       if (isSuccess && userData) {
         // Если пользователь успешно загружен, сохраняем его данные
         dispatch(setCredentials({ user: userData, accessToken }));
+        dispatch(dashboardApi.endpoints.getDashboard.initiate(userData.last_dashboard_id));
       } else if (isError && accessToken) {
         // Если токен есть, но он невалиден, выходим из системы
         dispatch(logout());
