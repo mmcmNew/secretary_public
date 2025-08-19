@@ -33,7 +33,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.secretary.rule=Host(`tasks.ndomen.online`)"
-      - "traefik.http.routers.secretary.entrypoints=websecure"
+      - "traefik.http.routers.secretary.entrypoints=web, websecure"
       - "traefik.http.routers.secretary.tls.certresolver=mytlschallenge"
       - "traefik.http.routers.secretary.tls=true"
       - "traefik.http.services.secretary.loadbalancer.server.port=5100"
