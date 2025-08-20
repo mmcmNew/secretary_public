@@ -1,9 +1,9 @@
 name: Release Workflow
 
 on:
-  push:
-    tags:
-      - 'v*.*.*' # More specific tag pattern, can be adjusted to 'v*' if needed
+  # push:
+  #   tags:
+  #     - 'v*.*.*' # More specific tag pattern, can be adjusted to 'v*' if needed
   workflow_dispatch: # Добавляем ручной запуск
     inputs:
       build_and_push_docker:
