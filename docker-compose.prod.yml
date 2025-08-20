@@ -12,17 +12,17 @@ services:
       - postgres
     # command: tail -f /dev/null
     environment:
-      MODE: docker
-      HOST: 0.0.0.0
-      SERVER_PORT: 5100
-      SECRET_KEY: fa918053300bad9fe292417d94894510bc79d93d8aa585c196babe6487709142085986c17cd8d0add3e1812b82a6b63ed830
-      JWT_SECRET_KEY: 1196f1d717c5eceeaf47f14d72a8e80b1fb4269897a43f6acb90660164cec3292e65d91de5dd3ad7bc5c46df91f1c31d007c
-      AI_WEBHOOK_URL: https://n8n.ndomen.online/webhook/4999da23-b30e-494b-9435-9948be5ab8d4
-      AI_IMAGE_WEBHOOK_URL: https://n8n.ndomen.online/webhook/2da3e25d-1ff6-41f9-94e8-d55d43c1247b
-      SESSION_COOKIE_SECURE: "True"
-      SESSION_COOKIE_HTTPONLY: "True"
-      PERMANENT_SESSION_LIFETIME: "3600"
-      DATABASE_URL: postgresql+psycopg2://secretary:secretary@postgres:5432/secretary_db
+      MODE: ${MODE}
+      HOST: ${HOST}
+      SERVER_PORT: ${SERVER_PORT}
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      AI_WEBHOOK_URL: ${AI_WEBHOOK_URL}
+      AI_IMAGE_WEBHOOK_URL: ${AI_IMAGE_WEBHOOK_URL}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE}
+      SESSION_COOKIE_HTTPONLY: ${SESSION_COOKIE_HTTPONLY}
+      PERMANENT_SESSION_LIFETIME: ${PERMANENT_SESSION_LIFETIME}
+      DATABASE_URL: ${DATABASE_URL}
 
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:5100/ || exit 1"]

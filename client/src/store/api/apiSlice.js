@@ -27,37 +27,12 @@ const isTestEnv = (() => {
   return false;
 })();
 
-// Allow overriding the backend URL used during tests via BASE_API_URL env var.
-// Default to the local server with SSL and the same /api prefix used in the app.
-const resolveEnvBaseUrl = () => {
-  // Prefer Node-style env when available (Vitest running under Node).
-  try {
-    const proc = typeof globalThis !== 'undefined' ? globalThis['process'] : undefined;
-    if (proc && proc.env && proc.env.BASE_API_URL) {
-      return proc.env.BASE_API_URL;
-    }
-  } catch {
-    // ignore
-  }
 
-  // Next try Vite/Vitest import.meta.env
-  try {
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_API_URL) {
-      return import.meta.env.BASE_API_URL;
-    }
-  } catch {
-    // import.meta might be unavailable in some runtimes; ignore errors
-  }
 
-  return null;
-};
 
-// The Flask app registers dashboard routes at the application root (e.g. '/dashboard/last'),
-// not under '/api'. For tests that call dashboard endpoints use the server root.
-const testBaseUrl = resolveEnvBaseUrl() || 'https://localhost:5100';
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: isTestEnv ? testBaseUrl : '/',
+  baseUrl: '/',
   prepareHeaders: (headers, { getState, endpoint }) => {
     const accessToken = getState().auth.accessToken;
     if (accessToken) {

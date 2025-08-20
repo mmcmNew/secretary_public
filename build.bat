@@ -3,7 +3,7 @@ chcp 65001
 
 REM 1. Сборка клиента
 cd client
-call npm install
+@REM call npm install
 call npm run build
 cd ..
 
@@ -16,9 +16,9 @@ xcopy "client\dist" "server\app\static\" /s /e /i
 REM 5. Сборка контейнера
 REM 5. Сборка контейнера
 REM Usage: build.bat [version-tag]
-REM Example: build.bat v1.2.1  -> will produce playermmcm/secretary-app:v1.2.1 and playermmcm/secretary-app:latest
+REM Example: build.bat v1.2.2  -> will produce playermmcm/secretary-app:v1.2.1 and playermmcm/secretary-app:latest
 
-docker build -t playermmcm/secretary-app:v1.2.1 -t playermmcm/secretary-app:latest .
+docker build -t playermmcm/secretary-app:v1.2.2 -t playermmcm/secretary-app:latest .
 
-REM 6. Запуск контейнера
-docker compose --env-file .env.docker up -d --build
+@REM REM 6. Запуск контейнера
+@REM docker compose --env-file .env.docker up -d --build
