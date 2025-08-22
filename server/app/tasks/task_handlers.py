@@ -127,9 +127,14 @@ def get_tasks_by_ids(task_ids, user_id=None):
     return {'tasks': [t.to_dict() for t in tasks]}, 200
 
 
-def add_task(data, user_id=None):
+def add_task(data, user_id=None, client_timezone='UTC'):
     current_app.logger.info(f'add_task: {data}')
     task_title = data.get('title', '')
+    tz_name = client_timezone or 'UTC'
+    try:
+        tz = pytz.timezone(tz_name)
+    except Exception:
+        tz = pytz.UTC
     if user_id is None:
         raise ValueError("user_id must be provided for add_task")
     if not task_title or not task_title.strip():
@@ -142,6 +147,7 @@ def add_task(data, user_id=None):
     is_important = data.get('is_important', False)
     updated_list_dict = {}
     task_type_id = data.get('type_id', None)
+    is_completed = data.get('is_completed', False)
 
     if end:
         end = _parse_iso_datetime(end)
@@ -150,16 +156,22 @@ def add_task(data, user_id=None):
 
     match list_id:
         case 'my_day':
-            end = datetime.now(timezone.utc) + timedelta(hours=2)
-            start = datetime.now(timezone.utc) + timedelta(hours=1)
+            now_in_tz = datetime.now(tz)
+            start_time = now_in_tz.replace(hour=12, minute=0, second=0, microsecond=0)
+            end_time = now_in_tz.replace(hour=13, minute=0, second=0, microsecond=0)
+            start = start_time.astimezone(pytz.UTC)
+            end = end_time.astimezone(pytz.UTC)
+            current_app.logger.info(f'add_task: my_day task, start: {start}, end: {end}, tz: {tz}')
         case 'important':
             is_important = True
         case 'background':
             is_background = True
 
     new_task = Task(title=task_title, end=end, start=start, is_important=is_important,
-                    is_background=is_background, user_id=user_id, type_id=task_type_id)
+                    is_background=is_background, user_id=user_id, type_id=task_type_id, 
+                    is_completed=is_completed)
     db.session.add(new_task)
+    db.session.flush()  # Сохраняем, чтобы получить ID задачи
 
     # Проверяем, является ли list_id UUID, а не системным именем
     try:
@@ -186,7 +198,21 @@ def add_task(data, user_id=None):
 
             db.session.add(updated_list)
 
-    db.session.commit()
+    db.session.commit() # Commit here to ensure triggers run and counts are updated
+
+    if list_id and is_uuid:
+        # Re-fetch the updated_list to get the latest counts from the database
+        db.session.refresh(updated_list)
+        updated_list_dict = updated_list.to_dict()
+    elif not is_uuid: # It's a system list
+        from .list_handlers import get_lists_and_groups_data
+        all_lists_data = get_lists_and_groups_data(user_id=user_id)
+        for lst in all_lists_data.get('default_lists', []):
+            if lst['id'] == list_id:
+                updated_list_dict = lst
+                break
+        # If it's a system list, and it's not found in default_lists, it means it's a new system list
+        # or an edge case. For now, we assume it's found.
 
     return {'success': True, 'message': 'Задача добавлена', 'task': new_task.to_dict(),
                 'task_list': updated_list_dict}, 200
@@ -277,6 +303,7 @@ def change_task_status(data, user_id=None):
         return {'success': False, 'message': 'Task not found'}, 404
 
     completed_dt = datetime.now(timezone.utc) if is_completed else None
+    completed_at_iso = completed_dt.isoformat() if completed_dt else None
 
     # Логика для повторяющихся задач
     if task.interval_id and task.start and is_completed:
@@ -286,7 +313,7 @@ def change_task_status(data, user_id=None):
         
         override_data = {
             'is_completed': True,
-            'completed_at': completed_dt.isoformat() + 'Z'
+            'completed_at': completed_at_iso
         }
 
         if not override:
@@ -302,7 +329,12 @@ def change_task_status(data, user_id=None):
             override.data = {**(override.data or {}), **override_data}
         
         db.session.commit()
-        return {'success': True, 'changed_ids': [task.id]}, 200
+        return {
+            'success': True, 
+            'changed_ids': [task.id], 
+            'is_completed': True, 
+            'completed_at': completed_at_iso
+        }, 200
 
     # Логика для обычных задач
     task.is_completed = is_completed
@@ -311,15 +343,25 @@ def change_task_status(data, user_id=None):
     # Обновляем все подзадачи
     all_subtasks = collect_all_subtasks(task)
     for subtask in all_subtasks:
-        subtask.is_completed = is_completed
-        subtask.completed_at = completed_dt
+        if is_completed:
+            if not subtask.is_completed:
+                subtask.is_completed = is_completed
+                subtask.completed_at = completed_dt
+        else:
+            subtask.is_completed = is_completed
+            subtask.completed_at = None
     
     db.session.add(task)
     db.session.add_all(all_subtasks)
     db.session.commit()
 
     changed_ids = [task.id] + [sub.id for sub in all_subtasks]
-    return {'success': True, 'changed_ids': changed_ids}, 200
+    return {
+        'success': True, 
+        'changed_ids': changed_ids, 
+        'is_completed': is_completed, 
+        'completed_at': completed_at_iso
+    }, 200
 
 
 def collect_all_subtasks(root_task):

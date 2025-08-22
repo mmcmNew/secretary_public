@@ -9,6 +9,8 @@ test.describe('Регистрация', () => {
     await page.getByRole('textbox', { name: 'Email' }).fill('newuser@example.com');
     await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: 'Register' }).click();
+
+    await page.getByRole('button', { name: 'ToDo' }).toBeVisible()
     
     // Проверка успешной регистрации
     await expect(page).toHaveURL('/');

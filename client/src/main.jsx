@@ -22,7 +22,7 @@ if ('serviceWorker' in navigator) {
 
 
 // Performance monitoring
-if (import.meta.env.MODE === 'production') {
+if (import.meta.env.MODE === 'docker') {
   // const mainStart = performance.now();
   // window.mainStart = mainStart;
   console.log = () => {}; // Disable console.log in production

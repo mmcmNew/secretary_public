@@ -74,17 +74,18 @@ function MainContainerMobile() {
 
     function createComponent(type) {
         if (type === "tasks" && isMobile) {
-            type = "tasksMobile"; // Если мобильная версия, заменяем тип
+            type = "tasks"; // Если мобильная версия, заменяем тип
         }
 
         const componentConfig = containerTypes[type];
+        console.log("createComponent", type, componentConfig);
 
         if (!componentConfig) {
             console.error(`Unknown container type: ${type}`);
             return null;
         }
 
-        const Component = componentConfig.content?.type;
+        const Component = componentConfig && componentConfig.content?.type;
         return <Component />;
     }
 

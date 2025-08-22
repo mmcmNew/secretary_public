@@ -7,7 +7,7 @@ const initialState = {
   selectedTask: null,
   isEditingTitle: false,
   editingTitle: '',
-  newTask: '',
+  // newTask: '',
   completedTasksOpen: true,
   expandedTasks: {},
   openGroups: {},
@@ -27,9 +27,9 @@ export const todoLayoutSlice = createSlice({
       state.isEditingTitle = action.payload.isEditing;
       state.editingTitle = action.payload.title || '';
     },
-    setNewTask: (state, action) => {
-      state.newTask = action.payload;
-    },
+    // setNewTask: (state, action) => {
+    //   state.newTask = action.payload;
+    // },
     setCompletedTasksOpen: (state, action) => {
       state.completedTasksOpen = action.payload;
     },
@@ -37,9 +37,9 @@ export const todoLayoutSlice = createSlice({
       const taskId = action.payload;
       state.expandedTasks[taskId] = !state.expandedTasks[taskId];
     },
-    resetNewTask: (state) => {
-      state.newTask = '';
-    },
+    // resetNewTask: (state) => {
+    //   state.newTask = '';
+    // },
     toggleGroup: (state, action) => {
       const groupId = action.payload;
       state.openGroups[groupId] = !state.openGroups[groupId];
@@ -62,10 +62,10 @@ export const {
   setSelectedListId, 
   setSelectedList,
   setEditingTitle, 
-  setNewTask, 
+  // setNewTask, 
   setCompletedTasksOpen, 
   toggleTaskExpanded,
-  resetNewTask,
+  // resetNewTask,
   toggleGroup, 
   setSelectedTaskId, 
   setSelectedTask,

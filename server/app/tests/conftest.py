@@ -39,6 +39,53 @@ def pytest_sessionfinish(session):
 
     with open("test_api_documentation.json", "w", encoding="utf-8") as f:
         json.dump(api_calls, f, indent=2, ensure_ascii=False)
+
+def document_api_call(original_open, *args, **kwargs):
+    """Wrapper for client.open to document API calls."""
+    # Сохраняем детали запроса
+    request_path = args[0] if args else kwargs.get('path')
+    request_method = kwargs.get('method', 'GET')
+    request_data = kwargs.get('data', None)
+    
+    # Выполняем запрос
+    response = original_open(*args, **kwargs)
+    
+    # Декодируем данные, если они в байтах
+    if isinstance(request_data, bytes):
+        request_data = request_data.decode('utf-8')
+    
+    response_data_bytes = response.data
+    response_data_str = response_data_bytes.decode('utf-8')
+
+    # Преобразуем JSON строки в словари для красивого вывода
+    try:
+        request_data = json.loads(request_data) if request_data else None
+    except json.JSONDecodeError:
+        pass # Оставляем как есть, если это не JSON
+        
+    try:
+        response_data = json.loads(response_data_str) if response_data_str else None
+    except json.JSONDecodeError:
+        response_data = response_data_str
+
+    request_key = f"{request_method} {request_path}"
+    
+    # Initialize the list if the key is not present
+    if request_key not in api_calls:
+        api_calls[request_key] = []
+
+    # Add the new call to the list
+    api_calls[request_key].append({
+        'request': {
+            'data': request_data,
+        },
+        'response': {
+            'status_code': response.status_code,
+            'data': response_data,
+        }
+    })
+    
+    return response
 # --- End of documentation generation code ---
 
 @pytest.fixture(scope='session')
@@ -59,6 +106,10 @@ def app():
         
         # Добавляем начальные данные
         add_initial_test_data(db.session)
+        
+        # Создаем триггеры для счетчиков списков
+        from app.tasks.triggers import create_list_counter_triggers
+        create_list_counter_triggers()
         
         yield app
         
@@ -102,48 +153,7 @@ def auth_client(app, test_user, pytestconfig):
     if pytestconfig.getoption("docs"):
         documenting_original_open = client.open
         def open_with_docs(*args, **kwargs):
-            # Сохраняем детали запроса
-            request_path = args[0] if args else kwargs.get('path')
-            request_method = kwargs.get('method', 'GET')
-            request_data = kwargs.get('data', None)
-            
-            # Выполняем запрос
-            response = documenting_original_open(*args, **kwargs)
-            
-            # Декодируем данные, если они в байтах
-            if isinstance(request_data, bytes):
-                request_data = request_data.decode('utf-8')
-            
-            response_data_bytes = response.data
-            response_data_str = response_data_bytes.decode('utf-8')
-
-            # Преобразуем JSON строки в словари для красивого вывода
-            try:
-                request_data = json.loads(request_data) if request_data else None
-            except json.JSONDecodeError:
-                pass # Оставляем как есть, если это не JSON
-                
-            try:
-                response_data = json.loads(response_data_str) if response_data_str else None
-            except json.JSONDecodeError:
-                response_data = response_data_str
-
-            # Only record successful responses (status 200)
-            if response.status_code == 200:
-                request_key = f"{request_method} {request_path}"
-                
-                # Only record the first successful call for each key
-                if request_key not in api_calls:
-                    api_calls[request_key] = {
-                        'request': {
-                            'data': request_data,
-                        },
-                        'response': {
-                            'data': response_data,
-                        }
-                    }
-            
-            return response
+            return document_api_call(documenting_original_open, *args, **kwargs)
         client.open = open_with_docs
 
     yield client
@@ -176,48 +186,7 @@ def auth_client2(app, test_user2, pytestconfig):
     if pytestconfig.getoption("docs"):
         documenting_original_open = client.open
         def open_with_docs(*args, **kwargs):
-            # Сохраняем детали запроса
-            request_path = args[0] if args else kwargs.get('path')
-            request_method = kwargs.get('method', 'GET')
-            request_data = kwargs.get('data', None)
-            
-            # Выполняем запрос
-            response = documenting_original_open(*args, **kwargs)
-            
-            # Декодируем данные, если они в байтах
-            if isinstance(request_data, bytes):
-                request_data = request_data.decode('utf-8')
-            
-            response_data_bytes = response.data
-            response_data_str = response_data_bytes.decode('utf-8')
-
-            # Преобразуем JSON строки в словари для красивого вывода
-            try:
-                request_data = json.loads(request_data) if request_data else None
-            except json.JSONDecodeError:
-                pass # Оставляем как есть, если это не JSON
-                
-            try:
-                response_data = json.loads(response_data_str) if response_data_str else None
-            except json.JSONDecodeError:
-                response_data = response_data_str
-
-            # Only record successful responses (status 200)
-            if response.status_code == 200:
-                request_key = f"{request_method} {request_path}"
-                
-                # Only record the first successful call for each key
-                if request_key not in api_calls:
-                    api_calls[request_key] = {
-                        'request': {
-                            'data': request_data,
-                        },
-                        'response': {
-                            'data': response_data,
-                        }
-                    }
-            
-            return response
+            return document_api_call(documenting_original_open, *args, **kwargs)
         client.open = open_with_docs
 
     yield client

@@ -114,7 +114,9 @@ def add_object_route():
 def add_task_route():
     data = request.get_json()
     user_id = current_user.id
-    result, status_code = add_task(data, user_id)
+    client_timezone = request.headers.get('Time-Zone', 'UTC')
+    current_app.logger.info(f'add_task_route: headers {request.headers}')
+    result, status_code = add_task(data, user_id, client_timezone)
     response = jsonify(result)
     if status_code == 200:
         new_version = DataVersion.update_version('tasksVersion')
@@ -408,7 +410,7 @@ def get_fields_config():
         "color": {"id": 5, "type": "color", "name": "Цвет на календаре"},
         "divider2": {"id": 6, "type": "divider"},
         "reward": {"id": 7, "type": "toggle", "name": "Награда"},
-        "cost": {"id": 8, "type": "number", "name": "Добавить файл"},
+        "cost": {"id": 8, "type": "number", "name": "Стоимость"},
         "divider3": {"id": 9, "type": "divider"},
         "priority_id": {
             "id": 10,

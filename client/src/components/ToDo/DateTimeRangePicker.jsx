@@ -1,171 +1,107 @@
-import { Box, FormHelperText, IconButton, InputAdornment } from "@mui/material";
-import { DateTimePicker } from "@mui/x-date-pickers";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { Controller, useFormContext } from "react-hook-form";
-import dayjs from "dayjs";
-import ClearIcon from "@mui/icons-material/Clear";
-import CheckIcon from "@mui/icons-material/CheckCircle";
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { Box } from '@mui/material';
+import dayjs from 'dayjs';
 import 'dayjs/locale/ru';
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
+
 dayjs.locale('ru');
 
-import { useState, useRef } from "react";
+/**
+ * Компонент для выбора диапазона даты и времени с использованием Material-UI.
+ * @param {{
+ *   value: { start: string | null, end: string | null },
+ *   onChange: (value: { start: string | null, end: string | null }) => void,
+ * }} props
+ * @returns {JSX.Element}
+ */
+export default function DateTimeRangePicker({ value = {}, onChange }) {
+  const { start = null, end = null } = value;
 
-export default function DateTimeRangePickerField({ name = "startEnd", onValidBlur }) {
-    const { control, trigger, getValues } = useFormContext();
-    const [editing, setEditing] = useState({ start: false, end: false });
-    const [lastSent, setLastSent] = useState({ start: null, end: null });
-    const startInputRef = useRef();
-    const endInputRef = useRef();
+  const [internalStart, setInternalStart] = useState(start ? dayjs(start) : null);
+  const [internalEnd, setInternalEnd] = useState(end ? dayjs(end) : null);
 
-    // Универсальный обработчик для отправки
-    const handleSave = async (field) => {
-        let currentValue = getValues(name) || {};
-        const { start, end } = currentValue;
-        let valid = await trigger(name);
-        if (valid) {
-            onValidBlur?.({
-                start: start ? dayjs(start).toISOString() : null,
-                end: end ? dayjs(end).toISOString() : null,
-            });
-            setLastSent({ start, end });
-            setEditing((prev) => ({ ...prev, [field]: false }));
-        }
-    };
+  useEffect(() => {
+    setInternalStart(start ? dayjs(start) : null);
+  }, [start]);
 
-    return (
-        <Controller
-            name={name}
-            control={control}
-            rules={{
-                validate: (value = {}) => {
-                    const { start = null, end = null } = value;
-                    if (!start && !end) return true;
-                    if (!start || !end) return "Выберите дату и время начала и окончания";
-                    const startDate = dayjs(start);
-                    const endDate = dayjs(end);
-                    if (!startDate.isValid() || !endDate.isValid()) return "Некорректная дата";
-                    if (!startDate.isBefore(endDate)) return "Дата окончания должна быть позже даты начала";
-                    return true;
-                }
-            }}
-            render={({ field: { value = {}, onChange }, fieldState: { error } }) => {
-                const { start = null, end = null } = value;
-                const parsedStart = start ? dayjs(start) : null;
-                const parsedEnd = end ? dayjs(end) : null;
-                const isStartChanged = start !== lastSent.start;
-                const isEndChanged = end !== lastSent.end;
+  useEffect(() => {
+    setInternalEnd(end ? dayjs(end) : null);
+  }, [end]);
 
-                const handleStartChange = (newStart) => {
-                    onChange({ ...value, start: newStart });
-                    setEditing((prev) => ({ ...prev, start: true }));
-                };
+  const handleDateChange = () => {
+    let newStart = internalStart;
+    let newEnd = internalEnd;
 
-                const handleEndChange = (newEnd) => {
-                    onChange({ ...value, end: newEnd });
-                    setEditing((prev) => ({ ...prev, end: true }));
-                };
+    if (newStart && newEnd && newStart.isAfter(newEnd)) {
+      [newStart, newEnd] = [newEnd, newStart];
+    }
 
-                const clearStart = () => {
-                    onChange({ ...value, start: null });
-                    setEditing((prev) => ({ ...prev, start: true }));
-                };
+    if (newStart?.toISOString() !== start || newEnd?.toISOString() !== end) {
+      onChange({
+        start: newStart ? newStart.toISOString() : null,
+        end: newEnd ? newEnd.toISOString() : null,
+      });
+    }
+  };
 
-                const clearEnd = () => {
-                    onChange({ ...value, end: null });
-                    setEditing((prev) => ({ ...prev, end: true }));
-                };
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleDateChange();
+    }
+  };
 
-                return (
-                    <LocalizationProvider 
-                        dateAdapter={AdapterDayjs}
-                        adapterLocale="ru">
-                        <Box display="flex" gap={2} flexWrap="wrap" width="100%">
-                            <DateTimePicker
-                                label="Начало"
-                                format="DD.MM.YYYY HH:mm"
-                                value={parsedStart}
-                                onChange={handleStartChange}
-                                slotProps={{
-                                    textField: {
-                                        fullWidth: true,
-                                        error: !!error,
-                                        inputRef: startInputRef,
-                                        InputProps: {
-                                            endAdornment: (
-                                                <>
-                                                    {start && (
-                                                        <InputAdornment position="end">
-                                                            <IconButton onClick={clearStart} size="small">
-                                                                <ClearIcon />
-                                                            </IconButton>
-                                                        </InputAdornment>
-                                                    )}
-                                                    {/* Галочка всегда видна */}
-                                                    <InputAdornment position="end">
-                                                        <IconButton
-                                                            color="success"
-                                                            size="small"
-                                                            title="Сохранить"
-                                                            onClick={() => handleSave('start')}
-                                                        >
-                                                            <CheckIcon style={{ color: '#43a047' }} />
-                                                        </IconButton>
-                                                    </InputAdornment>
-                                                </>
-                                            )
-                                        },
-                                        onFocus: () => setEditing((prev) => ({ ...prev, start: true })),
-                                    }
-                                }}
-                            />
-                            <DateTimePicker
-                                label="Окончание"
-                                format="DD.MM.YYYY HH:mm"
-                                value={parsedEnd}
-                                onChange={handleEndChange}
-                                slotProps={{
-                                    textField: {
-                                        fullWidth: true,
-                                        error: !!error,
-                                        inputRef: endInputRef,
-                                        InputProps: {
-                                            endAdornment: (
-                                                <>
-                                                    {end && (
-                                                        <InputAdornment position="end">
-                                                            <IconButton onClick={clearEnd} size="small">
-                                                                <ClearIcon />
-                                                            </IconButton>
-                                                        </InputAdornment>
-                                                    )}
-                                                    {/* Галочка всегда видна */}
-                                                    <InputAdornment position="end">
-                                                        <IconButton
-                                                            color="success"
-                                                            size="small"
-                                                            title="Сохранить"
-                                                            onClick={() => handleSave('end')}
-                                                        >
-                                                            <CheckIcon style={{ color: '#43a047' }} />
-                                                        </IconButton>
-                                                    </InputAdornment>
-                                                </>
-                                            )
-                                        },
-                                        onFocus: () => setEditing((prev) => ({ ...prev, end: true })),
-                                    }
-                                }}
-                            />
-                            {error?.message && (
-                                <Box width="100%">
-                                    <FormHelperText error>{error.message}</FormHelperText>
-                                </Box>
-                            )}
-                        </Box>
-                    </LocalizationProvider>
-                );
-            }}
+  const handleStartChange = (date) => {
+    setInternalStart(date);
+  };
+
+  const handleEndChange = (date) => {
+    setInternalEnd(date);
+  };
+
+  return (
+    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ru">
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
+        <DateTimePicker
+          label="Начало"
+          clearable
+          value={internalStart}
+          onChange={handleStartChange}
+          ampm={false}
+          sx={{ width: '100%' }}
+          size="small"
+          slotProps={{
+            textField: { onKeyDown: handleKeyDown },
+            actionBar: {
+              actions: ['clear', 'cancel', 'accept'],
+            },
+          }}
         />
-    );
+        <DateTimePicker
+          label="Окончание"
+          clearable
+          value={internalEnd}
+          onChange={handleEndChange}
+          ampm={false}
+          sx={{ width: '100%' }}
+          size="small"
+          slotProps={{
+            textField: { onKeyDown: handleKeyDown },
+            actionBar: {
+              actions: ['clear', 'cancel', 'accept'],
+            },
+          }}
+        />
+      </Box>
+    </LocalizationProvider>
+  );
 }
+
+DateTimeRangePicker.displayName = 'DateTimeRangePicker'; // Set display name for better debugging
+DateTimeRangePicker.propTypes = {
+  value: PropTypes.object,
+  onChange: PropTypes.func,
+};

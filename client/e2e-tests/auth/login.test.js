@@ -11,6 +11,7 @@ test.describe('Аутентификация', () => {
     
     // Проверка успешного входа
     await expect(page).toHaveURL('/');
+    // await page.getByRole('button', { name: 'ToDo' }).toBeVisible(600);
     // После успешного входа пользователь попадает на главную страницу
   });
 

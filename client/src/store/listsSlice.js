@@ -142,7 +142,8 @@ export const listsApi = apiSlice.injectEndpoints({
               }
             })
           );
-        } catch {
+        } catch (error) {
+          console.error('Error updating cache:', error)
           // В случае ошибки инвалидируем теги, чтобы данные перезагрузились
           dispatch(listsApi.util.invalidateTags(['List']));
         }

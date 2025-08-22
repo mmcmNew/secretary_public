@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, memo, useCallback } from "react";
+import { useEffect, useState, memo } from "react";
 import { useForm, Controller, useFieldArray, FormProvider } from "react-hook-form";
 import {
     Box,
@@ -24,10 +24,9 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 import { renderTimeViewClock } from "@mui/x-date-pickers";
 import ColorPicker from "../ColorPicker";
-// import NewRecordDialog from "../JournalEditor/NewRecordDialog";
 import TaskTypeDialog from "../TaskTypeManager/TaskTypeDialog.jsx";
 import PropTypes from "prop-types";
-import DateTimeRangePickerField from "./DateTimeRangePicker.jsx";
+import DateTimeRangePicker from "./DateTimeRangePicker.jsx";
 import TimeRangePickerField from "./TimeRangePicker.jsx";
 
 function TaskEditor({
@@ -41,96 +40,67 @@ function TaskEditor({
     showJournalButton = true,
 }) {
     const methods = useForm({ defaultValues: { subtasks: [] } });
-    const { control, setValue, reset, watch, formState: { errors } } = methods;
+    const { control, setValue, reset, watch, formState: { errors }, getValues } = methods;
     const { fields: subtaskFields, append, remove, replace } = useFieldArray({ control, name: 'subtasks' });
-    const [newRecordDialogOpen, setNewRecordDialogOpen] = useState(false);
     const [typeDialogOpen, setTypeDialogOpen] = useState(false);
     const [newTypeData, setNewTypeData] = useState({ name: '', color: '#3788D8', description: '' });
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
     const updateNewTypeData = (field, value) => setNewTypeData(prev => ({ ...prev, [field]: value }));
 
-    console.log(taskFields, task, subtasks);
-
     // Инициализация формы из пропсов
     useEffect(() => {
         if (!task || !taskFields) return;
-        const sorted = Object.entries(taskFields)
-            .sort(([, a], [, b]) => (a.id || 0) - (b.id || 0));
         const initial = {};
-        sorted.forEach(([key, field]) => {
-            if (field.type === 'toggle') {
-                initial[key] = typeof task[key] === 'boolean' ? task[key] : !!task[key];
-            } else if (field.type === 'color') {
-                initial[key] = typeof task[key] === 'string' ? task[key] : '';
-            } else if (field.type === 'multiselect') {
-                initial[key] = Array.isArray(task[key]) ? task[key] : [];
-            } else if (field.type === 'range') {
+        Object.entries(taskFields).forEach(([key, field]) => {
+            if (field.type === 'range') {
                 initial[key] = {
                     start: task.start ? dayjs(task.start).toISOString() : null,
                     end: task.end ? dayjs(task.end).toISOString() : null,
                 };
             } else {
-                initial[key] = task[key] ?? '';
+                 initial[key] = task[key] ?? (field.type === 'toggle' ? false : (field.type === 'multiselect' ? [] : ''));
             }
         });
         initial.title = task.title;
-        initial.start = task.start ? dayjs(task.start).toISOString() : null;
-        initial.end = task.end ? dayjs(task.end).toISOString() : null;
         initial.subtasks = Array.isArray(subtasks) ? subtasks.map(st => ({ id: st.id, title: st.title, is_completed: st.is_completed })) : [];
         reset(initial);
         replace(initial.subtasks);
     }, [task, taskFields, subtasks, reset, replace]);
 
-    // Обработчики
-    const handleUpdate = (field, value, opts = {}) => {
-        setValue(field, value);
-        if (opts.immediate && onChange) {
-            // Собираем актуальные значения формы
-            const values = methods.getValues();
-            const updatedTask = {
-                ...task,
-                ...values,
-                subtasks: values.subtasks,
-            };
-            onChange(updatedTask);
+    // Обработчик для немедленного обновления родительского компонента
+    const triggerParentOnChange = (updatedField, updatedValue) => {
+        if (!onChange) return;
+        const formValues = getValues();
+        const updatedTask = {
+            ...task,
+            ...formValues,
+            [updatedField]: updatedValue,
+        };
+
+        // Если обновляется диапазон дат, также обновим корневые start и end
+        if (typeof updatedValue === 'object' && updatedValue !== null && ('start' in updatedValue || 'end' in updatedValue)) {
+            updatedTask.start = updatedValue.start;
+            updatedTask.end = updatedValue.end;
         }
+
+        onChange(updatedTask);
     };
 
-    const handleRangeUpdate = (val) => {
-        handleUpdate('start', val?.start || null, { immediate: true });
-        handleUpdate('end', val?.end || null, { immediate: true });
-    };
-
-    const handleToggle = (taskId, checked, subIdx = null) => {
-        if (changeTaskStatus) changeTaskStatus(taskId, checked);
-        // onChange вызовется через родителя, но для локальных чекбоксов тоже отправим
-        if (onChange) {
-            const values = methods.getValues();
-            const updatedTask = {
-                ...task,
-                ...values,
-                subtasks: values.subtasks,
-            };
-            onChange(updatedTask);
+    const handleToggle = (taskId, is_completed) => {
+        if (changeTaskStatus) {
+            const completed_at = is_completed ? new Date().toISOString() : null;
+            changeTaskStatus({ taskId, is_completed, completed_at });
         }
     };
 
     const handleSubBlur = async (index) => {
         const field = subtaskFields[index];
-        const title = methods.getValues(`subtasks.${index}.title`).trim();
+        const title = getValues(`subtasks.${index}.title`).trim();
         if (!title) return;
         if (!field.id && addSubTask) {
             await addSubTask({ title, parentTaskId: task.id });
-            // onChange вызовется через обновление subtasks пропа
-        } else if (onChange) {
-            // Для существующей подзадачи отправим изменения
-            const values = methods.getValues();
-            const updatedTask = {
-                ...task,
-                ...values,
-                subtasks: values.subtasks,
-            };
-            onChange(updatedTask);
+        } else {
+            triggerParentOnChange(`subtasks.${index}.title`, title);
         }
     };
 
@@ -147,23 +117,15 @@ function TaskEditor({
         setNewSubtaskTitle('');
     };
 
-    const handleKeyDown = (e, field, subIdx = null) => {
+    const handleKeyDown = (e, field, onEnter) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            if (subIdx !== null) handleSubBlur(subIdx);
-            else {
-                handleUpdate(field, e.target.value, { immediate: true });
-            }
+            onEnter(e.target.value);
         }
     };
 
     const handleDeleteSubTask = (subId) => {
         if (deleteTask) deleteTask(subId);
-        // onChange вызовется через обновление subtasks пропа
-    };
-
-    const handleDeleteTask = () => {
-        if (deleteTask) deleteTask(task.id);
     };
 
     if (!task) return null;
@@ -186,8 +148,8 @@ function TaskEditor({
                                 label="Название задачи"
                                 sx={{ width: '100%', my: 1 }}
                                 {...field}
-                                onBlur={(e) => handleUpdate('title', e.target.value, { immediate: true })}
-                                onKeyDown={(e) => handleKeyDown(e, 'title')}
+                                onBlur={(e) => triggerParentOnChange('title', e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, 'title', (value) => triggerParentOnChange('title', value))}
                                 multiline
                                 maxRows={3}
                                 variant="outlined"
@@ -203,7 +165,7 @@ function TaskEditor({
                                     <Checkbox
                                         checked={sub.is_completed}
                                         sx={{ m: 0, p: 0 }}
-                                        onChange={(e) => sub.id && handleToggle(sub.id, e.target.checked, idx)}
+                                        onChange={(e) => sub.id && handleToggle(sub.id, e.target.checked)}
                                     />
                                     <Controller
                                         name={`subtasks.${idx}.title`}
@@ -214,7 +176,7 @@ function TaskEditor({
                                                 placeholder="Подзадача"
                                                 {...field}
                                                 onBlur={() => handleSubBlur(idx)}
-                                                onKeyDown={(e) => handleKeyDown(e, `subtasks.${idx}.title`, idx)}
+                                                onKeyDown={(e) => handleKeyDown(e, `subtasks.${idx}.title`, () => handleSubBlur(idx))}
                                                 inputProps={{ 'aria-label': 'subtask' }}
                                             />
                                         )}
@@ -253,7 +215,7 @@ function TaskEditor({
                 </Typography>
             )}
             <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexDirection: 'column', gap: 1.5, paddingY: 2 }}>
-                {showJournalButton && <Button variant="outlined" onClick={() => setNewRecordDialogOpen(true)}>Добавить запись в журнал проекта</Button>}
+                {showJournalButton && <Button variant="outlined">Добавить запись в журнал проекта</Button>}
                 {Object.entries(taskFields)
                     .slice()
                     .sort(([, a], [, b]) => (a.id || 0) - (b.id || 0))
@@ -263,9 +225,22 @@ function TaskEditor({
                         return (
                             <Box key={key} sx={{ mt: 1 }}>
                                 {field.type === 'range' ?
-                                    <DateTimeRangePickerField name={key} onValidBlur={handleRangeUpdate} />
+                                    <Controller
+                                        name={key}
+                                        control={control}
+                                        render={({ field: { onChange: onFieldChange, value }, fieldState: { error } }) => (
+                                            <DateTimeRangePicker
+                                                value={value}
+                                                onChange={(newValue) => {
+                                                    onFieldChange(newValue);
+                                                    triggerParentOnChange(key, newValue);
+                                                }}
+                                                error={error}
+                                            />
+                                        )}
+                                    />
                                  : field.type === 'time-range' ?
-                                    <TimeRangePickerField name={key} onValidBlur={handleRangeUpdate} />
+                                    <TimeRangePickerField name={key} onValidBlur={(val) => triggerParentOnChange(key, val)} />
                                  : field.type === 'datetime' ? (
                                     <FormControl fullWidth>
                                         <Controller
@@ -282,7 +257,7 @@ function TaskEditor({
                                                         onChange={(nv) => {
                                                             const iso = nv ? nv.toISOString() : null;
                                                             ctrl.onChange(iso);
-                                                            handleUpdate(key, iso, { immediate: true });
+                                                            triggerParentOnChange(key, iso);
                                                         }}
                                                         slotProps={{ textField: { inputProps: { readOnly: false }, error: !!errors[key], helperText: errors[key]?.message } }}
                                                     />
@@ -309,7 +284,7 @@ function TaskEditor({
                                                     if (key === 'type_id' && nv && nv.value === '__add__') {
                                                         setTypeDialogOpen(true);
                                                     } else {
-                                                        handleUpdate(key, nv ? nv.value : null, { immediate: true });
+                                                        triggerParentOnChange(key, nv ? nv.value : null);
                                                     }
                                                 }}
                                                 renderInput={(params) => <TextField {...params} label={field.name} />}
@@ -327,8 +302,8 @@ function TaskEditor({
                                                 multiline
                                                 rows={5}
                                                 {...ctrl}
-                                                onBlur={(e) => handleUpdate(key, e.target.value, { immediate: true })}
-                                                onKeyDown={(e) => handleKeyDown(e, key)}
+                                                onBlur={(e) => triggerParentOnChange(key, e.target.value)}
+                                                onKeyDown={(e) => handleKeyDown(e, key, (value) => triggerParentOnChange(key, value))}
                                                 variant="outlined"
                                             />
                                         )}
@@ -343,7 +318,11 @@ function TaskEditor({
                                                     value="check"
                                                     size="small"
                                                     selected={!!ctrl.value}
-                                                    onChange={() => handleUpdate(key, !ctrl.value, { immediate: true })}
+                                                    onChange={() => {
+                                                        const newValue = !ctrl.value;
+                                                        ctrl.onChange(newValue);
+                                                        triggerParentOnChange(key, newValue);
+                                                    }}
                                                     sx={{ border: '1px solid', borderColor: ctrl.value ? 'darkgrey' : 'grey.400', justifyContent: 'flex-start', p: 0 }}
                                                 >
                                                     <Checkbox checked={!!ctrl.value} />
@@ -361,7 +340,7 @@ function TaskEditor({
                                                 fieldKey={key}
                                                 fieldName={field.name}
                                                 selectedColorProp={ctrl.value || ''}
-                                                onColorChange={(_, color) => handleUpdate(key, color, { immediate: true })}
+                                                onColorChange={(_, color) => triggerParentOnChange(key, color)}
                                             />
                                         )}
                                     />
@@ -376,7 +355,7 @@ function TaskEditor({
                                                 getOptionLabel={opt => opt.title}
                                                 isOptionEqualToValue={(opt, val) => opt.id === val.id}
                                                 value={Array.isArray(ctrl.value) ? ctrl.value : []}
-                                                onChange={(e, nv) => handleUpdate(key, nv, { immediate: true })}
+                                                onChange={(e, nv) => triggerParentOnChange(key, nv)}
                                                 renderInput={(params) => <TextField {...params} label={field.name} />}
                                                 renderTags={(val, getTagProps) => val.map((opt, idx) => <Chip key={opt.id} label={opt.title} {...getTagProps({ idx })} />)}
                                             />
@@ -392,8 +371,8 @@ function TaskEditor({
                                                 label={field.name}
                                                 type={field.type}
                                                 {...ctrl}
-                                                onBlur={(e) => handleUpdate(key, e.target.value, { immediate: true })}
-                                                onKeyDown={(e) => handleKeyDown(e, key)}
+                                                onBlur={(e) => triggerParentOnChange(key, e.target.value)}
+                                                onKeyDown={(e) => handleKeyDown(e, key, (value) => triggerParentOnChange(key, value))}
                                                 variant="outlined"
                                             />
                                         )}
@@ -403,7 +382,6 @@ function TaskEditor({
                         );
                     })}
             </Paper>
-            {/* <NewRecordDialog open={newRecordDialogOpen} handleClose={() => setNewRecordDialogOpen(false)} taskId={task.id} /> */}
             <TaskTypeDialog
                 open={typeDialogOpen}
                 onClose={() => setTypeDialogOpen(false)}

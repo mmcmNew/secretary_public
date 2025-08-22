@@ -1,38 +1,8 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { logout, setCredentials } from '../authSlice';
 
-// Use an absolute baseUrl when running in the test environment (Vitest/Node)
-// because Node's fetch implementation requires absolute URLs. In browser
-// runtime we keep the relative '/api' path.
-//
-// Determine test mode safely so this file can run in browser (Vite),
-// in Node (Vitest/Node) and in environments where `process` may be
-// undefined. We prefer `process.env.NODE_ENV === 'test'` when available,
-// otherwise fall back to `import.meta.env.MODE === 'test'` used by Vite/Vitest.
-const isTestEnv = (() => {
-  // Check Node-style process on the global object first (works in Node and many test runners)
-  if (typeof globalThis !== 'undefined' && globalThis.process && globalThis.process.env && globalThis.process.env.NODE_ENV === 'test') {
-    return true;
-  }
-
-  // Fallback to Vite/Vitest import.meta.env when available
-  try {
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.MODE === 'test') {
-      return true;
-    }
-  } catch {
-    // import.meta may not be available in some runtimes; ignore errors
-  }
-
-  return false;
-})();
-
-
-
-
-
 const baseQuery = fetchBaseQuery({
-  baseUrl: '/',
+  baseUrl: import.meta.env.VITEST ? 'http://localhost:5100' : '/',
   prepareHeaders: (headers, { getState, endpoint }) => {
     const accessToken = getState().auth.accessToken;
     if (accessToken) {
@@ -53,15 +23,13 @@ const baseQuery = fetchBaseQuery({
   },
 });
 
-const baseQueryWithReauth = async (args, api, extraOptions) => {
-  if (isTestEnv) {
-    try {
-      const url = typeof args === 'string' ? args : args?.url;
-      const method = typeof args === 'object' && args.method ? args.method.toUpperCase() : 'GET';
-      console.log('[TEST-LOG] Request:', method, url, args && args.body ? { body: args.body } : '');
-    } catch {
-      // ignore logging errors in tests
-    }
+export const baseQueryWithReauth = async (args, api, extraOptions) => {
+  try {
+    const url = typeof args === 'string' ? args : args?.url;
+    const method = typeof args === 'object' && args.method ? args.method.toUpperCase() : 'GET';
+    console.log('[TEST-LOG] Request:', method, url, args && args.body ? { body: args.body } : '');
+  } catch {
+    // ignore logging errors in tests
   }
   // Сначала проверяем, нужно ли открыть модальное окно
   const { isAuthenticated } = api.getState().auth;
@@ -81,12 +49,10 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
   }
 
   let result = await baseQuery(args, api, extraOptions);
-  if (isTestEnv) {
-    try {
-      console.log('[TEST-LOG] baseQuery result:', result && (result.error ? { error: result.error } : { data: result.data }));
-    } catch {
-      // ignore
-    }
+  try {
+    console.log('[TEST-LOG] baseQuery result:', result && (result.error ? { error: result.error } : { data: result.data }));
+  } catch {
+    // ignore
   }
   if (result.error && result.error.status === 401) {
     // Пытаемся обновить токен только если есть refresh токен
@@ -97,13 +63,11 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
         method: 'POST',
       }, api, extraOptions);
 
-      if (isTestEnv) {
-        try {
-          console.log('[TEST-LOG] refresh result:', refreshResult && (refreshResult.error ? { error: refreshResult.error } : { data: refreshResult.data }));
-        } catch {
-          // ignore
+      try {
+        console.log('[TEST-LOG] refresh result:', refreshResult && (refreshResult.error ? { error: refreshResult.error } : { data: refreshResult.data }));
+      } catch {
+        // ignore
         }
-      }
 
       if (refreshResult.data) {
         // Если токен успешно обновлен, сохраняем его

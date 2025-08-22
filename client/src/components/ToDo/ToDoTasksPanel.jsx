@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Box, Button, Paper, InputBase, Typography, TextField, IconButton } from '@mui/material';
 import ListIcon from '@mui/icons-material/List';
@@ -6,11 +6,15 @@ import AddIcon from '@mui/icons-material/Add';
 import TasksList from './TasksList';
 import { useGetTasksQuery, useAddTaskMutation } from '../../store/tasksSlice';
 import { useGetListsQuery, useUpdateListMutation } from '../../store/listsSlice';
-import { setSelectedListId, setEditingTitle, setNewTask, resetNewTask } from '../../store/todoLayoutSlice';
+import { setSelectedListId, setEditingTitle } from '../../store/todoLayoutSlice';
 
 function ToDoTasksPanel({ mobile = false }) {
   const dispatch = useDispatch();
-  const { selectedListId, selectedList, isEditingTitle, editingTitle, newTask } = useSelector((state) => state.todoLayout);
+  const selectedListId = useSelector((state) => state.todoLayout.selectedListId);
+  const selectedList = useSelector((state) => state.todoLayout.selectedList);
+  const isEditingTitle = useSelector((state) => state.todoLayout.isEditingTitle);
+  const editingTitle = useSelector((state) => state.todoLayout.editingTitle);
+  const [localNewTask, setLocalNewTask] = useState('');
 
   const { data: tasks = [] } = useGetTasksQuery(selectedListId, {
     skip: !selectedListId,
@@ -26,10 +30,10 @@ function ToDoTasksPanel({ mobile = false }) {
   const [updateList, { isLoading: isUpdatingList }] = useUpdateListMutation();
 
   const handleAddTask = async () => {
-    if (newTask.trim() === '' || !selectedListId) return;
+    if (localNewTask.trim() === '' || !selectedListId) return;
     try {
-      await addTask({ title: newTask, list_id: selectedListId }).unwrap();
-      dispatch(resetNewTask());
+      await addTask({ title: localNewTask, listId: selectedListId }).unwrap();
+      setLocalNewTask('');
     } catch (error) {
       console.error('Failed to add task:', error);
     }
@@ -131,9 +135,9 @@ function ToDoTasksPanel({ mobile = false }) {
             <InputBase
               sx={{ flex: 1 }}
               placeholder="Добавить задачу"
-              value={newTask}
+              value={localNewTask}
               onKeyDown={handleKeyDown}
-              onChange={(e) => dispatch(setNewTask(e.target.value))}
+              onChange={(e) => setLocalNewTask(e.target.value)}
               disabled={isAddingTask}
             />
           </Paper>

@@ -1,4 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
+import https from 'https';
 import { apiSlice } from '../../store/api/apiSlice';
 import { authSlice, setCredentials } from '../../store/authSlice';
 import { listsSlice } from '../../store/listsSlice';
@@ -72,13 +73,18 @@ export const getDemoToken = async (store) => {
   })();
 
   if (isTestEnv) {
-    const url = 'https://localhost:5100/api/login';
+    const agent = new https.Agent({
+        rejectUnauthorized: false,
+    });
+
+    const url = 'http://localhost:5100/api/login';
     // Замените на реальные креды тестового пользователя из seed
   const credentials = { email: 'testuser@example.com', password: 'password123' };
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(credentials)
+      body: JSON.stringify(credentials),
+      agent,
     });
     if (!res.ok) throw new Error('Failed to login: ' + res.status);
     const data = await res.json();
@@ -129,7 +135,7 @@ export const waitForQuery = (store, endpointName, timeout = 30000) => {
       });
       
       if (matchingQuery) {
-        resolve(matchingQuery[1]);
+        resolve(matchingQuery);
       } else if (Date.now() - startTime > timeout) {
         reject(new Error(`Query ${endpointName} timed out`));
       } else {
@@ -164,7 +170,7 @@ export const waitForMutation = (store, endpointName, timeout = 30000) => {
         return false;
       });
 
-      if (matching) return resolve(matching[1]);
+      if (matching) return resolve(matching);
       if (Date.now() - startTime > timeout) return reject(new Error(`Mutation ${endpointName} timed out`));
       setTimeout(check, 50);
     };

@@ -1,6 +1,6 @@
 import { apiSlice } from './apiSlice';
 import { setCredentials } from '../authSlice';
-// import { dashboardApi } from './dashboardApi';
+import { dashboardApi } from './dashboardApi';
 
 export const authApiSlice = apiSlice.injectEndpoints({
   endpoints: builder => ({
@@ -15,7 +15,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
           const { data } = await queryFulfilled;
           const { user, access_token, refresh_token } = data;
           dispatch(setCredentials({ user, accessToken: access_token, refreshToken: refresh_token }));
-          // dispatch(dashboardApi.endpoints.getDashboard.initiate(user.last_dashboard_id));
+          dispatch(dashboardApi.endpoints.getDashboard.initiate(user.last_dashboard_id));
         } catch {
           // Ошибки обрабатываются в baseQuery, здесь можно ничего не делать
         }
@@ -32,7 +32,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
           const { data } = await queryFulfilled;
           const { user, access_token, refresh_token } = data;
           dispatch(setCredentials({ user, accessToken: access_token, refreshToken: refresh_token }));
-          // dispatch(dashboardApi.endpoints.getDashboard.initiate(user.last_dashboard_id));
+          dispatch(dashboardApi.endpoints.getDashboard.initiate(user.last_dashboard_id));
         } catch {
           // Ошибки обрабатываются в baseQuery, здесь можно ничего не делать
         }

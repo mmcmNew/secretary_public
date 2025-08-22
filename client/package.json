@@ -14,7 +14,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:auth": "playwright test auth/login.test.js",
-  "test:rtk": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 vitest --config vitest.rtk.config.js",
+    "test:rtk": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 vitest --config vitest.rtk.config.js",
     "test:rtk:ui": "vitest --config vitest.rtk.config.js --ui",
     "test:rtk:watch": "vitest --config vitest.rtk.config.js --watch"
   },
@@ -50,6 +50,7 @@
     "@tanstack/react-query": "^5.83.0",
     "@tanstack/react-query-devtools": "^5.84.1",
     "@toolpad/core": "^0.16.0",
+    "antd": "^5.27.1",
     "dayjs": "^1.11.13",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
