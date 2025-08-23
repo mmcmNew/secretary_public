@@ -91,9 +91,11 @@ export const tasksApi = apiSlice.injectEndpoints({
               }
 
               // Manually update 'my_day' list count if the added task falls within today's range and is unfinished
-              if (!addedTask.is_completed) {
+              if (!addedTask.is_completed && (addedTask.start || addedTask.end)) {
                 const myDayList = draft.default_lists.find(l => l.id === 'my_day');
                 if (myDayList) {
+                  console.log('Checking if added task fits in My Day range:', addedTask);
+
                   const now = new Date();
                   const todayUtcStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
                   const todayUtcEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
@@ -133,6 +135,14 @@ export const tasksApi = apiSlice.injectEndpoints({
         body: newSubtask,
       }),
       invalidatesTags: (result, error, newSubtask) => [{ type: 'Task', id: newSubtask.parent_task_id }],
+    }),
+     deleteTask: builder.mutation({
+      query: ({ taskId }) => ({
+        url: '/api/tasks/del_task',
+        method: 'DELETE',
+        body: { taskId },
+      }),
+      invalidatesTags: (result, error, { listId }) => [{ type: 'Task', id: listId }],
     }),
     updateTask: builder.mutation({
       query: (updatedTask) => ({

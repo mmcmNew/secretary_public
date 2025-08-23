@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM python:alpine
 
 WORKDIR /app
 
@@ -19,4 +19,4 @@ EXPOSE 5100
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-CMD sh -c "flask db upgrade && flask seed && python run.py --mode docker"
+CMD ["sh", "-c", "flask db upgrade && flask seed && python run.py --mode docker"]
