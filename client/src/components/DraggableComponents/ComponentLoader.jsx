@@ -1,3 +1,4 @@
+import { PropTypes } from 'prop-types';
 import React, { Suspense } from 'react';
 import { CircularProgress, Box } from '@mui/material';
 
@@ -36,3 +37,8 @@ const ComponentLoader = ({ type, ...props }) => {
 };
 
 export default ComponentLoader;
+
+
+ComponentLoader.propTypes = {
+  type: PropTypes.string.isRequired,
+};

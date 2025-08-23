@@ -1,10 +1,11 @@
 import { useCallback, memo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Box, Typography, IconButton } from '@mui/material';
+import { Box, Typography, IconButton, Button } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import TaskEditor from './TaskEditor';
 import { setSelectedTaskId } from '../../store/todoLayoutSlice';
 import { useGetSubtasksQuery, useAddSubtaskMutation, useUpdateTaskMutation, useChangeTaskStatusMutation, useDeleteTaskMutation, useGetFieldsConfigQuery } from '../../store/tasksSlice';
+import PropTypes from 'prop-types';
 
 function ToDoTaskEditorPanel({ mobile = false }) {
   const dispatch = useDispatch();
@@ -43,9 +44,13 @@ function ToDoTaskEditorPanel({ mobile = false }) {
       }}
     >
       <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
-        <IconButton onClick={handleCloseEditor}>
-          <CloseIcon />
-        </IconButton>
+        {mobile ? (
+          <Button onClick={handleCloseEditor}>Назад</Button>
+        ): (
+          <IconButton onClick={handleCloseEditor} sx={{ ml: 'auto' }}>
+            <CloseIcon />
+          </IconButton>
+        )}
       </Box>
       <Box sx={{ px: 1, flexGrow: 1, overflowY: 'auto', height: '100%' }}>
         {Object.keys(taskFields).length === 0 ? (
@@ -68,3 +73,7 @@ function ToDoTaskEditorPanel({ mobile = false }) {
 }
 
 export default memo(ToDoTaskEditorPanel);
+
+ToDoTaskEditorPanel.propTypes = {
+  mobile: PropTypes.bool,
+};

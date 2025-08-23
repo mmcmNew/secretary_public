@@ -29,12 +29,41 @@ function ToDoLayoutUniversal() {
   const isLoading = tasksLoading || listsLoading;
 
   const content = isMobile ? (
-    <Box sx={{ height: '100%', width: '100%' }}>
-      <ToDoListsPanel mobile={isMobile} />
-      <ToDoTasksPanel mobile={isMobile} />
-      {showEditor && <ToDoTaskEditorPanel mobile={isMobile} />}
+    <Box sx={{ height: "100%", width: "100%", position: "relative" }}>
+      {/* Списки */}
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          display: selectedListId ? "none" : "block",
+        }}
+      >
+        <ToDoListsPanel mobile />
+      </Box>
+
+      {/* Задачи */}
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          display: selectedListId && !showEditor ? "block" : "none",
+        }}
+      >
+        <ToDoTasksPanel mobile />
+      </Box>
+
+      {/* Редактор задачи */}
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          display: showEditor ? "block" : "none",
+        }}
+      >
+        <ToDoTaskEditorPanel mobile />
+      </Box>
     </Box>
-  ) : (
+    ) : (
     <Box sx={{ padding: 2, height: '100%', width: '100%' }}>
       <Grid container spacing={0.5} sx={{ height: '100%' }}>
         <Grid item xs={12} md={4} sx={{ height: '100%', display: 'flex', flexDirection: 'column', minWidth: '300px', maxWidth: '300px' }}>

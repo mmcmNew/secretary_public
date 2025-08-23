@@ -6,36 +6,38 @@ import CssBaseline from "@mui/material/CssBaseline";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
 import MenuIcon from "@mui/icons-material/Menu";
-import MetronomeIcon from "@mui/icons-material/MusicNote";
+// import MetronomeIcon from "@mui/icons-material/MusicNote";
 import ChecklistIcon from "@mui/icons-material/Checklist";
-import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
-import SdStorageIcon from "@mui/icons-material/SdStorage";
-import EditCalendarIcon from "@mui/icons-material/EditCalendar";
-import EditNoteIcon from "@mui/icons-material/EditNote";
-import ChatIcon from "@mui/icons-material/Chat";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
+// import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+// import SdStorageIcon from "@mui/icons-material/SdStorage";
+// import EditCalendarIcon from "@mui/icons-material/EditCalendar";
+// import EditNoteIcon from "@mui/icons-material/EditNote";
+// import ChatIcon from "@mui/icons-material/Chat";
+// import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import ComputerIcon from "@mui/icons-material/Computer";
 import SmartphoneIcon from "@mui/icons-material/Smartphone";
-import { containerTypes } from "./DraggableComponents/containerConfig";
+// import { containerTypes } from "./DraggableComponents/containerConfig";
 import { useMediaQuery } from "@mui/material";
 import MiniTimers from "./Timer/MiniTimers";
+import {createComponent} from "../store/dashboardSlice";
+import ComponentLoader from "./DraggableComponents/ComponentLoader";
 
 const componentsTypes = [
-    { icon: <MetronomeIcon />, name: "Метроном", type: "metronome" },
+    // { icon: <MetronomeIcon />, name: "Метроном", type: "metronome" },
     { icon: <ChecklistIcon />, name: "Список задач", type: "tasks" },
-    { icon: <EditCalendarIcon />, name: "Календарь", type: "calendar" },
-    { icon: <SdStorageIcon />, name: "Память", type: "memory" },
-    { icon: <AssignmentTurnedInIcon />, name: "Сценарий", type: "Scenario" },
-    { icon: <EditNoteIcon />, name: "Журналы", type: "JournalEditorDrawer" },
-    { icon: <ChatIcon />, name: "Chat", type: "chat" },
-    { icon: <AccessTimeIcon />, name: "Режим фокусировки", type: "AntiSchedule" },
+    // { icon: <EditCalendarIcon />, name: "Календарь", type: "calendar" },
+    // { icon: <SdStorageIcon />, name: "Память", type: "memory" },
+    // { icon: <AssignmentTurnedInIcon />, name: "Сценарий", type: "Scenario" },
+    // { icon: <EditNoteIcon />, name: "Журналы", type: "JournalEditorDrawer" },
+    // { icon: <ChatIcon />, name: "Chat", type: "chat" },
+    // { icon: <AccessTimeIcon />, name: "Режим фокусировки", type: "AntiSchedule" },
 ];
 
 function MainContainerMobile() {
     const [mode, setMode] = useState("light");
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [currentComponent, setCurrentComponent] = useState(null);
-    const [currentComponentType, setCurrentComponentType] = useState("chat");
+    const [currentComponentType, setCurrentComponentType] = useState("tasks");
     const isMobileQuery = useMediaQuery("(max-width: 1100px)");
 
     const [isMobile, setIsMobile] = useState(isMobileQuery);
@@ -70,23 +72,6 @@ function MainContainerMobile() {
 
     function handleIsMobileToggle() {
         setIsMobile(!isMobile);
-    }
-
-    function createComponent(type) {
-        if (type === "tasks" && isMobile) {
-            type = "tasks"; // Если мобильная версия, заменяем тип
-        }
-
-        const componentConfig = containerTypes[type];
-        console.log("createComponent", type, componentConfig);
-
-        if (!componentConfig) {
-            console.error(`Unknown container type: ${type}`);
-            return null;
-        }
-
-        const Component = componentConfig && componentConfig.content?.type;
-        return <Component />;
     }
 
     const handleDrawerToggle = () => {
@@ -182,7 +167,7 @@ function MainContainerMobile() {
                     display: "flex",
                 }}
             >
-                {currentComponent ? (
+                {currentComponentType ? (
                     <Box
                         sx={{
                             height: "100%",
@@ -194,12 +179,12 @@ function MainContainerMobile() {
                             justifyContent: "center",
                         }}
                     >
-                        {currentComponent}
+                        <ComponentLoader type={currentComponentType} {...(currentComponent ? currentComponent.componentProps : {})} />
                     </Box>
                 ) : (
                     <Box sx={{ textAlign: "center", mt: 4 }}>Добро пожаловать!</Box>
                 )}
-                {currentComponentType !== "chat" && <MicrophoneButton />}
+                {/* {currentComponentType !== "chat" && <MicrophoneButton />} */}
             </Box>
         </ThemeProvider>
     );

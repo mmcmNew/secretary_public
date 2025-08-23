@@ -129,7 +129,7 @@ function MainContainer() {
           onSave={handleSave}
         />
         <MainContent containers={containers} />
-        <ChatAccordion />
+        {/* <ChatAccordion /> */}
       </ThemeProvider>
     </ColorModeContext.Provider>
   );

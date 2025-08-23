@@ -7,6 +7,7 @@ import TasksList from './TasksList';
 import { useGetTasksQuery, useAddTaskMutation } from '../../store/tasksSlice';
 import { useGetListsQuery, useUpdateListMutation } from '../../store/listsSlice';
 import { setSelectedListId, setEditingTitle } from '../../store/todoLayoutSlice';
+import PropTypes from 'prop-types';
 
 function ToDoTasksPanel({ mobile = false }) {
   const dispatch = useDispatch();
@@ -84,7 +85,7 @@ function ToDoTasksPanel({ mobile = false }) {
   return (
     <Box sx={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column' }}>
       {selectedList && (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: mobile ? 1 : 4, py: 2, my: 1, borderBottom: '1px solid #ddd', minWidth: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: mobile ? 1 : 4, py: 0, my: 1, borderBottom: '1px solid #ddd', minWidth: 0 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, minWidth: 0 }}>
             <ListIcon sx={{ mr: 1, flexShrink: 0 }} />
             {isEditingTitle ? (
@@ -93,6 +94,7 @@ function ToDoTasksPanel({ mobile = false }) {
                 onChange={(e) => dispatch(setEditingTitle({ isEditing: true, title: e.target.value }))}
                 onBlur={handleTitleEdit}
                 onKeyDown={(e) => e.key === 'Enter' && handleTitleEdit()}
+                // eslint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
                 variant="standard"
                 size="small"
@@ -113,12 +115,12 @@ function ToDoTasksPanel({ mobile = false }) {
               </Typography>
             )}
           </Box>
+          {mobile && (
+            <Button sx={{mr: 'auto'}} onClick={() => dispatch(setSelectedListId(null))}>Назад</Button>
+          )}
         </Box>
       )}
       <Box sx={{ flexGrow: 1, overflowY: 'auto', minHeight: 0 }}>
-        {mobile && (
-          <Button onClick={() => dispatch(setSelectedListId(null))}>Назад</Button>
-        )}
         <TasksList 
           tasks={tasks} 
           selectedList={selectedList}
@@ -148,3 +150,7 @@ function ToDoTasksPanel({ mobile = false }) {
 }
 
 export default memo(ToDoTasksPanel);
+
+ToDoTasksPanel.propTypes = {
+  mobile: PropTypes.bool,
+};

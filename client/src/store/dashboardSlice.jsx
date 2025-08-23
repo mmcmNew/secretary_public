@@ -2,36 +2,44 @@ import { createSlice } from '@reduxjs/toolkit';
 import { containerTypes } from "../components/DraggableComponents/containerConfig";
 import { dashboardApi } from './api/dashboardApi';
 
-export function createContainer(type, id, containerData) {
-    const componentConfig = containerTypes[type];
-    console.log(`createContainer: type=${type}, id=${id}, containerData=`, containerData);
-    if (!componentConfig) {
-        console.error(`Unknown container type: ${type}`);
-        return null;
-    }
-    if (!id) {
-      id = Date.now().toString(); // Generate a unique ID if not provided
-    }
-console.log(`Creating container with ID: ${id} and type: ${type}`);
+export function createComponent(type, id, containerData) {
+  const componentConfig = containerTypes[type];
+  console.log(`createComponent: type=${type}, id=${id}, containerData=`, containerData);
+  if (!componentConfig) {
+      console.error(`Unknown container type: ${type}`);
+      return null;
+  }
+  if (!id) {
+    id = Date.now().toString(); // Generate a unique ID if not provided
+  }
+  console.log(`Creating container with ID: ${id} and type: ${type}`);
+  if (!containerData) {
+    containerData = {}; // Initialize containerData if not provided
+  }
+  if (!componentConfig) {
+      console.error(`Unknown container type: ${type}`);
+      return null;
+  }
+  
 
-    const newContainer = {
-        ...containerData,
-        id,
-        type,
-        name: containerData.name || componentConfig.name,
-        position: containerData.position || componentConfig.position,
-        size: containerData.size || componentConfig.size,
-        maxSize: componentConfig.maxSize,
-        minSize: componentConfig.minSize,
-        isLockAspectRatio: containerData.isLockAspectRatio ?? componentConfig.isLockAspectRatio,
-        isResizable: componentConfig.isResizable,
-        isDisableDragging: componentConfig.isDisableDragging,
-        isLocked: containerData.isLocked ?? componentConfig.isLocked,
-        isMinimized: containerData.isMinimized ?? componentConfig.isMinimized,
-        componentProps: {
-            containerId: id,
-            ...containerData,
-        }
+  const newContainer = {
+      ...containerData,
+      id,
+      type,
+      name: containerData.name || componentConfig.name,
+      position: containerData.position || componentConfig.position,
+      size: containerData.size || componentConfig.size,
+      maxSize: componentConfig.maxSize,
+      minSize: componentConfig.minSize,
+      isLockAspectRatio: containerData.isLockAspectRatio ?? componentConfig.isLockAspectRatio,
+      isResizable: componentConfig.isResizable,
+      isDisableDragging: componentConfig.isDisableDragging,
+      isLocked: containerData.isLocked ?? componentConfig.isLocked,
+      isMinimized: containerData.isMinimized ?? componentConfig.isMinimized,
+      componentProps: {
+          containerId: id,
+          ...containerData,
+      }
     };
     return newContainer;
 }
@@ -56,7 +64,7 @@ const dashboardSlice = createSlice({
     },
     addContainer: (state, action) => {
       console.log('Adding container of type: ', action);
-      const newContainer = createContainer(action.payload, action.id || null, action.payload.props || {});
+      const newContainer = createComponent(action.payload, action.id || null, action.payload.props || {});
       if (newContainer) {
         state.containers.push(newContainer);
       }
@@ -83,7 +91,7 @@ const dashboardSlice = createSlice({
             if (!cont) {
               return null;
             }
-            return createContainer(cont.type, cont.id, cont)});
+            return createComponent(cont.type, cont.id, cont)});
           state.themeMode = action.payload.themeMode;
           state.timers = action.payload.timers;
           state.calendarSettings = action.payload.calendarSettings;
@@ -109,7 +117,7 @@ const dashboardSlice = createSlice({
           state.loading = false;
           state.id = action.payload.id;
           state.name = action.payload.name;
-          state.containers = action.payload.containers.map((cont) => createContainer(cont.type, cont.id, cont));
+          state.containers = action.payload.containers.map((cont) => createComponent(cont.type, cont.id, cont));
           state.themeMode = action.payload.themeMode;
           state.timers = action.payload.timers;
           state.calendarSettings = action.payload.calendarSettings;
