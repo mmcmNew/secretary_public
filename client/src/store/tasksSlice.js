@@ -5,7 +5,8 @@ import { listsApi } from './listsSlice';
 export const tasksSlice = createSlice({
   name: 'tasks',
   initialState: {
-    tasks: [],
+    byId: {},
+    allIds: [],
     selectedTaskId: null,
     loading: false,
     error: null,
@@ -17,11 +18,43 @@ export const tasksSlice = createSlice({
       state.version = action.payload;
     },
   },
+  extraReducers: (builder) => {
+    tasksExtraReducers(builder);
+  }
 });
 
 export const { setSelectedTaskId, setTasksVersion } = tasksSlice.actions;
 
 export default tasksSlice.reducer;
+
+// подписываемся на getTasks
+export const tasksExtraReducers = (builder) => {
+  builder.addMatcher(
+    tasksApi.endpoints.getTasks.matchFulfilled,
+    (state, action) => {
+      const tasks = action.payload || [];
+      state.byId = {};
+      state.allIds = [];
+      tasks.forEach(task => {
+        state.byId[task.id] = task;
+        state.allIds.push(task.id);
+      });
+    }
+  );
+
+  builder.addMatcher(
+    tasksApi.endpoints.updateTask.matchFulfilled,
+    (state, action) => {
+      const updatedTask = action.payload.task;
+      if (updatedTask) {
+        state.byId[updatedTask.id] = updatedTask;
+        if (!state.allIds.includes(updatedTask.id)) {
+          state.allIds.push(updatedTask.id);
+        }
+      }
+    }
+  );
+};
 
 export const tasksApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
@@ -206,18 +239,18 @@ export const tasksApi = apiSlice.injectEndpoints({
       },
     }),
     changeTaskStatus: builder.mutation({
-      query: ({ taskId, status_id, completed_at, listId }) => ({
+      query: ({ taskId, completed_at, is_completed, listId }) => ({
         url: '/api/tasks/change_status',
         method: 'PUT',
-        body: { task_id: taskId, status_id, completed_at, list_id: listId },
+        body: { taskId: taskId, is_completed: is_completed, completed_at, list_id: listId },
       }),
-      async onQueryStarted({ taskId, status_id, completed_at, listId }, { dispatch, queryFulfilled }) {
+      async onQueryStarted({ taskId, is_completed, completed_at, listId }, { dispatch, queryFulfilled }) {
         // Optimistic update for getTasks cache
         const patchResultGetTasks = dispatch(
           tasksApi.util.updateQueryData('getTasks', listId, (draft) => {
             const taskToUpdate = draft.find(task => task.id === taskId);
             if (taskToUpdate) {
-              taskToUpdate.status_id = status_id;
+              taskToUpdate.is_completed = is_completed;
               taskToUpdate.completed_at = completed_at;
             }
           })
@@ -227,7 +260,7 @@ export const tasksApi = apiSlice.injectEndpoints({
         const patchResultGetTasksByIds = dispatch(
           tasksApi.util.updateQueryData('getTasksByIds', [taskId], (draft) => {
             if (draft && draft.length > 0) {
-              draft.status_id = status_id;
+              draft.is_completed = is_completed;
               draft.completed_at = completed_at;
             }
           })

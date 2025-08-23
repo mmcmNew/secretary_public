@@ -5,13 +5,13 @@ import { Box, Button, IconButton, Paper } from '@mui/material';
 import DraggableContainer from './DraggableComponents/DraggableContainer';
 import ContainerSpeedDial from './DraggableComponents/ContainerSpeedDial';
 import MinimizedContainers from './DraggableComponents/MinimizedContainers';
-import MicrophoneButton from "./MicrophoneButton";
+// import MicrophoneButton from "./MicrophoneButton";
 import useContainer from './DraggableComponents/useContainer';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
-import ChatAccordion from './ChatAccordion';
+// import ChatAccordion from './ChatAccordion';
 import MiniTimers from './Timer/MiniTimers';
 // import MiniScenario from './Scenario/MiniScenario';
 import SmartphoneIcon from '@mui/icons-material/Smartphone';
@@ -63,7 +63,7 @@ const MainContent = memo(({ containers=[] }) => (
       )
     ))}
     <ContainerSpeedDial />
-    <MicrophoneButton />
+    {/* <MicrophoneButton /> */}
     {/* <AudioPlayer /> */}
   </Box>
 ));

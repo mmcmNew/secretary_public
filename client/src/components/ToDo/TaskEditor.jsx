@@ -129,6 +129,7 @@ function TaskEditor({
     };
 
     if (!task) return null;
+    console.log('TaskEditor render', { task, taskFields, subtasks });
 
     return (
         <FormProvider {...methods}>

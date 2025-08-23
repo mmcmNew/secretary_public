@@ -1,7 +1,7 @@
 {
   "name": "secretary_react",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.2.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -63,7 +63,7 @@
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dnd-touch-backend": "^16.0.1",
-    "react-dom": "^19.1.0",
+    "react-dom": "^19.1.1",
     "react-hook-form": "^7.60.0",
     "react-redux": "^9.2.0",
     "react-rnd": "^10.5.2",

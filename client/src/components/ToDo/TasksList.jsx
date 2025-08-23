@@ -1,7 +1,7 @@
 import { useEffect, useState, memo, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
-    List,
+    // List is unused because we virtualize the list
     ListItemButton,
     ListItemText,
     Collapse,
@@ -15,6 +15,7 @@ import PropTypes from "prop-types";
 import { Draggable } from "@fullcalendar/interaction";
 import useContextMenu from "./hooks/useContextMenu";
 import TaskItem from "./TaskItem.jsx";
+import VirtualizedTasksList from './VirtualizedTasksList.jsx';
 import {
     useChangeTaskStatusMutation,
     useUpdateTaskMutation,
@@ -24,10 +25,69 @@ import {
 import {
     setSelectedTaskId,
     setSelectedTask,
+    setCompletedTasksOpen,
+    toggleTaskExpanded,
+    setContextTarget,
+    clearContextTarget,
 } from "../../store/todoLayoutSlice.js";
 import { useUpdateListMutation } from "../../store/listsSlice";
-import { setCompletedTasksOpen, toggleTaskExpanded } from "../../store/todoLayoutSlice";
 
+// Pure helper: flatten hierarchical tasks into visible items using expanded map and optional ordering
+function flattenTasks(taskList = [], expandedMap = {}, selectedList = null) {
+    const mapById = new Map(taskList.map(t => [t.id, t]));
+    const roots = (selectedList?.childes_order && selectedList.childes_order.length > 0)
+        ? selectedList.childes_order.map(id => mapById.get(id)).filter(Boolean)
+        : taskList.filter(t => !t.parent_id);
+
+    const out = [];
+    const visit = (task, level = 0) => {
+        out.push({ task, level });
+        if (task.childes_order && expandedMap[task.id]) {
+            task.childes_order.forEach(childId => {
+                const child = mapById.get(childId);
+                if (child) visit(child, level + 1);
+            });
+        }
+    };
+    roots.forEach(r => visit(r, 0));
+    return out;
+}
+
+// Lightweight memoized row to avoid recreating TaskItem render functions
+const TaskRow = memo(function TaskRow({ task, level, selectedTaskId, expandedMap, onTaskSelect, onTaskToggle, onExpandToggle, onAdditionalButtonClick, onContextMenu, onDragStart, additionalButton, isNeedContextMenu }) {
+    return (
+        <div style={{ paddingLeft: level * 12 }}>
+            <TaskItem
+                task={task}
+                selectedTaskId={selectedTaskId}
+                expandedMap={expandedMap}
+                onTaskSelect={onTaskSelect}
+                onTaskToggle={onTaskToggle}
+                onExpandToggle={onExpandToggle}
+                onAdditionalButtonClick={onAdditionalButtonClick}
+                onContextMenu={onContextMenu}
+                onDragStart={onDragStart}
+                additionalButton={additionalButton}
+                isNeedContextMenu={isNeedContextMenu}
+            />
+        </div>
+    );
+});
+
+TaskRow.propTypes = {
+    task: PropTypes.object.isRequired,
+    level: PropTypes.number,
+    selectedTaskId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    expandedMap: PropTypes.object,
+    onTaskSelect: PropTypes.func,
+    onTaskToggle: PropTypes.func,
+    onExpandToggle: PropTypes.func,
+    onAdditionalButtonClick: PropTypes.func,
+    onContextMenu: PropTypes.func,
+    onDragStart: PropTypes.func,
+    additionalButton: PropTypes.object,
+    isNeedContextMenu: PropTypes.bool,
+};
 
 function TasksList({
     containerId,
@@ -51,13 +111,15 @@ function TasksList({
     const [linkTaskMutation] = useLinkTaskMutation();
     const [updateListMutation] = useUpdateListMutation();
 
-    // State from Redux
-    const { expandedTasks, completedTasksOpen, selectedTaskId } = useSelector((state) => state.todoLayout);
+    // State from Redux (store is single source of truth for these UI flags)
+    const { expandedTasks, completedTasksOpen, selectedTaskId, contextTarget } = useSelector((state) => state.todoLayout);
 
-    // Local state
+    // Local state (anchors, actionType) — anchors must stay local (non-serializable)
     const [listsMenuAnchorEl, setListsMenuAnchorEl] = useState(null);
     const [actionType, setActionType] = useState(null);
-    const [targetItemId, setTargetItemId] = useState(null);
+
+    // Получаем targetItemId из store.contextTarget
+    const targetItemId = contextTarget?.id;
 
     // Logic for splitting tasks into active and completed
     const { activeTasks, completedTasks } = useMemo(() => {
@@ -75,6 +137,9 @@ function TasksList({
         return { activeTasks: active, completedTasks: completed };
     }, [tasks]);
 
+    // Compute visible (flattened) lists for virtualization
+    const visibleActive = useMemo(() => flattenTasks(activeTasks, expandedTasks, selectedList), [activeTasks, expandedTasks, selectedList]);
+    const visibleCompleted = useMemo(() => flattenTasks(completedTasks, expandedTasks, selectedList), [completedTasks, expandedTasks, selectedList]);
 
     // useEffect for Draggable initialization
     useEffect(() => {
@@ -100,17 +165,15 @@ function TasksList({
         return () => draggable.destroy();
     }, [tasks, containerId]);
 
-
     const handleTaskClick = useCallback((taskId) => {
         dispatch(toggleTaskExpanded(taskId));
     }, [dispatch]);
 
-    // Мемоизированные обработчики
     const handleToggle = useCallback(async (task_id, checked) => {
         if (!selectedList?.id) return;
-        const status_id = checked ? 2 : 1; // TODO: get final status from settings
+        const is_completed = checked;
         try {
-            await changeTaskStatusMutation({ taskId: task_id, status_id, completed_at: checked ? new Date().toISOString() : null, listId: selectedList.id }).unwrap();
+            await changeTaskStatusMutation({ taskId: task_id, is_completed: is_completed, completed_at: checked ? new Date().toISOString() : null, listId: selectedList.id }).unwrap();
             if (onSuccess) onSuccess(`Task status changed`);
         } catch (err) {
             if (onError) onError(err);
@@ -121,18 +184,18 @@ function TasksList({
         if (typeof additionalButtonClick === "function") additionalButtonClick(task);
     }, [additionalButtonClick]);
 
-    function handleContextMenu(event, item) {
+    const handleContextMenu = useCallback((event, item) => {
         openMenu(event);
-        setTargetItemId(item.id);
-    }
+        // store only id and menuType; anchorEl remains local in hook
+        dispatch(setContextTarget({ id: item.id, menuType: 'task' }));
+    }, [openMenu, dispatch]);
 
-    console.log(selectedTaskId, "selectedTaskId from TasksList");
-
-    function handleCloseMenu() {
+    const handleCloseMenu = useCallback(() => {
         setListsMenuAnchorEl(null);
         closeMenu();
         setActionType(null);
-    }
+        dispatch(clearContextTarget());
+    }, [closeMenu, dispatch]);
 
     async function handleChangeChildesOrder(elementId, direction) {
         handleCloseMenu();
@@ -153,7 +216,7 @@ function TasksList({
 
         try {
             await updateListMutation({ listId: selectedList.id, childes_order: newChildesOrder }).unwrap();
-            if (onSuccess) onSuccess('Порядок задач изменен');
+            if (onSuccess) onSuccess('Порядок задачи изменен');
         } catch (err) {
             if (onError) onError(err);
         }
@@ -186,7 +249,7 @@ function TasksList({
 
         try {
             await linkTaskMutation(params).unwrap();
-            if (onSuccess) onSuccess('Задача перемещена');
+            if (onSuccess) onSuccess('Задача перемещена/связана');
         } catch (err) {
             if (onError) onError(err);
         }
@@ -198,8 +261,8 @@ function TasksList({
         handleToListAction(selectedList.id, "link");
     }
 
-    function handleOpenListsMenu(event, actionType) {
-        setActionType(actionType);
+    function handleOpenListsMenu(event, actionTypeParam) {
+        setActionType(actionTypeParam);
         setListsMenuAnchorEl(event.currentTarget);
     }
 
@@ -207,70 +270,28 @@ function TasksList({
         setListsMenuAnchorEl(null);
     }
 
-    function handleDragStart(event, task){
+    const handleDragStart = useCallback((event, task) => {
         event.dataTransfer.setData("task", JSON.stringify(task));
-    }
+    }, []);
+
+    const handleSelectTask = useCallback((taskId) => {
+        const selectedTask = tasks.find(t => t.id === taskId);
+        dispatch(setSelectedTaskId(taskId));
+        dispatch(setSelectedTask(selectedTask));
+    }, [dispatch, tasks]);
 
     const handleAddToMyDayClick = useCallback(async () => {
         try {
-            // Assuming "My Day" is a list with a specific, known ID or alias.
-            // This logic might need adjustment based on how "My Day" is identified.
-            // For now, let's assume we need to update the task.
             await updateTaskMutation({ taskId: targetItemId, isMyDay: true }).unwrap();
             if (onSuccess) onSuccess('Добавлено в "Мой день"');
         } catch (err) {
             if (onError) onError(err);
         }
         handleCloseMenu();
-    }, [updateTaskMutation, targetItemId, onSuccess, onError]);
+    }, [updateTaskMutation, targetItemId, onSuccess, onError, handleCloseMenu]);
 
-    // Мемоизированная функция рендера задачи
-    const renderTask = useCallback((task) => {
-        const hasChildren = task.childes_order && task.childes_order.length > 0;
-
-        return (
-            <TaskItem
-                key={task.id}
-                task={task}
-                selectedTaskId={selectedTaskId}
-                open={expandedTasks}
-                onTaskSelect={(taskId) => {
-                    const selectedTask = tasks.find(t => t.id === taskId);
-                    dispatch(setSelectedTaskId(taskId));
-                    dispatch(setSelectedTask(selectedTask));
-                }}
-                onTaskToggle={handleToggle}
-                onExpandToggle={handleTaskClick}
-                onAdditionalButtonClick={handleAdditionalButtonClick}
-                onContextMenu={handleContextMenu}
-                onDragStart={handleDragStart}
-                additionalButton={additionalButton}
-                isNeedContextMenu={isNeedContextMenu}
-            >
-                {hasChildren && (
-                    <Collapse in={expandedTasks[task.id]} timeout="auto" unmountOnExit>
-                        <List disablePadding sx={{ pl: 3 }}>
-                            {task.childes_order.map((childId) => {
-                                const childTask = tasks.find((t) => t.id === childId);
-                                return childTask ? renderTask(childTask) : null;
-                            })}
-                        </List>
-                    </Collapse>
-                )}
-            </TaskItem>
-        );
-    }, [
-        selectedTaskId,
-        expandedTasks,
-        handleToggle,
-        handleTaskClick,
-        handleAdditionalButtonClick,
-        handleContextMenu,
-        handleDragStart,
-        additionalButton,
-        isNeedContextMenu,
-        tasks,
-    ]);
+    // Handlers passed to TaskRow are stable (useCallback where needed)
+    
 
     if (!tasks || !selectedList) {
         return (
@@ -280,11 +301,31 @@ function TasksList({
         );
     }
 
-
     return (
         <>
-            <List sx={{ width: "100%", pt: 0 }} component="nav" id={`tasksList${containerId}`}>
-                {activeTasks.map((task) => renderTask(task))}
+            <div id={`tasksList${containerId}`}>
+                <VirtualizedTasksList
+                    items={visibleActive}
+                    itemContent={(index, item) => (
+                        <TaskRow
+                            key={item.task.id}
+                            task={item.task}
+                            level={item.level}
+                            selectedTaskId={selectedTaskId}
+                            expandedMap={expandedTasks}
+                            onTaskSelect={handleSelectTask}
+                            onTaskToggle={handleToggle}
+                            onExpandToggle={handleTaskClick}
+                            onAdditionalButtonClick={handleAdditionalButtonClick}
+                            onContextMenu={handleContextMenu}
+                            onDragStart={handleDragStart}
+                            additionalButton={additionalButton}
+                            isNeedContextMenu={isNeedContextMenu}
+                        />
+                    )}
+                    style={{ height: '60vh' }}
+                />
+
                 {completedTasks.length > 0 && (
                     <div>
                         <ListItemButton onClick={() => dispatch(setCompletedTasksOpen(!completedTasksOpen))}>
@@ -292,11 +333,31 @@ function TasksList({
                             {completedTasksOpen ? <ExpandLess /> : <ExpandMore />}
                         </ListItemButton>
                         <Collapse in={completedTasksOpen} timeout="auto" unmountOnExit>
-                            <List disablePadding>{completedTasks.map((task) => renderTask(task))}</List>
+                            <VirtualizedTasksList
+                                items={visibleCompleted}
+                                itemContent={(index, item) => (
+                                    <TaskRow
+                                        key={item.task.id}
+                                        task={item.task}
+                                        level={item.level}
+                                        selectedTaskId={selectedTaskId}
+                                        expandedMap={expandedTasks}
+                                        onTaskSelect={handleSelectTask}
+                                        onTaskToggle={handleToggle}
+                                        onExpandToggle={handleTaskClick}
+                                        onAdditionalButtonClick={handleAdditionalButtonClick}
+                                        onContextMenu={handleContextMenu}
+                                        onDragStart={handleDragStart}
+                                        additionalButton={additionalButton}
+                                        isNeedContextMenu={isNeedContextMenu}
+                                    />
+                                )}
+                                style={{ height: '30vh' }}
+                            />
                         </Collapse>
                     </div>
                 )}
-            </List>
+            </div>
             {isNeedContextMenu && (
                 <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleCloseMenu}>
                     <MenuItem key="addToMyDay" onClick={handleAddToMyDayClick}>
@@ -323,8 +384,6 @@ function TasksList({
                             Удалить из этого списка
                         </MenuItem>,
                     ]}
-
-                    {/* <MenuItem onClick={handleDeleteClick}>Удалить</MenuItem> */}
                 </Menu>
             )}
 

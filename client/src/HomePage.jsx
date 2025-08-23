@@ -1,8 +1,10 @@
 import MainContainer from './components/MainContainer';
-import { useEffect } from 'react';
+import { useMediaQuery } from '@mui/material';
+import MainContainerMobile from './components/MobileMain';
 
 
 function HomePage() {
+  const isMobile = useMediaQuery('(max-width:600px)');
   // console.log("HomePage.jsx: старт рендера");
   // useEffect(() => {
   //   if (typeof window !== 'undefined' && window.mainStart) {
@@ -12,7 +14,8 @@ function HomePage() {
 
   return (
     <div>
-      <MainContainer />
+      {isMobile ? <MainContainerMobile /> : <MainContainer />}
+      {/* <MainContainer /> */}
     </div>
   );
 }

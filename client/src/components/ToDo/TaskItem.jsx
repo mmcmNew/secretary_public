@@ -15,11 +15,12 @@ import StarBorderIcon from "@mui/icons-material/StarBorder";
 import StarIcon from "@mui/icons-material/Star";
 import PropTypes from "prop-types";
 
-// Мемоизированный компонент задачи
+// Мемоизированный компонент задачи (presentational)
+// expandedMap — объект { [taskId]: boolean } контролируется внешне (store)
 const TaskItem = memo(({
     task,
     selectedTaskId,
-    open,
+    expandedMap,
     onTaskSelect,
     onTaskToggle,
     onExpandToggle,
@@ -45,7 +46,6 @@ const TaskItem = memo(({
 
     const handleTaskClick = useCallback(() => {
         onTaskSelect(task.id);
-        console.log(task.id, "TaskItem clicked")
     }, [task.id, onTaskSelect]);
 
     const handleAdditionalClick = useCallback((event) => {
@@ -91,7 +91,7 @@ const TaskItem = memo(({
                                 edge="end"
                                 onClick={handleExpandClick}
                             >
-                                {open[task.id] ? <ExpandLess /> : <ExpandMore />}
+                                {expandedMap && expandedMap[task.id] ? <ExpandLess /> : <ExpandMore />}
                             </IconButton>
                         )}
                         <IconButton onClick={handleAdditionalClick}>
@@ -117,8 +117,8 @@ TaskItem.displayName = 'TaskItem';
 
 TaskItem.propTypes = {
     task: PropTypes.object.isRequired,
-    selectedTaskId: PropTypes.number,
-    open: PropTypes.object,
+    selectedTaskId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    expandedMap: PropTypes.object,
     onTaskSelect: PropTypes.func,
     onTaskToggle: PropTypes.func,
     onExpandToggle: PropTypes.func,

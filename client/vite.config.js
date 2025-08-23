@@ -86,6 +86,13 @@ export default defineConfig({
       enabled: false
     }
   })],
+  resolve: {
+    alias: {
+  // map both react-dom and react-dom/client to the profiling build
+  'react-dom/client': 'react-dom/profiling',
+  'scheduler/tracing': 'scheduler/tracing-profiling'
+    }
+  },
   build: {
     // 8. Стандартный вывод в dist/assets/
     outDir: 'dist',
@@ -106,8 +113,7 @@ export default defineConfig({
           'utils': ['dayjs'],
           'fullcalendar': ['@fullcalendar/core', '@fullcalendar/react', '@fullcalendar/daygrid', '@fullcalendar/timegrid', '@fullcalendar/list', '@fullcalendar/interaction', '@fullcalendar/rrule', '@fullcalendar/scrollgrid', '@fullcalendar/bootstrap5'],
           'blocknote': ['@blocknote/core', '@blocknote/mantine', '@blocknote/react'],
-          'dnd': ['@hello-pangea/dnd', 'react-rnd'],
-          'swiper': ['swiper']
+          'dnd': ['@hello-pangea/dnd', 'react-rnd']
         }
       }
     },

@@ -7,10 +7,11 @@ const initialState = {
   selectedTask: null,
   isEditingTitle: false,
   editingTitle: '',
-  // newTask: '',
   completedTasksOpen: true,
   expandedTasks: {},
   openGroups: {},
+  // contextTarget хранит id и тип (menuType) для контекстного меню — anchorEl остаётся локальным
+  contextTarget: { id: null, menuType: null },
 };
 
 export const todoLayoutSlice = createSlice({
@@ -27,9 +28,6 @@ export const todoLayoutSlice = createSlice({
       state.isEditingTitle = action.payload.isEditing;
       state.editingTitle = action.payload.title || '';
     },
-    // setNewTask: (state, action) => {
-    //   state.newTask = action.payload;
-    // },
     setCompletedTasksOpen: (state, action) => {
       state.completedTasksOpen = action.payload;
     },
@@ -37,39 +35,48 @@ export const todoLayoutSlice = createSlice({
       const taskId = action.payload;
       state.expandedTasks[taskId] = !state.expandedTasks[taskId];
     },
-    // resetNewTask: (state) => {
-    //   state.newTask = '';
-    // },
+    // Явная установка раскрытия (полезно для селекторов / программного управления)
+    setTaskExpanded: (state, action) => {
+      const { taskId, expanded } = action.payload;
+      state.expandedTasks[taskId] = !!expanded;
+    },
     toggleGroup: (state, action) => {
       const groupId = action.payload;
       state.openGroups[groupId] = !state.openGroups[groupId];
     },
     setSelectedTaskId: (state, action) => {
-      console.log(action.payload, "setSelectedTaskId payload in todoLayoutSlice");
       state.selectedTaskId = action.payload;
     },
     setSelectedTask: (state, action) => {
       state.selectedTask = action.payload;
     },
+    // Контекстная цель: хранит id элемента и тип меню (например 'task' / 'list')
+    setContextTarget: (state, action) => {
+      const { id, menuType } = action.payload || {};
+      state.contextTarget = { id: id ?? null, menuType: menuType ?? null };
+    },
+    clearContextTarget: (state) => {
+      state.contextTarget = { id: null, menuType: null };
+    },
     addToGeneralList: (state, action) => {
-      // Логика добавления в общий список будет обрабатываться на сервере
-      console.log('Adding to general list:', action.payload);
+      // заглушка — логика добавления обрабатывается сервером / RTK Query
     },
   },
 });
 
-export const { 
-  setSelectedListId, 
+export const {
+  setSelectedListId,
   setSelectedList,
-  setEditingTitle, 
-  // setNewTask, 
-  setCompletedTasksOpen, 
+  setEditingTitle,
+  setCompletedTasksOpen,
   toggleTaskExpanded,
-  // resetNewTask,
-  toggleGroup, 
-  setSelectedTaskId, 
+  setTaskExpanded,
+  toggleGroup,
+  setSelectedTaskId,
   setSelectedTask,
-  addToGeneralList
+  setContextTarget,
+  clearContextTarget,
+  addToGeneralList,
 } = todoLayoutSlice.actions;
 
 export default todoLayoutSlice.reducer;

@@ -1,4 +1,4 @@
-import { useCallback, memo } from 'react';
+import { useCallback, memo, useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Box, Typography, IconButton, Button } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -9,9 +9,21 @@ import PropTypes from 'prop-types';
 
 function ToDoTaskEditorPanel({ mobile = false }) {
   const dispatch = useDispatch();
+  const tasks = useSelector((state) => state.tasks.byId || []);
+  const [task, setTask] = useState(null);
   const { selectedTask, selectedTaskId } = useSelector((state) => state.todoLayout);
+  console.log('ToDoTaskEditorPanel render', { tasks, selectedTask, selectedTaskId });
   
-  const task = selectedTask;
+  useEffect(() => {
+    if (selectedTaskId) {
+      const foundTask = tasks?.byId?.find(t => t.id === selectedTaskId) || selectedTask || null;
+      setTask(foundTask || selectedTask);
+    } else {
+      setTask(null);  
+    }
+  }, [tasks, selectedTask, selectedTaskId]);
+
+  // const task = tasks?.byId?.find(t => t.id === selectedTaskId) || selectedTask;
   
   const { data: subtasks = [] } = useGetSubtasksQuery(selectedTaskId, {
     skip: !selectedTaskId
