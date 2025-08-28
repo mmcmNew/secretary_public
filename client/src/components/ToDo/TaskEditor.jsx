@@ -1,33 +1,10 @@
-import { useEffect, useState, memo } from "react";
-import { useForm, Controller, useFieldArray, FormProvider } from "react-hook-form";
-import {
-    Box,
-    TextField,
-    IconButton,
-    Grid,
-    Checkbox,
-    Divider,
-    Paper,
-    InputBase,
-    FormControl,
-    Typography,
-    ToggleButton,
-    Autocomplete,
-    Chip,
-    Button,
-} from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-import AddIcon from "@mui/icons-material/Add";
-import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { useEffect, useState, memo, useCallback, useMemo } from "react";
+import { useForm, useFieldArray, FormProvider } from "react-hook-form";
+import { Box, Typography } from "@mui/material";
 import dayjs from "dayjs";
-import { renderTimeViewClock } from "@mui/x-date-pickers";
-import ColorPicker from "../ColorPicker";
 import TaskTypeDialog from "../TaskTypeManager/TaskTypeDialog.jsx";
 import PropTypes from "prop-types";
-import DateTimeRangePicker from "./DateTimeRangePicker.jsx";
-import TimeRangePickerField from "./TimeRangePicker.jsx";
+import { TaskTitleSection, TaskFieldsSection } from "./TaskEditor/components";
 
 function TaskEditor({
     taskFields,
@@ -40,360 +17,282 @@ function TaskEditor({
     showJournalButton = true,
 }) {
     const methods = useForm({ defaultValues: { subtasks: [] } });
-    const { control, setValue, reset, watch, formState: { errors }, getValues } = methods;
+    const { control, reset, formState: { errors }, getValues } = methods;
     const { fields: subtaskFields, append, remove, replace } = useFieldArray({ control, name: 'subtasks' });
     const [typeDialogOpen, setTypeDialogOpen] = useState(false);
     const [newTypeData, setNewTypeData] = useState({ name: '', color: '#3788D8', description: '' });
-    const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
-    const updateNewTypeData = (field, value) => setNewTypeData(prev => ({ ...prev, [field]: value }));
+    const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
 
-    // Инициализация формы из пропсов
-    useEffect(() => {
-        if (!task || !taskFields) return;
+    // Memoized task ID for comparison
+    const taskId = useMemo(() => task?.id, [task?.id]);
+    
+    // Memoized initial form data - only recalculate when task ID changes
+    const initialFormData = useMemo(() => {
+        if (!task || !taskFields) return {};
+        
         const initial = {};
         Object.entries(taskFields).forEach(([key, field]) => {
+            const taskValue = task[key];
+            
             if (field.type === 'range') {
                 initial[key] = {
                     start: task.start ? dayjs(task.start).toISOString() : null,
                     end: task.end ? dayjs(task.end).toISOString() : null,
                 };
+            } else if (field.type === 'select' || field.type === 'multiselect') {
+                initial[key] = taskValue ?? null;
             } else {
-                 initial[key] = task[key] ?? (field.type === 'toggle' ? false : (field.type === 'multiselect' ? [] : ''));
+                initial[key] = taskValue ?? (field.type === 'toggle' ? false : (field.type === 'multiselect' ? [] : ''));
             }
         });
         initial.title = task.title;
-        initial.subtasks = Array.isArray(subtasks) ? subtasks.map(st => ({ id: st.id, title: st.title, is_completed: st.is_completed })) : [];
-        reset(initial);
-        replace(initial.subtasks);
-    }, [task, taskFields, subtasks, reset, replace]);
+        initial.subtasks = Array.isArray(subtasks) ? subtasks.map(st => ({ 
+            id: st.id, 
+            title: st.title, 
+            is_completed: st.is_completed 
+        })) : [];
+        
+        return initial;
+    }, [taskId, taskFields, subtasks]); // Removed 'task' dependency to prevent form reset on task updates
 
-    // Обработчик для немедленного обновления родительского компонента
-    const triggerParentOnChange = (updatedField, updatedValue) => {
-        if (!onChange) return;
-        const formValues = getValues();
-        const updatedTask = {
-            ...task,
-            ...formValues,
+    // Initialize form when task ID changes only
+    useEffect(() => {
+        if (!task || !taskFields) return;
+        console.log('Initializing form for task:', taskId);
+        reset(initialFormData);
+        replace(initialFormData.subtasks);
+    }, [taskId, taskFields, reset, replace]); // Only reset when taskId changes
+
+    // Sync subtaskFields with subtasks prop changes
+    useEffect(() => {
+        if (Array.isArray(subtasks) && subtasks.length !== subtaskFields.length) {
+            const formattedSubtasks = subtasks.map(st => ({ 
+                id: st.id, 
+                title: st.title, 
+                is_completed: st.is_completed 
+            }));
+            replace(formattedSubtasks);
+        }
+    }, [subtasks, subtaskFields.length, replace]);
+
+    // Stable callbacks
+    const triggerParentOnChange = useCallback((updatedField, updatedValue) => {
+        if (!onChange || !taskId) {
+            console.log('triggerParentOnChange skipped:', { updatedField, updatedValue, hasOnChange: !!onChange, hasTaskId: !!taskId });
+            return;
+        }
+        
+        const updateData = {
+            taskId: taskId,
             [updatedField]: updatedValue,
         };
 
-        // Если обновляется диапазон дат, также обновим корневые start и end
-        if (typeof updatedValue === 'object' && updatedValue !== null && ('start' in updatedValue || 'end' in updatedValue)) {
-            updatedTask.start = updatedValue.start;
-            updatedTask.end = updatedValue.end;
+        // Handle special cases for date fields
+        if (updatedField === 'start' || updatedField === 'end') {
+            updateData[updatedField] = updatedValue;
+        } else if (updatedField === 'range' && typeof updatedValue === 'object' && updatedValue !== null) {
+            if ('start' in updatedValue) {
+                updateData.start = updatedValue.start;
+            }
+            if ('end' in updatedValue) {
+                updateData.end = updatedValue.end;
+            }
         }
 
-        onChange(updatedTask);
-    };
+        console.log('triggerParentOnChange called:', { updatedField, updatedValue, updateData });
+        onChange(updateData);
+    }, [onChange, taskId]);
 
-    const handleToggle = (taskId, is_completed) => {
+    const handleToggle = useCallback((taskId, is_completed) => {
         if (changeTaskStatus) {
-            const completed_at = is_completed ? new Date().toISOString() : null;
-            changeTaskStatus({ taskId, is_completed, completed_at });
+            // According to API: PUT /api/tasks/change_status
+            // This works for both main tasks and subtasks since subtasks are also tasks
+            const updateData = { 
+                taskId, 
+                is_completed 
+            };
+            
+            // Add completed_at only when marking as completed
+            if (is_completed) {
+                updateData.completed_at = new Date().toISOString();
+            }
+            
+            console.log('handleToggle called:', { taskId, is_completed, updateData, isSubtask: taskId !== task?.id });
+            
+            try {
+                changeTaskStatus(updateData).unwrap().then(result => {
+                    console.log('changeTaskStatus result:', result);
+                }).catch(error => {
+                    console.error('changeTaskStatus error:', error);
+                });
+            } catch (error) {
+                console.error('changeTaskStatus error:', error);
+            }
         }
-    };
+    }, [changeTaskStatus, task?.id]);
 
-    const handleSubBlur = async (index) => {
+    const handleSubBlur = useCallback(async (index) => {
         const field = subtaskFields[index];
         const title = getValues(`subtasks.${index}.title`).trim();
         if (!title) return;
+        
+        console.log('handleSubBlur called:', { index, field, title });
+        
         if (!field.id && addSubTask) {
-            await addSubTask({ title, parentTaskId: task.id });
-        } else {
-            triggerParentOnChange(`subtasks.${index}.title`, title);
+            // Create new subtask using API: POST /api/tasks/add_subtask
+            console.log('Creating new subtask:', { title, parentTaskId: taskId });
+            try {
+                const result = await addSubTask({ 
+                    title, 
+                    parentTaskId: taskId 
+                }).unwrap();
+                console.log('addSubTask result:', result);
+                
+                // Add the new subtask to local state for immediate UI update
+                if (result.subtask) {
+                    append({ 
+                        id: result.subtask.id, 
+                        title: result.subtask.title, 
+                        is_completed: result.subtask.is_completed 
+                    });
+                }
+            } catch (error) {
+                console.error('addSubTask error:', error);
+            }
+        } else if (field.id) {
+            // Update existing subtask using updateTask API since subtasks are also tasks
+            console.log('Updating existing subtask title:', { subtaskId: field.id, title });
+            
+            if (onChange) {
+                // Use the same updateTask API that's used for main tasks
+                const updateData = {
+                    taskId: field.id, // Use subtask ID, not parent task ID
+                    title: title
+                };
+                
+                console.log('Calling updateTask for subtask:', updateData);
+                onChange(updateData);
+            }
         }
-    };
+    }, [subtaskFields, getValues, addSubTask, taskId, onChange, append]);
 
-    const handleAddSubtask = async (e) => {
+    const handleAddSubtask = useCallback(async (e) => {
         if (e.type === 'keydown' && e.key !== 'Enter') return;
         e.preventDefault();
         const title = newSubtaskTitle.trim();
         if (!title) return;
+        
+        console.log('handleAddSubtask called:', { title, taskId });
+        
         if (addSubTask) {
-            await addSubTask({ title, parentTaskId: task.id });
+            // Use API: POST /api/tasks/add_subtask
+            console.log('Calling addSubTask API');
+            try {
+                const result = await addSubTask({ 
+                    title, 
+                    parentTaskId: taskId 
+                }).unwrap();
+                console.log('addSubTask result:', result);
+                
+                // Add the new subtask to local state for immediate UI update
+                if (result.subtask) {
+                    append({ 
+                        id: result.subtask.id, 
+                        title: result.subtask.title, 
+                        is_completed: result.subtask.is_completed 
+                    });
+                }
+            } catch (error) {
+                console.error('addSubTask error:', error);
+            }
         } else {
+            // Fallback for local development/testing
+            console.log('Adding subtask locally');
             append({ title, status_id: 1 });
         }
         setNewSubtaskTitle('');
-    };
+    }, [newSubtaskTitle, addSubTask, taskId, append]);
 
-    const handleKeyDown = (e, field, onEnter) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            onEnter(e.target.value);
+    const handleDeleteSubTask = useCallback((subId) => {
+        if (deleteTask) {
+            // Use API: DELETE /api/tasks/del_task
+            console.log('handleDeleteSubTask called:', subId);
+            
+            try {
+                deleteTask({ taskId: subId }).unwrap().then(result => {
+                    console.log('deleteTask result:', result);
+                    // Remove from local state
+                    const index = subtaskFields.findIndex(field => field.id === subId);
+                    if (index !== -1) {
+                        remove(index);
+                    }
+                }).catch(error => {
+                    console.error('deleteTask error:', error);
+                });
+            } catch (error) {
+                console.error('deleteTask error:', error);
+            }
         }
-    };
+    }, [deleteTask, subtaskFields, remove]);
 
-    const handleDeleteSubTask = (subId) => {
-        if (deleteTask) deleteTask(subId);
-    };
+    const updateNewTypeData = useCallback((field, value) => {
+        setNewTypeData(prev => ({ ...prev, [field]: value }));
+    }, []);
 
+    // Memoized completion status text
+    const completionText = useMemo(() => {
+        if (!task?.is_completed) return null;
+        return (
+            <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
+                Завершено: {task.completed_at ? dayjs(task.completed_at).format('DD/MM/YYYY HH:mm') : ''}
+            </Typography>
+        );
+    }, [task?.is_completed, task?.completed_at]);
+
+    // Early return if no task
     if (!task) return null;
-    console.log('TaskEditor render', { task, taskFields, subtasks });
 
     return (
         <FormProvider {...methods}>
-        <Box sx={{ width: '100%', height: '96%', pb: 2 }}>
-            <Paper variant="outlined" sx={{ p: 1, my: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Checkbox
-                        checked={task.is_completed}
-                        sx={{ mr: 1, p: 0 }}
-                        onChange={(e) => handleToggle(task.id, e.target.checked)}
-                    />
-                    <Controller
-                        name="title"
-                        control={control}
-                        render={({ field }) => (
-                            <TextField
-                                label="Название задачи"
-                                sx={{ width: '100%', my: 1 }}
-                                {...field}
-                                onBlur={(e) => triggerParentOnChange('title', e.target.value)}
-                                onKeyDown={(e) => handleKeyDown(e, 'title', (value) => triggerParentOnChange('title', value))}
-                                multiline
-                                maxRows={3}
-                                variant="outlined"
-                            />
-                        )}
-                    />
-                </Box>
-                <Box sx={{ marginY: 0 }}>
-                    {subtaskFields?.map((sub, idx) => (
-                        <Grid container alignItems="center" spacing={0.5} key={sub.id || idx} sx={{ marginY: 0.5 }}>
-                            <Grid item xs width="100%">
-                                <Box component="form" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                                    <Checkbox
-                                        checked={sub.is_completed}
-                                        sx={{ m: 0, p: 0 }}
-                                        onChange={(e) => sub.id && handleToggle(sub.id, e.target.checked)}
-                                    />
-                                    <Controller
-                                        name={`subtasks.${idx}.title`}
-                                        control={control}
-                                        render={({ field }) => (
-                                            <InputBase
-                                                sx={{ ml: 1, flex: 1, textDecoration: sub.is_completed ? 'line-through' : 'none', width: '100%' }}
-                                                placeholder="Подзадача"
-                                                {...field}
-                                                onBlur={() => handleSubBlur(idx)}
-                                                onKeyDown={(e) => handleKeyDown(e, `subtasks.${idx}.title`, () => handleSubBlur(idx))}
-                                                inputProps={{ 'aria-label': 'subtask' }}
-                                            />
-                                        )}
-                                    />
-                                    <Divider sx={{ height: 15, m: 0.5 }} orientation="vertical" />
-                                    <IconButton sx={{ m: 0, p: 0 }} onClick={() => sub.id ? handleDeleteSubTask(sub.id) : remove(idx)}>
-                                        <CloseIcon />
-                                    </IconButton>
-                                </Box>
-                                <Divider sx={{ m: 0.5 }} />
-                            </Grid>
-                        </Grid>
-                    ))}
-                </Box>
-                {typeof handleAddSubtask == 'function' &&
-                    <Grid item xs>
-                        <Box component="form" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                            <IconButton sx={{ m: 0, p: 0 }} onClick={handleAddSubtask}>
-                                <AddIcon />
-                            </IconButton>
-                            <InputBase
-                                sx={{ flex: 1, ml: 1 }}
-                                placeholder="Новая подзадача"
-                                value={newSubtaskTitle}
-                                onChange={e => setNewSubtaskTitle(e.target.value)}
-                                onKeyDown={handleAddSubtask}
-                                inputProps={{ 'aria-label': 'add subtask' }}
-                            />
-                        </Box>
-                    </Grid>
-                }
-            </Paper>
-            {task.is_completed && (
-                <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
-                    Завершено: {task.completed_at ? dayjs(task.completed_at).format('DD/MM/YYYY HH:mm') : ''}
-                </Typography>
-            )}
-            <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexDirection: 'column', gap: 1.5, paddingY: 2 }}>
-                {showJournalButton && <Button variant="outlined">Добавить запись в журнал проекта</Button>}
-                {Object.entries(taskFields)
-                    .slice()
-                    .sort(([, a], [, b]) => (a.id || 0) - (b.id || 0))
-                    .map(([key, field]) => {
-                        if (!field) return null;
-                        if (field.type === 'divider') return <Divider key={key} sx={{ my: 0.5 }} />;
-                        return (
-                            <Box key={key} sx={{ mt: 1 }}>
-                                {field.type === 'range' ?
-                                    <Controller
-                                        name={key}
-                                        control={control}
-                                        render={({ field: { onChange: onFieldChange, value }, fieldState: { error } }) => (
-                                            <DateTimeRangePicker
-                                                value={value}
-                                                onChange={(newValue) => {
-                                                    onFieldChange(newValue);
-                                                    triggerParentOnChange(key, newValue);
-                                                }}
-                                                error={error}
-                                            />
-                                        )}
-                                    />
-                                 : field.type === 'time-range' ?
-                                    <TimeRangePickerField name={key} onValidBlur={(val) => triggerParentOnChange(key, val)} />
-                                 : field.type === 'datetime' ? (
-                                    <FormControl fullWidth>
-                                        <Controller
-                                            name={key}
-                                            control={control}
-                                            render={({ field: ctrl }) => (
-                                                <LocalizationProvider dateAdapter={AdapterDayjs}>
-                                                    <DateTimePicker
-                                                        viewRenderers={{ hours: renderTimeViewClock, minutes: renderTimeViewClock, seconds: renderTimeViewClock }}
-                                                        ampm={false}
-                                                        label={field.name}
-                                                        value={ctrl.value ? dayjs(ctrl.value) : null}
-                                                        format="DD/MM/YYYY HH:mm"
-                                                        onChange={(nv) => {
-                                                            const iso = nv ? nv.toISOString() : null;
-                                                            ctrl.onChange(iso);
-                                                            triggerParentOnChange(key, iso);
-                                                        }}
-                                                        slotProps={{ textField: { inputProps: { readOnly: false }, error: !!errors[key], helperText: errors[key]?.message } }}
-                                                    />
-                                                </LocalizationProvider>
-                                            )}
-                                        />
-                                    </FormControl>
-                                ) : field.type === 'select' ? (
-                                    <Controller
-                                        name={key}
-                                        control={control}
-                                        render={({ field: ctrl }) => (
-                                            <Autocomplete
-                                                options={(key === 'type_id' ? [...field.options, { value: '__add__', label: 'Добавить тип...' }] : field.options).slice().sort((a, b) => {
-                                                    const ga = a.groupLabel || '';
-                                                    const gb = b.groupLabel || '';
-                                                    if (ga !== gb) return ga.localeCompare(gb);
-                                                    return (a.label || '').localeCompare(b.label || '');
-                                                })}
-                                                groupBy={field.groupBy ? opt => opt.groupLabel || 'Без группы' : undefined}
-                                                getOptionLabel={opt => opt.label || ''}
-                                                value={field.options.find(opt => opt.value === ctrl.value) || null}
-                                                onChange={(e, nv) => {
-                                                    if (key === 'type_id' && nv && nv.value === '__add__') {
-                                                        setTypeDialogOpen(true);
-                                                    } else {
-                                                        triggerParentOnChange(key, nv ? nv.value : null);
-                                                    }
-                                                }}
-                                                renderInput={(params) => <TextField {...params} label={field.name} />}
-                                            />
-                                        )}
-                                    />
-                                ) : field.type === 'text' ? (
-                                    <Controller
-                                        name={key}
-                                        control={control}
-                                        render={({ field: ctrl }) => (
-                                            <TextField
-                                                fullWidth
-                                                label={field.name}
-                                                multiline
-                                                rows={5}
-                                                {...ctrl}
-                                                onBlur={(e) => triggerParentOnChange(key, e.target.value)}
-                                                onKeyDown={(e) => handleKeyDown(e, key, (value) => triggerParentOnChange(key, value))}
-                                                variant="outlined"
-                                            />
-                                        )}
-                                    />
-                                ) : field.type === 'toggle' ? (
-                                    <FormControl fullWidth>
-                                        <Controller
-                                            name={key}
-                                            control={control}
-                                            render={({ field: ctrl }) => (
-                                                <ToggleButton
-                                                    value="check"
-                                                    size="small"
-                                                    selected={!!ctrl.value}
-                                                    onChange={() => {
-                                                        const newValue = !ctrl.value;
-                                                        ctrl.onChange(newValue);
-                                                        triggerParentOnChange(key, newValue);
-                                                    }}
-                                                    sx={{ border: '1px solid', borderColor: ctrl.value ? 'darkgrey' : 'grey.400', justifyContent: 'flex-start', p: 0 }}
-                                                >
-                                                    <Checkbox checked={!!ctrl.value} />
-                                                    <Typography sx={{ ml: 1, textTransform: 'none' }}>{field.name}</Typography>
-                                                </ToggleButton>
-                                            )}
-                                        />
-                                    </FormControl>
-                                ) : field.type === 'color' ? (
-                                    <Controller
-                                        name={key}
-                                        control={control}
-                                        render={({ field: ctrl }) => (
-                                            <ColorPicker
-                                                fieldKey={key}
-                                                fieldName={field.name}
-                                                selectedColorProp={ctrl.value || ''}
-                                                onColorChange={(_, color) => triggerParentOnChange(key, color)}
-                                            />
-                                        )}
-                                    />
-                                ) : field.type === 'multiselect' ? (
-                                    <Controller
-                                        name={key}
-                                        control={control}
-                                        render={({ field: ctrl }) => (
-                                            <Autocomplete
-                                                multiple
-                                                options={field.options}
-                                                getOptionLabel={opt => opt.title}
-                                                isOptionEqualToValue={(opt, val) => opt.id === val.id}
-                                                value={Array.isArray(ctrl.value) ? ctrl.value : []}
-                                                onChange={(e, nv) => triggerParentOnChange(key, nv)}
-                                                renderInput={(params) => <TextField {...params} label={field.name} />}
-                                                renderTags={(val, getTagProps) => val.map((opt, idx) => <Chip key={opt.id} label={opt.title} {...getTagProps({ idx })} />)}
-                                            />
-                                        )}
-                                    />
-                                ) : (
-                                    <Controller
-                                        name={key}
-                                        control={control}
-                                        render={({ field: ctrl }) => (
-                                            <TextField
-                                                fullWidth
-                                                label={field.name}
-                                                type={field.type}
-                                                {...ctrl}
-                                                onBlur={(e) => triggerParentOnChange(key, e.target.value)}
-                                                onKeyDown={(e) => handleKeyDown(e, key, (value) => triggerParentOnChange(key, value))}
-                                                variant="outlined"
-                                            />
-                                        )}
-                                    />
-                                )}
-                            </Box>
-                        );
-                    })}
-            </Paper>
-            <TaskTypeDialog
-                open={typeDialogOpen}
-                onClose={() => setTypeDialogOpen(false)}
-                data={newTypeData}
-                onChange={updateNewTypeData}
-                onSave={async () => {
-                    // Типы задач должны обновляться вне компонента
+            <Box sx={{ width: '100%', height: '96%', pb: 2 }}>
+                <TaskTitleSection
+                    key={`title-${taskId}`}
+                    task={task}
+                    control={control}
+                    handleToggle={handleToggle}
+                    handleSubBlur={handleSubBlur}
+                    handleAddSubtask={handleAddSubtask}
+                    handleDeleteSubTask={handleDeleteSubTask}
+                    newSubtaskTitle={newSubtaskTitle}
+                    setNewSubtaskTitle={setNewSubtaskTitle}
+                    subtaskFields={subtaskFields}
+                    remove={remove}
+                    triggerParentOnChange={triggerParentOnChange}
+                />
+                
+                {completionText}
+                
+                <TaskFieldsSection
+                    key={`fields-${taskId}`}
+                    taskFields={taskFields}
+                    control={control}
+                    errors={errors}
+                    triggerParentOnChange={triggerParentOnChange}
+                    showJournalButton={showJournalButton}
+                    setTypeDialogOpen={setTypeDialogOpen}
+                />
+                
+                <TaskTypeDialog
+                    open={typeDialogOpen}
+                    onClose={() => setTypeDialogOpen(false)}
+                    data={newTypeData}
+                    onChange={updateNewTypeData}
+                    onSave={async () => {
+                        // Task types should be updated outside the component
                         setTypeDialogOpen(false);
-                }}
-            />
-        </Box>
+                    }}
+                />
+            </Box>
         </FormProvider>
     );
 }

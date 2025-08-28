@@ -2,9 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   selectedListId: null,
-  selectedList: null,
   selectedTaskId: null,
-  selectedTask: null,
   isEditingTitle: false,
   editingTitle: '',
   completedTasksOpen: true,
@@ -19,10 +17,17 @@ export const todoLayoutSlice = createSlice({
   initialState,
   reducers: {
     setSelectedListId: (state, action) => {
-      state.selectedListId = action.payload;
-    },
-    setSelectedList: (state, action) => {
-      state.selectedList = action.payload;
+      const newListId = action.payload;
+      const oldListId = state.selectedListId;
+      state.selectedListId = newListId;
+      
+      // Сбрасываем selectedTaskId при смене списка (включая установку null)
+      if (state.selectedTaskId !== null) {
+        console.log(`List changed from ${oldListId} to ${newListId}, clearing selectedTaskId: ${state.selectedTaskId}`);
+        state.selectedTaskId = null;
+        // Также сбрасываем expandedTasks для нового списка
+        state.expandedTasks = {};
+      }
     },
     setEditingTitle: (state, action) => {
       state.isEditingTitle = action.payload.isEditing;
@@ -47,9 +52,6 @@ export const todoLayoutSlice = createSlice({
     setSelectedTaskId: (state, action) => {
       state.selectedTaskId = action.payload;
     },
-    setSelectedTask: (state, action) => {
-      state.selectedTask = action.payload;
-    },
     // Контекстная цель: хранит id элемента и тип меню (например 'task' / 'list')
     setContextTarget: (state, action) => {
       const { id, menuType } = action.payload || {};
@@ -66,14 +68,12 @@ export const todoLayoutSlice = createSlice({
 
 export const {
   setSelectedListId,
-  setSelectedList,
   setEditingTitle,
   setCompletedTasksOpen,
   toggleTaskExpanded,
   setTaskExpanded,
   toggleGroup,
   setSelectedTaskId,
-  setSelectedTask,
   setContextTarget,
   clearContextTarget,
   addToGeneralList,

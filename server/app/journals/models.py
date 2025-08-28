@@ -2,13 +2,14 @@ from datetime import datetime
 import os
 
 from app import db
+import uuid
 from flask import current_app
 
 class JournalSchema(db.Model):
     __tablename__ = 'journal_schemas'
     __table_args__ = {'schema': 'content'}
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(db.String(36), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     display_name = db.Column(db.String(200), nullable=False)
@@ -32,7 +33,7 @@ class JournalEntry(db.Model):
     __tablename__ = 'journal_entries'
     __table_args__ = {'schema': 'content'}
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(db.String(36), nullable=False)
     journal_type = db.Column(db.String(50))
     data = db.Column(db.JSON)
@@ -55,8 +56,9 @@ class JournalFile(db.Model):
     __tablename__ = 'journal_files'
     __table_args__ = {'schema': 'content'}
 
-    id = db.Column(db.Integer, primary_key=True)
-    entry_id = db.Column(db.Integer, db.ForeignKey('content.journal_entries.id'), nullable=False)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), nullable=False)
+    entry_id = db.Column(db.String(36), db.ForeignKey('content.journal_entries.id'), nullable=False)
     field_name = db.Column(db.String(100), nullable=False)  # Имя поля, к которому относится файл
     filename = db.Column(db.String(255), nullable=False)
     original_filename = db.Column(db.String(255), nullable=False)

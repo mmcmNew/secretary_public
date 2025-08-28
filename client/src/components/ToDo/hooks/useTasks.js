@@ -288,17 +288,7 @@ export const useTasks = ({ onError, setLoading }) => {
   //   }
   // }, [onError, setLoading, taskFields]);
 
-  // const getSubtasksByParentId = useCallback(async (parentId) => {
-  //   try {
-  //     const { data } = await api.get(`/tasks/get_subtasks/${parentId}`);
-  //     return data.subtasks || [];
-  //   } catch (err) {
-  //     onError?.(err);
-  //     throw err;
-  //   }
-  // }, [onError]);
-
-  // // Очистка pending операций при размонтировании
+  // Очистка pending операций при размонтировании
   // useEffect(() => {
   //   return () => {
   //     pendingOperations.current.clear();
@@ -314,7 +304,6 @@ export const useTasks = ({ onError, setLoading }) => {
     // deleteTask,
     // changeTaskStatus,
     // fetchTasks,
-    // getSubtasksByParentId,
     // taskFields,
     // handleWebSocketUpdate,
   };

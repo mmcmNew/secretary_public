@@ -1,9 +1,9 @@
-import { createContext, useEffect, useState } from 'react';
+import { createContext, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import io from 'socket.io-client';
 import { useSelector, useDispatch } from 'react-redux';
 import { setCalendarVersion, useGetCalendarEventsQuery } from '../../store/calendarSlice';
-import { setTasksVersion, useGetTasksQuery } from '../../store/tasksSlice';
+import { setTasksVersion, tasksApi } from '../../store/tasksSlice'; // ✅ ВОССТАНОВЛЕНО: setTasksVersion
 
 export const UpdateWebSocketContext = createContext({});
 
@@ -11,10 +11,10 @@ export default function UpdateWebSocketProvider({ children }) {
   const dispatch = useDispatch();
 
   const { version: currentCalendarVersion, isFetching: isFetchingCalendar, range: calendarRange } = useSelector((state) => state.calendar);
-  const { version: currentTasksVersion, isFetching: isFetchingTasks } = useSelector((state) => state.tasks);
+  // ✅ ВОССТАНОВЛЕНО: версия для WebSocket уведомлений
+  const { version: currentTasksVersion } = useSelector((state) => state.tasks);
 
   const { refetch: refetchCalendarEvents } = useGetCalendarEventsQuery(calendarRange, { skip: !calendarRange });
-  const { refetch: refetchTasks } = useGetTasksQuery();
 
   useEffect(() => {
     const socket = io('/updates', { transports: ['websocket'], secure: true });
@@ -31,26 +31,33 @@ export default function UpdateWebSocketProvider({ children }) {
           refetchCalendarEvents();
         }
       }
-      if (data.tasksVersion && data.tasksVersion > currentTasksVersion && !isFetchingTasks) {
+      
+      // ✅ ОБНОВЛЕНО: WebSocket + автоматическая проверка версии
+      if (data.tasksVersion && data.tasksVersion > currentTasksVersion) {
+        console.log(`🔄 WebSocket: версия задач обновлена ${currentTasksVersion} → ${data.tasksVersion}`);
+        // Обновляем локальную версию
         dispatch(setTasksVersion(data.tasksVersion));
-        refetchTasks();
+        // Инвалидируем кэш для перезагрузки данных
+        dispatch(tasksApi.util.invalidateTags(['Task']));
       }
     });
 
     socket.on('task_changed', (data) => {
-      // Этот обработчик может быть использован для более гранулярных обновлений,
-      // но в рамках текущей логики, где data_updated триггерит полный рефетч по версии,
-      // его можно оставить пустым или удалить, если он не нужен для других целей.
-      // Если task_changed должен триггерить рефетч, то логика будет аналогична data_updated.
-      // Для простоты, пока полагаемся на data_updated для общих версий.
+      // ✅ Более гранулярное обновление через RTK Query
+      if (data.taskId) {
+        console.log('🔄 WebSocket: invalidating specific task cache');
+        // Инвалидируем конкретную задачу
+        dispatch(tasksApi.util.invalidateTags([{ type: 'Task', id: data.taskId }]));
+      }
     });
 
     socket.on('disconnect', () => {
       console.log('Disconnected from updates WebSocket');
     });
 
+    // ✅ ВОССТАНОВЛЕНО: currentTasksVersion в зависимостях
     return () => socket.disconnect();
-  }, [dispatch, currentCalendarVersion, isFetchingCalendar, calendarRange, currentTasksVersion, isFetchingTasks, refetchCalendarEvents, refetchTasks]);
+  }, [dispatch, currentCalendarVersion, isFetchingCalendar, calendarRange, currentTasksVersion, refetchCalendarEvents]);
 
   return (
     <UpdateWebSocketContext.Provider value={{}}>

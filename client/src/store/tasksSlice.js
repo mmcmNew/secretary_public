@@ -1,290 +1,126 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { apiSlice } from './api/apiSlice';
-import { listsApi } from './listsSlice';
+import { createEntityAdapter } from '@reduxjs/toolkit';
 
+// ✅ УПРОЩЕННЫЙ slice - ТОЛЬКО версионирование для проверки актуальности
 export const tasksSlice = createSlice({
   name: 'tasks',
   initialState: {
-    byId: {},
-    allIds: [],
-    selectedTaskId: null,
-    loading: false,
-    error: null,
+    // ✅ ТОЛЬКО версия для сравнения с сервером
     version: 0,
-    isFetching: false,
+    // ❌ НЕ храним данные - это делает RTK Query
   },
   reducers: {
     setTasksVersion: (state, action) => {
       state.version = action.payload;
     },
   },
-  extraReducers: (builder) => {
-    tasksExtraReducers(builder);
-  }
 });
 
-export const { setSelectedTaskId, setTasksVersion } = tasksSlice.actions;
-
+export const { setTasksVersion } = tasksSlice.actions;
+export const tasksAdapter = createEntityAdapter();
 export default tasksSlice.reducer;
 
-// подписываемся на getTasks
-export const tasksExtraReducers = (builder) => {
-  builder.addMatcher(
-    tasksApi.endpoints.getTasks.matchFulfilled,
-    (state, action) => {
-      const tasks = action.payload || [];
-      state.byId = {};
-      state.allIds = [];
-      tasks.forEach(task => {
-        state.byId[task.id] = task;
-        state.allIds.push(task.id);
-      });
-    }
-  );
-
-  builder.addMatcher(
-    tasksApi.endpoints.updateTask.matchFulfilled,
-    (state, action) => {
-      const updatedTask = action.payload.task;
-      if (updatedTask) {
-        state.byId[updatedTask.id] = updatedTask;
-        if (!state.allIds.includes(updatedTask.id)) {
-          state.allIds.push(updatedTask.id);
-        }
-      }
-    }
-  );
-};
-
+// ✅ RTK Query endpoints - единственный источник данных
 export const tasksApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getTasks: builder.query({
-      query: (listId) => `/api/tasks/get_tasks?list_id=${listId}`,
-      providesTags: (result, error, listId) => [{ type: 'Task', id: listId }],
-      transformResponse: (response) => {
-        return response.tasks || [];
+    // 1️⃣ Список задач по конкретному списку
+    getTasksByListId: builder.query({
+      query: (listId) => `api/tasks/get_tasks?list_id=${listId}`,
+      transformResponse: (response, meta, listId) => {
+        // response = { tasks: [...], list: {...} }
+        return {
+          listId,
+          list: response.list,
+          tasks: response.tasks,
+        };
       },
+      providesTags: (result, error, listId) =>
+        result
+          ? [
+              { type: 'Task', id: `LIST-${listId}` },
+              ...result.tasks.map(({ id }) => ({ type: 'Task', id })),
+            ]
+          : [{ type: 'Task', id: `LIST-${listId}` }],
     }),
+     // 2️⃣ Задачи по списку id
     getTasksByIds: builder.query({
-      query: (ids) => `/api/tasks/get_tasks_by_ids?ids=${ids.join(',')}`,
-      providesTags: (result, error, ids) => ids.map(id => ({ type: 'Task', id })),
+      query: ({ ids = [] }) => ({
+        url: 'api/tasks/get_tasks_by_ids',
+        method: 'POST',
+        body: { ids },
+      }),
+      providesTags: (result) =>
+        result?.tasks
+          ? result.tasks.map(({ id }) => ({ type: 'Task', id }))
+          : [],
     }),
     addTask: builder.mutation({
-      query: (newTask) => ({
-        url: '/api/tasks/add_task',
+      query: (task) => ({
+        url: 'api/tasks/add_task',
         method: 'POST',
-        body: newTask,
+        body: task,
       }),
-      async onQueryStarted(newTask, { dispatch, queryFulfilled }) {
-        const patchResult = dispatch(
-          tasksApi.util.updateQueryData('getTasks', newTask.listId, () => {})
-        );
-        try {
-          const { data: addedTaskResponse } = await queryFulfilled;
-          const { task: addedTask, task_list: serverUpdatedList } = addedTaskResponse;
+      invalidatesTags: (result, error, { listId }) => [{ type: 'Task', id: `LIST-${listId}` }, 'List', 'CalendarEvent'],
+    }),
 
-          // Update the getTasks cache with the final task from the server
-          dispatch(
-            tasksApi.util.updateQueryData('getTasks', newTask.listId, (draft) => {
-              if (draft && !draft.find(t => t.id === addedTask.id)) {
-                draft.push(addedTask);
-              }
-            })
-          );
-
-          // Update the getLists cache with the server-provided updated list
-          dispatch(
-            listsApi.util.updateQueryData('getLists', undefined, (draft) => {
-              if (!draft) return;
-
-              // Update the list the task was explicitly added to (from server response)
-              if (serverUpdatedList) {
-                let listInCache = draft.lists.find(l => l.id === serverUpdatedList.id) || draft.default_lists.find(l => l.id === serverUpdatedList.id);
-                if (listInCache) {
-                  Object.assign(listInCache, serverUpdatedList);
-                } else if (serverUpdatedList.type !== 'default') {
-                  draft.lists.push(serverUpdatedList);
-                }
-              }
-
-              // Manually update 'important' list count if the added task is important and unfinished
-              if (addedTask.is_important && !addedTask.is_completed) {
-                const importantList = draft.default_lists.find(l => l.id === 'important');
-                if (importantList) {
-                  importantList.unfinished_tasks_count = (importantList.unfinished_tasks_count || 0) + 1;
-                }
-              }
-
-              // Manually update 'background' list count if the added task is background and unfinished
-              if (addedTask.is_background && !addedTask.is_completed) {
-                const backgroundList = draft.default_lists.find(l => l.id === 'background');
-                if (backgroundList) {
-                  backgroundList.unfinished_tasks_count = (backgroundList.unfinished_tasks_count || 0) + 1;
-                }
-              }
-
-              // Manually update 'my_day' list count if the added task falls within today's range and is unfinished
-              if (!addedTask.is_completed && (addedTask.start || addedTask.end)) {
-                const myDayList = draft.default_lists.find(l => l.id === 'my_day');
-                if (myDayList) {
-                  console.log('Checking if added task fits in My Day range:', addedTask);
-
-                  const now = new Date();
-                  const todayUtcStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
-                  const todayUtcEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
-
-                  const taskStart = addedTask.start ? new Date(addedTask.start) : null;
-                  const taskEnd = addedTask.end ? new Date(addedTask.end) : taskStart; // If no end, assume it's a point in time
-
-                  // Replicate server's _is_task_in_range logic
-                  let isInMyDayRange = true;
-                  if (taskEnd && taskEnd < todayUtcStart) {
-                    isInMyDayRange = false;
-                  }
-                  if (taskStart && taskStart > todayUtcEnd) {
-                    isInMyDayRange = false;
-                  }
-
-                  if (isInMyDayRange) {
-                    myDayList.unfinished_tasks_count = (myDayList.unfinished_tasks_count || 0) + 1;
-                    // Also add to childes_order if it's not already there
-                    if (!myDayList.childes_order.includes(addedTask.id)) {
-                      myDayList.childes_order.push(addedTask.id);
-                    }
-                  }
-                }
-              }
-            })
-          );
-        } catch {
-          patchResult.undo();
-        }
-      },
+    updateTask: builder.mutation({
+      query: (task) => ({
+        url: 'api/tasks/edit_task',
+        method: 'PUT',
+        body: task,
+      }),
+      invalidatesTags: (result, error, task) => [
+        { type: 'Task', id: task.id },
+        { type: 'Task', id: `LIST-${task.listId}` },
+      ],
+    }),
+    changeTaskStatus: builder.mutation({
+      query: (data) => ({
+        url: '/api/tasks/change_task_status',
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: ['List', 'CalendarEvent'],
     }),
     addSubtask: builder.mutation({
-      query: (newSubtask) => ({
+      query: (data) => ({
         url: '/api/tasks/add_subtask',
         method: 'POST',
-        body: newSubtask,
+        body: data,
       }),
-      invalidatesTags: (result, error, newSubtask) => [{ type: 'Task', id: newSubtask.parent_task_id }],
+      invalidatesTags: (result, error, { parentId }) => [{ type: 'Task', id: parentId }, 'List', 'CalendarEvent'],
     }),
-     deleteTask: builder.mutation({
-      query: ({ taskId }) => ({
-        url: '/api/tasks/del_task',
+    deleteTask: builder.mutation({
+      query: (taskId) => ({
+        url: `/api/tasks/del_task`,
         method: 'DELETE',
         body: { taskId },
       }),
-      invalidatesTags: (result, error, { listId }) => [{ type: 'Task', id: listId }],
-    }),
-    updateTask: builder.mutation({
-      query: (updatedTask) => ({
-        url: '/api/tasks/edit_task',
-        method: 'PUT',
-        body: updatedTask,
-      }),
-      async onQueryStarted(updatedTask, { dispatch, queryFulfilled }) {
-        // Optimistic update for getTasks cache
-        const patchResultGetTasks = dispatch(
-          tasksApi.util.updateQueryData('getTasks', updatedTask.listId, (draft) => {
-            const taskToUpdate = draft.find(task => task.id === updatedTask.id);
-            if (taskToUpdate) {
-              // Apply only the fields that were sent in updatedTask for optimistic update
-              Object.assign(taskToUpdate, updatedTask);
-            }
-          })
-        );
-
-        // Optimistic update for getTasksByIds cache
-        const patchResultGetTasksByIds = dispatch(
-          tasksApi.util.updateQueryData('getTasksByIds', [updatedTask.id], (draft) => {
-            if (draft && draft.length > 0) {
-              Object.assign(draft[0], updatedTask);
-            }
-          })
-        );
-
-        try {
-          const { data: response } = await queryFulfilled;
-          const serverUpdatedTask = response.task; // Server returns { success: true, task: ... }
-
-          // Apply server's version to getTasks cache
-          dispatch(
-            tasksApi.util.updateQueryData('getTasks', updatedTask.listId, (draft) => {
-              const taskInCache = draft.find(task => task.id === serverUpdatedTask.id);
-              if (taskInCache) {
-                Object.assign(taskInCache, serverUpdatedTask);
-              }
-            })
-          );
-
-          // Apply server's version to getTasksByIds cache
-          dispatch(
-            tasksApi.util.updateQueryData('getTasksByIds', [serverUpdatedTask.id], (draft) => {
-              if (draft && draft.length > 0) {
-                Object.assign(draft[0], serverUpdatedTask);
-              }
-            })
-          );
-
-          // No update for getSubtasks needed here, as edit_task doesn't affect subtask relationships
-          // or propagate changes to them on the server side.
-          // If the updated task is a subtask, its parent's subtask list might become stale,
-          // but that's a limitation of the current server API for edit_task.
-
-        } catch {
-          patchResultGetTasks.undo(); // Revert optimistic update on error
-          patchResultGetTasksByIds.undo(); // Revert optimistic update on error
-        }
-      },
-    }),
-    changeTaskStatus: builder.mutation({
-      query: ({ taskId, completed_at, is_completed, listId }) => ({
-        url: '/api/tasks/change_status',
-        method: 'PUT',
-        body: { taskId: taskId, is_completed: is_completed, completed_at, list_id: listId },
-      }),
-      async onQueryStarted({ taskId, is_completed, completed_at, listId }, { dispatch, queryFulfilled }) {
-        // Optimistic update for getTasks cache
-        const patchResultGetTasks = dispatch(
-          tasksApi.util.updateQueryData('getTasks', listId, (draft) => {
-            const taskToUpdate = draft.find(task => task.id === taskId);
-            if (taskToUpdate) {
-              taskToUpdate.is_completed = is_completed;
-              taskToUpdate.completed_at = completed_at;
-            }
-          })
-        );
-
-        // Optimistic update for getTasksByIds cache
-        const patchResultGetTasksByIds = dispatch(
-          tasksApi.util.updateQueryData('getTasksByIds', [taskId], (draft) => {
-            if (draft && draft.length > 0) {
-              draft.is_completed = is_completed;
-              draft.completed_at = completed_at;
-            }
+      async onQueryStarted(taskId, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          tasksApi.util.updateQueryData('getTasksByIds', { 
+            listId: null, // или конкретный listId
+            ids: [taskId] 
+          }, (draft) => {
+            draft.tasks = draft.tasks.filter(t => t.id !== taskId);
           })
         );
 
         try {
           await queryFulfilled;
-          // Invalidate tags to refetch relevant data after successful update
-          dispatch(tasksApi.util.invalidateTags([{ type: 'Task', id: listId }]));
-          dispatch(tasksApi.util.invalidateTags([{ type: 'Task', id: taskId }]));
-          dispatch(listsApi.util.invalidateTags(['List'])); // Invalidate lists to update counts
         } catch {
-          patchResultGetTasks.undo(); // Revert optimistic update on error
-          patchResultGetTasksByIds.undo(); // Revert optimistic update on error
+          patchResult.undo();
         }
       },
     }),
     deleteFromChildes: builder.mutation({
       query: (data) => ({
         url: '/api/tasks/delete_from_childes',
-        method: 'DELETE',
+        method: 'PUT',
         body: data,
       }),
-      invalidatesTags: ['List'],
+      invalidatesTags: ['List', 'CalendarEvent'],
     }),
     linkTask: builder.mutation({
       query: (data) => ({
@@ -292,89 +128,88 @@ export const tasksApi = apiSlice.injectEndpoints({
         method: 'PUT',
         body: data,
       }),
-      invalidatesTags: ['Task'],
+      invalidatesTags: ['List', 'CalendarEvent'],
     }),
     getFieldsConfig: builder.query({
       query: () => '/api/tasks/fields_config',
-      providesTags: ['FieldsConfig'],
+      providesTags: ['List', 'CalendarEvent'],
     }),
     getTaskTypeGroups: builder.query({
-      query: () => '/api/tasks/task_type_groups',
-      providesTags: ['TaskTypeGroup'],
+      query: () => '/api/tasks/get_task_type_groups',
+      providesTags: ['List', 'CalendarEvent'],
     }),
     addTaskTypeGroup: builder.mutation({
-      query: (newGroup) => ({
-        url: '/api/tasks/task_type_groups',
+      query: (data) => ({
+        url: '/api/tasks/add_task_type_group',
         method: 'POST',
-        body: newGroup,
+        body: data,
       }),
-      invalidatesTags: ['TaskTypeGroup', 'FieldsConfig'],
+      invalidatesTags: ['Task'],
     }),
     updateTaskTypeGroup: builder.mutation({
-      query: ({ id, ...updatedGroup }) => ({
-        url: `/api/tasks/task_type_groups/${id}`,
+      query: (data) => ({
+        url: '/api/tasks/edit_task_type_group',
         method: 'PUT',
-        body: updatedGroup,
+        body: data,
       }),
-      invalidatesTags: ['TaskTypeGroup', 'FieldsConfig'],
+      invalidatesTags: ['Task'],
     }),
     deleteTaskTypeGroup: builder.mutation({
       query: (id) => ({
-        url: `/api/tasks/task_type_groups/${id}`,
+        url: `/api/tasks/del_task_type_group/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['TaskTypeGroup', 'FieldsConfig'],
+      invalidatesTags: ['Task'],
     }),
     getTaskTypes: builder.query({
-      query: () => '/api/tasks/task_types',
-      providesTags: ['TaskType'],
+      query: () => '/api/tasks/get_task_types',
+      providesTags: ['Task'],
     }),
     addTaskType: builder.mutation({
-      query: (newType) => ({
-        url: '/api/tasks/task_types',
+      query: (data) => ({
+        url: '/api/tasks/add_task_type',
         method: 'POST',
-        body: newType,
+        body: data,
       }),
-      invalidatesTags: ['TaskType', 'FieldsConfig'],
+      invalidatesTags: ['Task'],
     }),
     updateTaskType: builder.mutation({
-      query: ({ id, ...updatedType }) => ({
-        url: `/api/tasks/task_types/${id}`,
+      query: (data) => ({
+        url: '/api/tasks/edit_task_type',
         method: 'PUT',
-        body: updatedType,
+        body: data,
       }),
-      invalidatesTags: ['TaskType', 'FieldsConfig'],
+      invalidatesTags: ['Task'],
     }),
     deleteTaskType: builder.mutation({
       query: (id) => ({
-        url: `/api/tasks/task_types/${id}`,
+        url: `/api/tasks/del_task_type/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['TaskType', 'FieldsConfig'],
+      invalidatesTags: ['Task'],
     }),
-    getSubtasks: builder.query({
-      query: (parentTaskId) => `/api/tasks/get_subtasks?parent_task_id=${parentTaskId}`,
-      providesTags: (result, error, parentTaskId) => [{ type: 'Subtask', id: parentTaskId }],
-    }),
+    // ❌ УБРАНО: getSubtasks - подзадачи загружаются через getTasksByIds
     patchCalendarInstance: builder.mutation({
-      query: (instanceData) => ({
-        url: '/api/tasks/instance',
+      query: (data) => ({
+        url: '/api/tasks/patch_calendar_instance',
         method: 'PATCH',
-        body: instanceData,
+        body: data,
       }),
-      invalidatesTags: ['CalendarEvent'],
+      invalidatesTags: ['Task', 'CalendarEvent'],
     }),
   }),
 });
 
+// ✅ Экспортируем хуки для использования в компонентах
 export const {
-  useGetTasksQuery,
+  
   useGetTasksByIdsQuery,
+  useLazyGetTasksByIdsQuery,
   useAddTaskMutation,
-  useAddSubtaskMutation,
   useUpdateTaskMutation,
-  useDeleteTaskMutation,
   useChangeTaskStatusMutation,
+  useAddSubtaskMutation,
+  useDeleteTaskMutation,
   useDeleteFromChildesMutation,
   useLinkTaskMutation,
   useGetFieldsConfigQuery,
@@ -386,6 +221,6 @@ export const {
   useAddTaskTypeMutation,
   useUpdateTaskTypeMutation,
   useDeleteTaskTypeMutation,
-  useGetSubtasksQuery,
   usePatchCalendarInstanceMutation,
+  useGetTasksByListIdQuery,
 } = tasksApi;

@@ -1,3 +1,4 @@
+// import { useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useMediaQuery, Box, Grid } from '@mui/material';
 import { DndProvider } from 'react-dnd';
@@ -5,26 +6,18 @@ import { MultiBackend, getBackendOptions } from '@minoru/react-dnd-treeview';
 import ToDoListsPanel from './ToDoListsPanel';
 import ToDoTasksPanel from './ToDoTasksPanel';
 import ToDoTaskEditorPanel from './ToDoTaskEditorPanel';
-import { useGetTasksQuery } from '../../store/tasksSlice';
+import { useGetTasksByIdsQuery } from '../../store/tasksSlice';
 import { useGetListsQuery } from '../../store/listsSlice';
 
 function ToDoLayoutUniversal() {
   const isMobile = useMediaQuery('(max-width:600px)');
 
-  const { selectedTaskId } = useSelector((state) => state.todoLayout);
-  const { selectedListId } = useSelector((state) => state.todoLayout);
+  const { selectedTaskId, selectedListId } = useSelector((state) => state.todoLayout);
 
-  const {
-    isLoading: tasksLoading,
-  } = useGetTasksQuery(selectedListId, {
-    skip: !selectedListId,
-  });
+  const { isLoading: listsLoading } = useGetListsQuery();
 
-  const {
-    isLoading: listsLoading,
-  } = useGetListsQuery();
+  const { isLoading: tasksLoading } = useGetTasksByIdsQuery();
 
-  
   const showEditor = !!selectedTaskId;
   const isLoading = tasksLoading || listsLoading;
 
@@ -38,7 +31,7 @@ function ToDoLayoutUniversal() {
           display: selectedListId ? "none" : "block",
         }}
       >
-        <ToDoListsPanel mobile />
+        <ToDoListsPanel />
       </Box>
 
       {/* Задачи */}
@@ -49,7 +42,7 @@ function ToDoLayoutUniversal() {
           display: selectedListId && !showEditor ? "block" : "none",
         }}
       >
-        <ToDoTasksPanel mobile />
+        <ToDoTasksPanel />
       </Box>
 
       {/* Редактор задачи */}
@@ -60,7 +53,7 @@ function ToDoLayoutUniversal() {
           display: showEditor ? "block" : "none",
         }}
       >
-        <ToDoTaskEditorPanel mobile />
+        <ToDoTaskEditorPanel />
       </Box>
     </Box>
     ) : (
@@ -72,7 +65,7 @@ function ToDoLayoutUniversal() {
         <Grid
           item
           xs={12}
-          md={showEditor ? 5 : 9}
+          md={showEditor ? 4 : 8}
           sx={{ height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}
         >
           <ToDoTasksPanel mobile={isMobile} />
@@ -84,7 +77,7 @@ function ToDoLayoutUniversal() {
             md={4}
             sx={{ height: '100%', display: 'flex', flexDirection: 'column', width: '400px' }}
           >
-            <ToDoTaskEditorPanel />
+            <ToDoTaskEditorPanel mobile={isMobile} />
           </Grid>
         )}
       </Grid>

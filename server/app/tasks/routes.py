@@ -214,7 +214,7 @@ def change_task_status_route():
 
 @to_do_app.route('/tasks/get_tasks', methods=['GET'])
 @jwt_required()
-@etag('tasksVersion')
+# @etag('tasksVersion')
 def get_tasks_route():
     list_id = request.args.get('list_id', None)
     if not list_id:
@@ -236,29 +236,33 @@ def get_tasks_route():
 
 
 
-@to_do_app.route('/tasks/get_tasks_by_ids', methods=['GET'])
+@to_do_app.route('/tasks/get_tasks_by_ids', methods=['POST'])
 @jwt_required()
-@cache.cached(timeout=60, key_prefix=make_cache_key('tasks_by_ids', 'tasksVersion'))
-@etag('tasksVersion')
+# @cache.cached(timeout=60, key_prefix=make_cache_key('tasks_by_ids', 'tasksVersion'))
+# @etag('tasksVersion')
 def get_tasks_by_ids_route():
-    ids_param = request.args.get('ids', '')
+    data = request.get_json()
+    # current_app.logger.info(f'get_tasks_by_ids_route: data: {data}')
+    ids_param = data.get('ids', [])
     user_id = current_user.id
+    # current_app.logger.info(f'get_tasks_by_ids_route: ids_param: {ids_param}, user_id: {user_id}')
 
     if not ids_param:
         return get_tasks_by_ids([], user_id=user_id)
 
-    ids_list = [i.strip() for i in ids_param.split(',') if i.strip()]
-
     try:
         # Проверяем, что все ID являются валидными UUID
-        for id_str in ids_list:
+        for id_str in ids_param:
             uuid.UUID(id_str)
-        ids = ids_list
+        ids = ids_param
     except ValueError:
         # Если хотя бы один ID не является валидным UUID, возвращаем ошибку
         return {'error': 'Invalid ids provided'}, 400
+    
+    result = get_tasks_by_ids(ids, user_id=user_id)
+    # current_app.logger.info(f'get_tasks_by_ids_route: returning {result} tasks')
 
-    return get_tasks_by_ids(ids, user_id=user_id)
+    return result
 
 
 @to_do_app.route('/tasks/del_task', methods=['DELETE'])
@@ -398,10 +402,11 @@ def add_to_general_list_route():
 
 @to_do_app.route('/tasks/fields_config', methods=['GET'])
 @jwt_required()
-@cache.cached(timeout=3600, key_prefix=make_cache_key('fields_config', 'taskTypesVersion'))
-@etag('taskTypesVersion')
+# @cache.cached(timeout=3600, key_prefix=make_cache_key('fields_config', 'taskTypesVersion'))
+# @etag('taskTypesVersion')
 def get_fields_config():
     # Заглушка полей задач
+    current_app.logger.info('get_fields_config: generating fields config')
     fields = {
         "range": {"id": 1, "type": "range", "name": "Срок"},
         "completed_at": {"id": 17, "type": "datetime", "name": "Дата выполнения"},
@@ -409,9 +414,9 @@ def get_fields_config():
         "is_background": {"id": 4, "type": "toggle", "name": "Фоновая задача"},
         "color": {"id": 5, "type": "color", "name": "Цвет на календаре"},
         "divider2": {"id": 6, "type": "divider"},
-        "reward": {"id": 7, "type": "toggle", "name": "Награда"},
-        "cost": {"id": 8, "type": "number", "name": "Стоимость"},
-        "divider3": {"id": 9, "type": "divider"},
+        # "reward": {"id": 7, "type": "toggle", "name": "Награда"},
+        # "cost": {"id": 8, "type": "number", "name": "Стоимость"},
+        # "divider3": {"id": 9, "type": "divider"},
         "priority_id": {
             "id": 10,
             "type": "select",
@@ -437,33 +442,36 @@ def get_fields_config():
         },
         "is_infinite": {"id": 12, "type": "toggle", "name": "Бесконечно повторять на календаре"},
         "divider4": {"id": 13, "type": "divider"},
-        "type_id": {
-            "id": 14,
-            "type": "select",
-            "name": "Тип задачи",
-            "groupBy": "type",
-            "options": []  # будет заполнено данными из БД
-        },
-        "attachments": {"id": 15, "type": "string", "name": "Добавить файл"},
+        # "type_id": {
+        #     "id": 14,
+        #     "type": "select",
+        #     "name": "Тип задачи",
+        #     "groupBy": "type",
+        #     "options": []  # будет заполнено данными из БД
+        # },
+        # "attachments": {"id": 15, "type": "string", "name": "Добавить файл"},
         "note": {"id": 16, "type": "text", "name": "Заметка"}
     }
+    current_app.logger.info('get_fields_config: returning fields config')
 
-    task_types = TaskType.query.filter_by(user_id=current_user.id, is_active=True).all()
-    groups = TaskTypeGroup.query.filter_by(user_id=current_user.id).all()
-    group_map = {g.id: g.name for g in groups}
-    types_list = [
-        {
-            "value": t.id,
-            "label": t.name,
-            "color": t.color,
-            "description": t.description,
-            "group_id": t.group_id,
-            "groupLabel": group_map.get(t.group_id, "Без группы"),
-        }
-        for t in task_types
-    ]
+    # task_types = TaskType.query.filter_by(user_id=current_user.id, is_active=True).all()
+    # groups = TaskTypeGroup.query.filter_by(user_id=current_user.id).all()
+    # group_map = {g.id: g.name for g in groups}
+    # types_list = [
+    #     {
+    #         "value": t.id,
+    #         "label": t.name,
+    #         "color": t.color,
+    #         "description": t.description,
+    #         "group_id": t.group_id,
+    #         "groupLabel": group_map.get(t.group_id, "Без группы"),
+    #     }
+    #     for t in task_types
+    # ]
 
-    fields["type_id"]["options"] = types_list
+    # fields["type_id"]["options"] = types_list
+
+    # current_app.logger.info(f'get_fields_config: returning fields with {len(types_list)} task types')
 
     return fields
 
@@ -471,7 +479,7 @@ def get_fields_config():
 @to_do_app.route('/tasks/task_type_groups', methods=['GET'])
 @jwt_required()
 @cache.cached(timeout=3600, key_prefix=make_cache_key('task_type_groups', 'taskTypesVersion'))
-@etag('taskTypesVersion')
+# @etag('taskTypesVersion')
 def get_task_type_groups():
     groups = TaskTypeGroup.query.filter_by(user_id=current_user.id).all()
     return {g.id: g.to_dict() for g in groups}
@@ -533,7 +541,7 @@ def delete_task_type_group(group_id):
 @to_do_app.route('/tasks/task_types', methods=['GET'])
 @jwt_required()
 @cache.cached(timeout=3600, key_prefix=make_cache_key('task_types', 'taskTypesVersion'))
-@etag('taskTypesVersion')
+# @etag('taskTypesVersion')
 def get_task_types_route():
     types = TaskType.query.filter_by(user_id=current_user.id).all()
     return {t.id: t.to_dict() for t in types}
@@ -616,8 +624,8 @@ def delete_task_type_route(type_id):
 
 @to_do_app.route('/tasks/get_subtasks', methods=['GET'])
 @jwt_required()
-@cache.cached(timeout=60, key_prefix=make_cache_key('subtasks', 'tasksVersion'))
-@etag('tasksVersion')
+# @cache.cached(timeout=60, key_prefix=make_cache_key('subtasks', 'tasksVersion'))
+# @etag('tasksVersion')
 def get_subtasks_route():
     parent_task_id = request.args.get('parent_task_id')
     user_id = current_user.id

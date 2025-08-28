@@ -1,17 +1,16 @@
-import { Box, Button, IconButton } from '@mui/material';
+import { Box, Button, CircularProgress, IconButton } from '@mui/material';
 import ListsList from './ListsList';
 import QueueIcon from '@mui/icons-material/Queue';
 import { AccountTree } from '@mui/icons-material';
 import { memo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
-import { useGetListsQuery, useAddObjectMutation, useUpdateListMutation, useDeleteListMutation, useLinkItemsMutation, useMoveItemsMutation, useDeleteFromChildesMutation, useAddToGeneralListMutation } from '../../store/listsSlice';
-import { setSelectedListId, setSelectedList, toggleGroup } from '../../store/todoLayoutSlice';
+import { useAddObjectMutation, useUpdateListMutation, useDeleteListMutation, useLinkItemsMutation, useMoveItemsMutation, useDeleteFromChildesMutation, useAddToGeneralListMutation, useGetListsQuery } from '../../store/listsSlice';
+import { setSelectedListId, toggleGroup } from '../../store/todoLayoutSlice';
 
 
 function ToDoListsPanel({ mobile }) {
   const dispatch = useDispatch();
-  const { data, error, isLoading } = useGetListsQuery();
   const [addObject] = useAddObjectMutation();
   const [updateList] = useUpdateListMutation();
   const [deleteList] = useDeleteListMutation();
@@ -20,6 +19,7 @@ function ToDoListsPanel({ mobile }) {
   const [deleteFromChildes] = useDeleteFromChildesMutation();
   const [addToGeneralListMutation] = useAddToGeneralListMutation();
   const { selectedListId, openGroups } = useSelector((state) => state.todoLayout);
+  const { data: listsData, isLoading: listsLoading } = useGetListsQuery();
 
   const handleToggleGroup = useCallback((groupId) => {
     dispatch(toggleGroup(groupId));
@@ -31,8 +31,6 @@ function ToDoListsPanel({ mobile }) {
 
   const handleSetSelectedListId = (event, listId) => {
     dispatch(setSelectedListId(listId));
-    const list = data?.lists.find(l => l.id === listId) || data?.default_lists.find(l => l.id === listId);
-    dispatch(setSelectedList(list));
   };
 
   const handleUpdateList = (listId, data) => {
@@ -77,11 +75,9 @@ function ToDoListsPanel({ mobile }) {
     addToGeneralListMutation({ item_id: itemId });
   };
 
-  if (isLoading) return <div>Загрузка списков...</div>;
-  if (error) return <div>Ошибка: {error.message}</div>;
-  if (!data) return <div>Нет данных для отображения.</div>;
+  if (!listsData) return <div>Нет данных для отображения.</div>;
 
-  console.log('ToDoListsPanel data:', data);
+  console.log('ToDoListsPanel data:', listsData);
 
   return (
     <Box
@@ -93,43 +89,53 @@ function ToDoListsPanel({ mobile }) {
         width: '100%'
       }}
     >
-      <Box sx={{ flexGrow: 1, overflowY: 'auto', height: mobile ? '90%' : '100%' }}>
-        <ListsList
-          lists={data.lists}
-          defaultLists={data.default_lists}
-          projects={data.projects}
-          selectedListId={selectedListId}
-          onSelectList={handleSetSelectedListId}
-          onUpdateList={handleUpdateList}
-          onDeleteList={handleDeleteList}
-          onMoveList={handleMoveList}
-          isNeedContextMenu={true}
-          openGroups={openGroups}
-          onToggleGroup={handleToggleGroup}
-          onDeleteFromChildes={handleDeleteFromChildes}
-          onChangeChildesOrder={handleChangeChildesOrder}
-          onLinkToList={handleLinkToList}
-          onMoveToList={handleMoveToList}
-          onAddToGeneralList={handleAddToGeneralList}
-        />
-      </Box>
-      <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', mt: 1 }}>
-        <Button variant="outlined" sx={{ width: '100%' }} onClick={handleAddList}>
-          Создать список
-        </Button>
-        <IconButton variant="outlined" sx={{ alignSelf: 'center' }} onClick={handleAddGroup}>
-          <QueueIcon />
-        </IconButton>
-        <IconButton variant="outlined" sx={{ alignSelf: 'center' }} onClick={handleAddProject}>
-          <AccountTree />
-        </IconButton>
-      </Box>
+      {listsLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+      <> 
+        <Box sx={{ flexGrow: 1, overflowY: 'auto', height: mobile ? '90%' : '100%' }}>
+          <ListsList
+            lists={listsData.lists}
+            defaultLists={listsData.default_lists}
+            projects={listsData.projects}
+            selectedListId={selectedListId}
+            onSelectList={handleSetSelectedListId}
+            onUpdateList={handleUpdateList}
+            onDeleteList={handleDeleteList}
+            onMoveList={handleMoveList}
+            isNeedContextMenu={true}
+            openGroups={openGroups}
+            onToggleGroup={handleToggleGroup}
+            onDeleteFromChildes={handleDeleteFromChildes}
+            onChangeChildesOrder={handleChangeChildesOrder}
+            onLinkToList={handleLinkToList}
+            onMoveToList={handleMoveToList}
+            onAddToGeneralList={handleAddToGeneralList}
+          />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', mt: 1 }}>
+          <Button variant="outlined" sx={{ width: '100%' }} onClick={handleAddList}>
+            Создать список
+          </Button>
+          <IconButton variant="outlined" sx={{ alignSelf: 'center' }} onClick={handleAddGroup}>
+            <QueueIcon />
+          </IconButton>
+          <IconButton variant="outlined" sx={{ alignSelf: 'center' }} onClick={handleAddProject}>
+            <AccountTree />
+          </IconButton>
+        </Box>
+       </>
+      )} 
     </Box>
+   
   );
 }
  
 ToDoListsPanel.propTypes = {
   mobile: PropTypes.bool,
+  listsData: PropTypes.object.isRequired,
 };
 
 export default memo(ToDoListsPanel);

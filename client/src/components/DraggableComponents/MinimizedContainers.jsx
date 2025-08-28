@@ -5,7 +5,7 @@ import { updateContainer } from '../../store/dashboardSlice';
 function MinimizedContainers() {
   const dispatch = useDispatch();
   const minimizedContainers = useSelector(state => state.dashboard?.containers) || [];
-  console.log('MinimizedContainers: minimizedContainers=', minimizedContainers);
+  // console.log('MinimizedContainers: minimizedContainers=', minimizedContainers);
 
 
   return (

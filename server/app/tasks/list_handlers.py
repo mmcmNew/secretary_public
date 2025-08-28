@@ -12,7 +12,7 @@ from .task_handlers import get_tasks
 
 def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     start_time = time.perf_counter()
-    current_app.logger.info(f"PERF (user:{user_id}): get_lists_and_groups_data started.")
+    # current_app.logger.info(f"PERF (user:{user_id}): get_lists_and_groups_data started.")
     from collections import defaultdict
     from sqlalchemy import func, case, and_, or_
     import uuid
@@ -32,7 +32,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
         .filter_by(user_id=user_id)
         .all()
     )
-    current_app.logger.info(f"PERF (user:{user_id}): Query all lists took {time.perf_counter() - step_start_time:.4f}s.")
+    # current_app.logger.info(f"PERF (user:{user_id}): Query all lists took {time.perf_counter() - step_start_time:.4f}s.")
 
     step_start_time = time.perf_counter()
     # Используем сохраненные счетчики
@@ -44,7 +44,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     for group in groups_list:
         group_count = sum(lists_unfinished_map.get(lst.id, 0) for lst in group.lists)
         groups_unfinished_map[group.id] = group_count
-    current_app.logger.info(f"PERF (user:{user_id}): Calculate group counters took {time.perf_counter() - step_start_time:.4f}s.")
+    # current_app.logger.info(f"PERF (user:{user_id}): Calculate group counters took {time.perf_counter() - step_start_time:.4f}s.")
 
     step_start_time = time.perf_counter()
     # Для специальных списков используем один запрос
@@ -57,7 +57,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
         .filter(Task.user_id == user_id)
         .first()
     )
-    current_app.logger.info(f"PERF (user:{user_id}): Query special task counts took {time.perf_counter() - step_start_time:.4f}s.")
+    # current_app.logger.info(f"PERF (user:{user_id}): Query special task counts took {time.perf_counter() - step_start_time:.4f}s.")
 
     default_lists_unfinished_map = {
         'tasks': special_tasks_counts.tasks_count,
@@ -69,7 +69,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     step_start_time = time.perf_counter()
     lists_list = lists  # Re-use already queried lists
     projects_list = Project.query.filter_by(user_id=user_id).all()
-    current_app.logger.info(f"PERF (user:{user_id}): Query projects took {time.perf_counter() - step_start_time:.4f}s.")
+    # current_app.logger.info(f"PERF (user:{user_id}): Query projects took {time.perf_counter() - step_start_time:.4f}s.")
     # Получаем только ID задач для специальных списков через оптимизированные запросы
     step_start_time = time.perf_counter()
     # Получаем ID задач без списков
@@ -83,7 +83,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
         .order_by(Task.id.desc())
         .all()
     ]
-    current_app.logger.info(f"PERF (user:{user_id}): Query tasks_without_lists_ids took {time.perf_counter() - step_start_time:.4f}s.")
+    # current_app.logger.info(f"PERF (user:{user_id}): Query tasks_without_lists_ids took {time.perf_counter() - step_start_time:.4f}s.")
     step_start_time = time.perf_counter()
     # current_app.logger.info(f'tasks_without_lists_ids: {tasks_without_lists_ids}')
     # Получаем ID важных задач
@@ -96,7 +96,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
         .order_by(Task.id.desc())
         .all()
     ]
-    current_app.logger.info(f"PERF (user:{user_id}): Query important_tasks_ids took {time.perf_counter() - step_start_time:.4f}s.")
+    # current_app.logger.info(f"PERF (user:{user_id}): Query important_tasks_ids took {time.perf_counter() - step_start_time:.4f}s.")
     step_start_time = time.perf_counter()
     # Получаем ID фоновых задач
     background_tasks_ids = [
@@ -108,7 +108,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
         .order_by(Task.id.desc())
         .all()
     ]
-    current_app.logger.info(f"PERF (user:{user_id}): Query background_tasks_ids took {time.perf_counter() - step_start_time:.4f}s.")
+    # current_app.logger.info(f"PERF (user:{user_id}): Query background_tasks_ids took {time.perf_counter() - step_start_time:.4f}s.")
 
     step_start_time = time.perf_counter()
     # Получаем задачи для "Мой день" с учетом таймзоны пользователя
@@ -120,7 +120,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
                                 #  end=end_dt.isoformat(),
                                  user_id=user_id)
     my_day_tasks = my_day_response.get('tasks', [])
-    current_app.logger.info(f"PERF (user:{user_id}): Get 'My Day' tasks took {time.perf_counter() - step_start_time:.4f}s.")
+    # current_app.logger.info(f"PERF (user:{user_id}): Get 'My Day' tasks took {time.perf_counter() - step_start_time:.4f}s.")
 
     # --- Default lists с использованием предварительно посчитанных значений
     default_lists = []
@@ -142,7 +142,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
             'unfinished_tasks_count': unfinished,
             'childes_order': task_ids
         })
-    current_app.logger.info(f"PERF (user:{user_id}): Default lists processing took {time.perf_counter() - step_start_time:.4f}s.")
+    # current_app.logger.info(f"PERF (user:{user_id}): Default lists processing took {time.perf_counter() - step_start_time:.4f}s.")
     # current_app.logger.info(f"PERF (user:{user_id}): Default lists: {default_lists}")
     step_start_time = time.perf_counter()
     
@@ -185,7 +185,7 @@ def get_lists_and_groups_data(client_timezone='UTC', user_id=None):
     combined = groups_dict + lists_dict
     sorted_combined = sorted(combined, key=lambda x: x['order'])
     sorted_projects = sorted(projects_dict, key=lambda x: x['order'])
-    current_app.logger.info(f"PERF (user:{user_id}): Final data structuring took {time.perf_counter() - step_start_time:.4f}s.")
+    # current_app.logger.info(f"PERF (user:{user_id}): Final data structuring took {time.perf_counter() - step_start_time:.4f}s.")
 
     total_time = time.perf_counter() - start_time
     current_app.logger.info(f"PERF (user:{user_id}): get_lists_and_groups_data finished. Total time: {total_time:.4f}s.")

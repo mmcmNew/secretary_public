@@ -118,7 +118,7 @@ class DataVersion(db.Model):
 class Priority(db.Model):
     __tablename__ = 'priorities'
     __table_args__ = {'schema': 'productivity'}
-    id = db.Column('PriorityID', db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = db.Column('PriorityID', db.Integer, primary_key=True, autoincrement=True)
     name = db.Column('PriorityName', db.String(255))
 
     @staticmethod
@@ -141,7 +141,7 @@ class Priority(db.Model):
 class Interval(db.Model):
     __tablename__ = 'intervals'
     __table_args__ = {'schema': 'productivity'}
-    id = db.Column('IntervalID', db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = db.Column('IntervalID', db.Integer, primary_key=True, autoincrement=True)
     name = db.Column('IntervalName', db.String(255))
     title = db.Column('IntervalTitle', db.String(255))
 
@@ -345,8 +345,8 @@ class Task(db.Model):
     color = db.Column('Color', db.String(20))
     type_id = db.Column('TaskTypeID', db.String(36), db.ForeignKey('productivity.task_types.id'))
     status_id = db.Column('StatusID', db.String(36), db.ForeignKey('productivity.statuses.StatusID'))
-    priority_id = db.Column('PriorityID', db.String(36), db.ForeignKey('productivity.priorities.PriorityID'))
-    interval_id = db.Column('IntervalID', db.String(36), db.ForeignKey('productivity.intervals.IntervalID'))
+    priority_id = db.Column('PriorityID', db.Integer, db.ForeignKey('productivity.priorities.PriorityID'))
+    interval_id = db.Column('IntervalID', db.Integer, db.ForeignKey('productivity.intervals.IntervalID'))
     is_infinite = db.Column('IsInfinite', db.Boolean, default=False)
 
     status = db.relationship('Status', backref='tasks', foreign_keys=[status_id])
