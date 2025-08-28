@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { apiSlice } from './api/apiSlice';
 
 export const authSlice = createSlice({
   name: 'auth',
@@ -20,6 +21,8 @@ export const authSlice = createSlice({
       if (accessToken) {
         localStorage.setItem('accessToken', accessToken);
       }
+      // Clear RTK Query cache when new credentials are set (e.g., on login/registration)
+      apiSlice.util.resetApiState();
     },
     logout: (state) => {
       state.user = null;
@@ -27,6 +30,8 @@ export const authSlice = createSlice({
       state.isAuthenticated = false;
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      // Clear RTK Query cache on logout
+      apiSlice.util.resetApiState();
     },
     authLoadingDone: (state) => {
       state.isLoading = false;

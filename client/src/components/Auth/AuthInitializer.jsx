@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useGetMeQuery } from '../../store/api/authApi';
 import { setCredentials, logout, authLoadingDone } from '../../store/authSlice';
+import { apiSlice } from '../../store/api/apiSlice'; // Импорт apiSlice
 import { Box, CircularProgress } from '@mui/material';
 import PropTypes from 'prop-types';
 import { dashboardApi } from '../../store/api/dashboardApi';
@@ -27,9 +28,11 @@ function AuthInitializer({ children }) {
     // Если запрос выполнен (успешно или с ошибкой) и мы еще не завершили загрузку
     if (!isFetching && isLoading) {
       if (isSuccess && userData) {
-        // Если пользователь успешно загружен, сохраняем его данные
         dispatch(setCredentials({ user: userData, accessToken }));
         dispatch(dashboardApi.endpoints.getDashboard.initiate(userData.last_dashboard_id));
+        
+        // Сброс кэша RTK Query
+        dispatch(apiSlice.util.resetApiState());
       } else if (isError && accessToken) {
         // Если токен есть, но он невалиден, выходим из системы
         dispatch(logout());
